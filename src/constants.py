@@ -29,13 +29,13 @@ MIGRATION_BACKUP_DIR = os.path.join(
 )
 MIGRATION_AUTO_DROP = config("MIGRATION_AUTO_DROP", default=False, cast=bool)
 
-# Development mode detection
-DEVELOPMENT_MODE = config("DEVELOPMENT_MODE", default=False, cast=bool)
-ENABLE_PLUGIN_HOT_RELOAD = config("ENABLE_PLUGIN_HOT_RELOAD", default=True, cast=bool)
+# Development mode detection (set via --dev flag in CLI)
+DEVELOPMENT_MODE = config("CHACC_DEV_MODE", default=False, cast=bool)
+ENABLE_PLUGIN_HOT_RELOAD = config("ENABLE_PLUGIN_HOT_RELOAD", default=False, cast=bool)
 ENABLE_PLUGIN_DEPENDENCY_RESOLUTION = config(
-    "ENABLE_PLUGIN_DEPENDENCY_RESOLUTION", default=True, cast=bool
+    "ENABLE_PLUGIN_DEPENDENCY_RESOLUTION", default=False, cast=bool
 )
-PLUGIN_AUTO_DISCOVERY = config("PLUGIN_AUTO_DISCOVERY", default=True, cast=bool)
+PLUGIN_AUTO_DISCOVERY = config("PLUGIN_AUTO_DISCOVERY", default=False, cast=bool)
 
 # Redis Configuration
 REDIS_ENABLED = config("REDIS_ENABLED", default=True, cast=bool)
@@ -50,6 +50,15 @@ DATABASE_USER = config("DATABASE_USER", default="chacc")
 DATABASE_PASSWORD = config("DATABASE_PASSWORD", default="")
 DATABASE_HOST = config("DATABASE_HOST", default="localhost")
 DATABASE_PORT = config("DATABASE_PORT", default="5432", cast=int)
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="*", cast=str)
+CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default=True, cast=bool)
+CORS_ALLOW_METHODS = config("CORS_ALLOW_METHODS", default="*", cast=str)
+CORS_ALLOW_HEADERS = config("CORS_ALLOW_HEADERS", default="*", cast=str)
+
+# Secret Key for JWT
+SECRET_KEY = config("SECRET_KEY", default="", cast=str)
 
 if "postgres" in DATABASE_ENGINE.lower():
     DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"

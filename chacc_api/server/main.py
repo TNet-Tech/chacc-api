@@ -1,8 +1,6 @@
-import asyncio
-import os
-import sys
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
@@ -10,90 +8,21 @@ from src.health import health_router
 from src.database import ModuleRecord, initialize_database_models, get_db
 from src.logger import configure_logging, LogLevels
 from src.core_services import BackboneContext
-from src.constants import DEVELOPMENT_MODE, MODULES_LOADED_DIR, PLUGINS_DIR, BASE_DIR
+from src.constants import (
+    DEVELOPMENT_MODE,
+    MODULES_LOADED_DIR,
+    PLUGINS_DIR,
+    CORS_ALLOWED_ORIGINS,
+    CORS_ALLOW_CREDENTIALS,
+    CORS_ALLOW_METHODS,
+    CORS_ALLOW_HEADERS,
+)
 from src.env_validator import validate_environment, ValidationError
 
 from src.migration.runner import run_migration
 from src.redis_service import RedisService
 
 chacc_logger = configure_logging(log_level=LogLevels.DEBUG)
-
-
-async def run_backbone_tests():
-    """
-    Run backbone unit tests on startup.
-    Raises RuntimeError if tests fail to prevent app startup.
-    Only runs if tests directory exists in CWD.
-    """
-    tests_path = os.path.join(BASE_DIR, "tests", "test_backbone.py")
-    if not os.path.exists(tests_path):
-        chacc_logger.info(
-            "No backbone tests found in CWD. Skipping tests (not a development install)."
-        )
-        return
-
-    chacc_logger.info("Running backbone unit tests...")
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-m",
-            "pytest",
-            f"{BASE_DIR}/tests/test_backbone.py",
-            "-v",
-            "--tb=short",
-            "--no-header",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        result_stdout = stdout.decode() if stdout else ""
-        result_stderr = stderr.decode() if stderr else ""
-
-        passed_tests = []
-        failed_tests = []
-
-        if result_stdout:
-            lines = result_stdout.strip().split("\n")
-            for line in lines:
-                line = line.strip()
-                if "PASSED" in line:
-                    passed_tests.append(line)
-                elif "FAILED" in line or "ERROR" in line:
-                    failed_tests.append(line)
-
-        if proc.returncode == 0:
-            chacc_logger.info(f"All backbone tests passed successfully ({len(passed_tests)} tests)")
-            if passed_tests:
-                chacc_logger.info("Passed tests:")
-                for test in passed_tests:
-                    chacc_logger.info(f"  ✓ {test}")
-        else:
-            chacc_logger.error(f"Backbone tests failed with return code {proc.returncode}")
-
-            if passed_tests:
-                chacc_logger.info(f"Passed tests ({len(passed_tests)}):")
-                for test in passed_tests:
-                    chacc_logger.info(f"  ✓ {test}")
-
-            if failed_tests:
-                chacc_logger.error(f"Failed tests ({len(failed_tests)}):")
-                for test in failed_tests:
-                    chacc_logger.error(f"  ✗ {test}")
-            else:
-                chacc_logger.error("Test output:")
-                if result_stdout:
-                    chacc_logger.error(result_stdout)
-
-            if result_stderr:
-                chacc_logger.error(f"Test stderr: {result_stderr}")
-
-            raise RuntimeError(
-                f"Backbone tests failed ({len(failed_tests)} failed, {len(passed_tests)} passed). Application startup aborted."
-            )
-
-    except Exception as e:
-        chacc_logger.error(f"Unexpected error running backbone tests: {e}")
-        raise RuntimeError(f"Backbone tests failed due to unexpected error: {e}")
 
 
 @asynccontextmanager
@@ -146,9 +75,7 @@ async def onStartupLifespan(app: FastAPI):
     if not modules_table_exists:
         await run_migration()
 
-        print("First migration completed. Running backbone tests before loading modules...")
-
-    await run_backbone_tests()
+        print("First migration completed. Loading modules...")
 
     if DEVELOPMENT_MODE:
         chacc_logger.info("=" * 65)
@@ -189,6 +116,21 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=onStartupLifespan,
+)
+
+allowed_origins = (
+    [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
+    allow_methods=(
+        [CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]
+    ),
+    allow_headers=(
+        [CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]
+    ),
 )
 
 app.state.limiter = limiter

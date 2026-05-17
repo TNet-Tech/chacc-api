@@ -6,10 +6,20 @@ Validates required environment variables and configuration for production deploy
 
 import re
 from typing import List, Dict, Any
-from decouple import config as decouple_config
 
 from src.logger import configure_logging, LogLevels
-from src.constants import DEVELOPMENT_MODE, DATABASE_ENGINE
+from src.constants import (
+    DEVELOPMENT_MODE,
+    DATABASE_ENGINE,
+    DATABASE_HOST,
+    DATABASE_USER,
+    DATABASE_PASSWORD,
+    DATABASE_NAME,
+    SECRET_KEY,
+    ENABLE_PLUGIN_HOT_RELOAD,
+    ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
+    PLUGIN_AUTO_DISCOVERY,
+)
 
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
@@ -59,7 +69,7 @@ class EnvironmentValidator:
         - Must be at least 32 characters
         - Must not match common insecure patterns
         """
-        secret_key = decouple_config("SECRET_KEY", default="")
+        secret_key = SECRET_KEY
 
         if not secret_key:
             if not DEVELOPMENT_MODE:
@@ -94,29 +104,24 @@ class EnvironmentValidator:
         - DATABASE_HOST must not be localhost if using remote DB
         - All connection parameters must be set
         """
-        if DATABASE_ENGINE == "postgresql":
-            db_host = decouple_config("DATABASE_HOST", default="")
-            db_user = decouple_config("DATABASE_USER", default="")
-            db_password = decouple_config("DATABASE_PASSWORD", default="")
-            db_name = decouple_config("DATABASE_NAME", default="")
-
-            if not db_host:
+        if "postgres" in DATABASE_ENGINE:
+            if not DATABASE_HOST:
                 self._add_error("DATABASE_HOST is required when using PostgreSQL")
                 return False
 
-            if not db_user:
+            if not DATABASE_USER:
                 self._add_error("DATABASE_USER is required when using PostgreSQL")
                 return False
 
-            if not db_password:
+            if not DATABASE_PASSWORD:
                 self._add_error("DATABASE_PASSWORD is required when using PostgreSQL")
                 return False
 
-            if not db_name:
+            if not DATABASE_NAME:
                 self._add_error("DATABASE_NAME is required when using PostgreSQL")
                 return False
 
-            if not DEVELOPMENT_MODE and db_host in ("localhost", "127.0.0.1"):
+            if not DEVELOPMENT_MODE and DATABASE_HOST in ("localhost", "127.0.0.1"):
                 self._add_warning(
                     "DATABASE_HOST is localhost - ensure this is intentional for production"
                 )
@@ -128,29 +133,22 @@ class EnvironmentValidator:
         Validate production-specific settings.
         """
         if DEVELOPMENT_MODE:
-            hot_reload = decouple_config("ENABLE_PLUGIN_HOT_RELOAD", default="").lower()
-            if hot_reload in ("true", "1", "yes"):
+            if ENABLE_PLUGIN_HOT_RELOAD:
                 self._add_warning("ENABLE_PLUGIN_HOT_RELOAD is enabled - disable in production")
 
-            auto_discovery = decouple_config("PLUGIN_AUTO_DISCOVERY", default="").lower()
-            if auto_discovery in ("true", "1", "yes"):
+            if PLUGIN_AUTO_DISCOVERY:
                 self._add_warning("PLUGIN_AUTO_DISCOVERY is enabled - disable in production")
 
-            dep_resolution = decouple_config(
-                "ENABLE_PLUGIN_DEPENDENCY_RESOLUTION", default=""
-            ).lower()
-            if dep_resolution in ("true", "1", "yes"):
+            if ENABLE_PLUGIN_DEPENDENCY_RESOLUTION:
                 self._add_warning(
                     "ENABLE_PLUGIN_DEPENDENCY_RESOLUTION is enabled - disable in production for stability"
                 )
         else:
-            hot_reload = decouple_config("ENABLE_PLUGIN_HOT_RELOAD", default="false").lower()
-            if hot_reload in ("true", "1", "yes"):
+            if ENABLE_PLUGIN_HOT_RELOAD:
                 self._add_error("ENABLE_PLUGIN_HOT_RELOAD must be disabled in production")
                 return False
 
-            auto_discovery = decouple_config("PLUGIN_AUTO_DISCOVERY", default="false").lower()
-            if auto_discovery in ("true", "1", "yes"):
+            if PLUGIN_AUTO_DISCOVERY:
                 self._add_error("PLUGIN_AUTO_DISCOVERY must be disabled in production")
                 return False
 
