@@ -148,10 +148,6 @@ def create_module_scaffold(module_name: str, output_dir: str, force: bool = Fals
         with open(os.path.join(module_code_dir, "routes.py"), "w") as f:
             f.write(routes_content)
 
-        dev_context_content = load_template("dev_context.py.template", replacements)
-        with open(os.path.join(module_code_dir, "dev_context.py"), "w") as f:
-            f.write(dev_context_content)
-
         context_factory_content = load_template("context_factory.py.template", replacements)
         with open(os.path.join(module_code_dir, "context_factory.py"), "w") as f:
             f.write(context_factory_content)

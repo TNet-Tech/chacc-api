@@ -168,7 +168,6 @@ For a complete example of a working module, see the authentication module in [ch
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DEVELOPMENT_MODE` | `False` | Enable development mode |
 | `ENABLE_PLUGIN_HOT_RELOAD` | `True` | Auto-reload modules on file changes |
 | `PLUGIN_AUTO_DISCOVERY` | `True` | Automatically discover plugins |
 | `ENABLE_PLUGIN_DEPENDENCY_RESOLUTION` | `True` | Auto-resolve module dependencies |
@@ -186,7 +185,7 @@ For a complete example of a working module, see the authentication module in [ch
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `REDIS_ENABLED` | `True` | Enable Redis |
+| `REDIS_ENABLED` | `False` | Enable Redis |
 | `REDIS_HOST` | `localhost` | Redis host |
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_DB` | `0` | Redis database number |

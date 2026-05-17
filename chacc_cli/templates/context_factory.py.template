@@ -3,6 +3,7 @@ Context factory for providing BackboneContext in different environments.
 """
 import os
 from typing import Optional
+from fastapi import HTTPException
 from chacc_api import BackboneContext
 
 
@@ -36,7 +37,6 @@ class ContextFactory:
             BackboneContext instance
         """
         if context is not None:
-            # Running within the backbone
             return context
 
         raise RuntimeError(
@@ -62,3 +62,31 @@ class ContextFactory:
 def get_context(context: Optional[BackboneContext] = None) -> BackboneContext:
     """Get context using the factory."""
     return ContextFactory.get_context(context)
+
+
+async def get_db():
+    """
+    Get database session from module context.
+
+    This can be used in FastAPI Depends: db = Depends(get_db)
+    """
+    context: BackboneContext = get_module_context()
+    if context is None:
+        raise HTTPException(status_code=500, detail="Module not initialized")
+    return await anext(context.get_db())
+
+
+async def get_redis_client():
+    """Get Redis client from module context."""
+    context = get_module_context()
+    if context is None:
+        return None
+
+    redis_service = context.get_service("redis")
+    if redis_service is None:
+        return None
+
+    try:
+        return await redis_service.get_client()
+    except Exception:
+        return None

@@ -28,22 +28,6 @@ This module is automatically loaded by the ChaCC backbone when it's placed in th
 
 ## Development
 
-### Running in Standalone Mode
-
-To run this module independently for development:
-
-```bash
-cd plugins/{{module_name}}
-python -m {{module_name}}_src.dev_context
-```
-
-Or use the run_tests.py script:
-
-```bash
-cd plugins/{{module_name}}
-python run_tests.py
-```
-
 ### Testing
 
 Run tests using pytest:
