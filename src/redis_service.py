@@ -48,14 +48,11 @@ class RedisService:
         Get Redis client. Returns None if Redis is disabled or connection failed.
         """
         if not self._enabled:
-            chacc_logger.info("Redis is disabled. Service not available.")
             return None
 
-        # Return existing connection if already established
         if self._redis is not None and self._connection_error is None:
             return self._redis
 
-        # Attempt connection if not already attempted or previous attempt failed
         if not self._connection_attempted or self._connection_error is not None:
             self._connection_attempted = True
             try:
@@ -65,15 +62,15 @@ class RedisService:
                     db=self._db,
                     password=self._password,
                     decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_timeout=5,
+                    socket_connect_timeout=2,
+                    socket_timeout=2,
                 )
                 await self._redis.ping()
                 self._connection_error = None
                 chacc_logger.info(f"Redis connected: {self._host}:{self._port}/{self._db}")
             except Exception as e:
                 self._connection_error = str(e)
-                chacc_logger.error(f"Failed to connect to Redis: {e}")
+                chacc_logger.debug(f"Redis not available: {e}")
                 if self._redis:
                     await self._redis.close()
                     self._redis = None

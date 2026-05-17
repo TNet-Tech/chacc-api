@@ -38,7 +38,7 @@ ENABLE_PLUGIN_DEPENDENCY_RESOLUTION = config(
 PLUGIN_AUTO_DISCOVERY = config("PLUGIN_AUTO_DISCOVERY", default=False, cast=bool)
 
 # Redis Configuration
-REDIS_ENABLED = config("REDIS_ENABLED", default=True, cast=bool)
+REDIS_ENABLED = config("REDIS_ENABLED", default=False, cast=bool)
 REDIS_HOST = config("REDIS_HOST", default="localhost", cast=str)
 REDIS_PORT = config("REDIS_PORT", default=6379, cast=int)
 REDIS_DB = config("REDIS_DB", default=0, cast=int)

@@ -50,7 +50,7 @@ class BackboneContext:
         self._logger.info(f"Service '{name}' has been registered.")
         self._services[name] = service
 
-    def get_service(self, name: str) -> Callable[..., Any]:
+    def get_service(self, name: str) -> Optional[Callable[..., Any]]:
         """
         Retrieves a registered service by its name.
         """
