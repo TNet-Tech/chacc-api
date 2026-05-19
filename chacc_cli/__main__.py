@@ -113,8 +113,11 @@ def main():
 
     elif args.command == "run":
         if args.run_subcommand == "server":
-            cli_dir = os.path.dirname(os.path.dirname(__file__))
-            package_dir = os.path.join(cli_dir, "chacc_api", "server")
+            from pathlib import Path
+
+            cli_dir = Path(__file__).resolve().parent.parent
+            project_root = cli_dir
+            package_dir = cli_dir / "chacc_api" / "server"
 
             env = os.environ.copy()
 
@@ -123,16 +126,23 @@ def main():
                 if args.debug:
                     env["CHACC_DEBUG"] = "true"
 
-                config_path = os.path.join(package_dir, "uvicorn_config.py")
-                cmd = [sys.executable, config_path]
+                env["PYTHONPATH"] = str(
+                    str(project_root)
+                    + os.pathsep
+                    + env.get("PYTHONPATH", "")
+                )
+
+                config_path = package_dir / "uvicorn_config.py"
+                cmd = [sys.executable, str(config_path)]
             else:
-                server_path = os.path.join(package_dir, "start_server.py")
-                cmd = [sys.executable, server_path]
+                server_path = package_dir / "start_server.py"
+                cmd = [sys.executable, str(server_path)]
 
             try:
                 subprocess.run(cmd, env=env, cwd=os.getcwd())
             except KeyboardInterrupt:
                 print("\nShutting down ChaCC server...")
+            sys.exit(0)
         elif args.run_subcommand is None:
             print("Error: 'run' command requires a subcommand. Use 'chacc run server'.")
             run_parser.print_help()
