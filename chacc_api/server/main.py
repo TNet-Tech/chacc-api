@@ -75,7 +75,7 @@ async def onStartupLifespan(app: FastAPI):
     if not modules_table_exists:
         await run_migration()
 
-        print("First migration completed. Loading modules...")
+        chacc_logger.info("First migration completed. Loading modules...")
 
     if DEVELOPMENT_MODE:
         chacc_logger.info("=" * 65)
@@ -91,8 +91,6 @@ async def onStartupLifespan(app: FastAPI):
         chacc_logger.info(f"PRODUCTION MODE: Loading modules from {MODULES_LOADED_DIR} directory")
         chacc_logger.info("=" * 65)
         await load_modules(app, backbone_context)
-
-    await run_migration()
 
     yield
 
@@ -118,19 +116,13 @@ app = FastAPI(
     lifespan=onStartupLifespan,
 )
 
-allowed_origins = (
-    [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
-)
+allowed_origins = [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=CORS_ALLOW_CREDENTIALS,
-    allow_methods=(
-        [CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]
-    ),
-    allow_headers=(
-        [CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]
-    ),
+    allow_methods=([CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]),
+    allow_headers=([CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]),
 )
 
 app.state.limiter = limiter

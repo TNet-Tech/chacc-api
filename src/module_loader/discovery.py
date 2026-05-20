@@ -23,7 +23,9 @@ def _enclosing(prefix: str, rel_dir: str) -> str:
     return ".".join([prefix] + parts) if parts else prefix
 
 
-def discover_and_import_models(module_directory_path: str, module_import_prefix: str, logger: logging.Logger):
+def discover_and_import_models(
+    module_directory_path: str, module_import_prefix: str, logger: logging.Logger
+):
     """
     Recursively scans a directory for Python files and imports them.
 
@@ -63,13 +65,13 @@ def discover_and_import_models(module_directory_path: str, module_import_prefix:
 
         for depth in sorted(depth_groups):
             regular = [(fp, rp, f) for fp, rp, f in depth_groups[depth] if f != "__init__.py"]
-            inits  = [(fp, rp, f) for fp, rp, f in depth_groups[depth] if f == "__init__.py"]
+            inits = [(fp, rp, f) for fp, rp, f in depth_groups[depth] if f == "__init__.py"]
 
             # ── 3a. Regular .py files first ────────────────────────────────────
             for file_path, rel_path, file in sorted(regular, key=lambda t: t[2]):
                 rel_dir = os.path.dirname(rel_path)
                 module_dotted = _dotted_name(module_import_prefix, rel_dir, file[:-3])
-                enclosing       = _enclosing(module_import_prefix, rel_dir)
+                enclosing = _enclosing(module_import_prefix, rel_dir)
 
                 if module_dotted in sys.modules:
                     logger.debug(f"Skipping already imported: {module_dotted}")
@@ -89,14 +91,18 @@ def discover_and_import_models(module_directory_path: str, module_import_prefix:
 
                 except ImportError as e:
                     if "already defined for this MetaData instance" in str(e):
-                        logger.warning(f"Skipping {file_path}: its table is already registered in metadata.")
+                        logger.warning(
+                            f"Skipping {file_path}: its table is already registered in metadata."
+                        )
                         continue
                     logger.warning(f"Relative import issue in {file_path}: {e}")
                 except SyntaxError as e:
                     logger.warning(f"SyntaxError in {file_path} (line {e.lineno}): {e.msg}")
                 except Exception as e:
                     if "already defined for this MetaData instance" in str(e):
-                        logger.warning(f"Skipping {file_path}: its table is already registered in metadata.")
+                        logger.warning(
+                            f"Skipping {file_path}: its table is already registered in metadata."
+                        )
                         continue
                     logger.error(f"Failed to import models from {file_path}: {e}", exc_info=True)
 
@@ -122,14 +128,18 @@ def discover_and_import_models(module_directory_path: str, module_import_prefix:
 
                 except ImportError as e:
                     if "already defined for this MetaData instance" in str(e):
-                        logger.warning(f"Skipping {file_path}: its table is already registered in metadata.")
+                        logger.warning(
+                            f"Skipping {file_path}: its table is already registered in metadata."
+                        )
                         continue
                     logger.warning(f"Relative import issue in {file_path}: {e}")
                 except SyntaxError as e:
                     logger.warning(f"SyntaxError in {file_path} (line {e.lineno}): {e.msg}")
                 except Exception as e:
                     if "already defined for this MetaData instance" in str(e):
-                        logger.warning(f"Skipping {file_path}: its table is already registered in metadata.")
+                        logger.warning(
+                            f"Skipping {file_path}: its table is already registered in metadata."
+                        )
                         continue
                     logger.error(f"Failed to import models from {file_path}: {e}", exc_info=True)
 

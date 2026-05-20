@@ -121,17 +121,12 @@ def main():
 
             env = os.environ.copy()
 
+            env["PYTHONPATH"] = str(str(project_root) + os.pathsep + env.get("PYTHONPATH", ""))
+
             if args.dev:
                 env["CHACC_DEV_MODE"] = "true"
                 if args.debug:
                     env["CHACC_DEBUG"] = "true"
-
-                env["PYTHONPATH"] = str(
-                    str(project_root)
-                    + os.pathsep
-                    + env.get("PYTHONPATH", "")
-                )
-
                 config_path = package_dir / "uvicorn_config.py"
                 cmd = [sys.executable, str(config_path)]
             else:

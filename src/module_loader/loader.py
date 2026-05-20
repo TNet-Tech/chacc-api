@@ -17,8 +17,6 @@ from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, DEPENDENCY_
 from src.database import get_db, ModuleRecord
 from src.core_services import BackboneContext
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
-
 from .discovery import discover_and_import_models
 from .archive import (
     extract_module_names_from_chacc_files,
@@ -27,6 +25,8 @@ from .archive import (
     unzip_modules,
 )
 from .metadata import sync_database_with_filesystem
+
+chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
 
 async def load_single_module(
@@ -37,6 +37,7 @@ async def load_single_module(
     backbone_context: BackboneContext,
     base_path_prefix: str = None,
     tags: list = None,
+    discover_only: bool = False,
 ) -> bool:
     """Load a single module into the application.
 
@@ -52,6 +53,7 @@ async def load_single_module(
         backbone_context: BackboneContext for the module.
         base_path_prefix: Override the base path prefix.
         tags: Override the FastAPI route tags.
+        discover_only: If True, only discover models without running setup.
 
     Returns:
         True if the module loaded successfully, False otherwise.
@@ -70,6 +72,12 @@ async def load_single_module(
         chacc_logger.info(f"Auto-discovered models for module '{module_name}'")
     except Exception as e:
         chacc_logger.warning(f"Failed to discover models for module {module_name}: {e}")
+
+    if discover_only:
+        chacc_logger.info(
+            f"Model discovery complete for module '{module_name}' (discover_only mode)"
+        )
+        return True
 
     entry_point_str = module_metadata.get("entry_point")
     if not entry_point_str or ":" not in entry_point_str:
@@ -234,6 +242,38 @@ async def load_modules(
 
         updated_records = query.all()
 
+        # First pass: discover models only (no setup execution)
+        for record in updated_records:
+            try:
+                module_path = os.path.join(MODULES_LOADED_DIR, record.name)
+
+                meta_file_path = os.path.join(module_path, "module_meta.json")
+                if os.path.exists(meta_file_path):
+                    with open(meta_file_path, "r") as f:
+                        metadata = json.load(f)
+                else:
+                    metadata = record.meta_data if record.meta_data else {}
+
+                await load_single_module(
+                    module_name=record.name,
+                    module_path=module_path,
+                    module_metadata=metadata,
+                    app=app,
+                    backbone_context=backbone_context,
+                    base_path_prefix=record.base_path_prefix,
+                    discover_only=True,
+                )
+            except Exception as e:
+                chacc_logger.error(
+                    f"Error discovering models for module '{record.name}': {e}", exc_info=True
+                )
+
+        # Run migration after all models are discovered
+        from src.migration.runner import run_migration
+
+        await run_migration()
+
+        # Second pass: load modules with setup execution
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)
