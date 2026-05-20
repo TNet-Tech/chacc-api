@@ -10,12 +10,12 @@ from typing import Dict
 
 from src.constants import MODULES_LOADED_DIR
 
-chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(log_level=__import__("src.logger", fromlist=["LogLevels"]).LogLevels.INFO)
+chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(
+    log_level=__import__("src.logger", fromlist=["LogLevels"]).LogLevels.INFO
+)
 
 
-def sync_database_with_filesystem(
-    chacc_to_module_name: Dict[str, str], existing_records: Dict, db
-):
+def sync_database_with_filesystem(chacc_to_module_name: Dict[str, str], existing_records: Dict, db):
     """Remove DB records for modules that are no longer on disk.
 
     Args:

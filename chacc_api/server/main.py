@@ -116,19 +116,13 @@ app = FastAPI(
     lifespan=onStartupLifespan,
 )
 
-allowed_origins = (
-    [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
-)
+allowed_origins = [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=CORS_ALLOW_CREDENTIALS,
-    allow_methods=(
-        [CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]
-    ),
-    allow_headers=(
-        [CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]
-    ),
+    allow_methods=([CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]),
+    allow_headers=([CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]),
 )
 
 app.state.limiter = limiter

@@ -120,12 +120,8 @@ def main():
             package_dir = cli_dir / "chacc_api" / "server"
 
             env = os.environ.copy()
-            
-            env["PYTHONPATH"] = str(
-                    str(project_root)
-                    + os.pathsep
-                    + env.get("PYTHONPATH", "")
-                )
+
+            env["PYTHONPATH"] = str(str(project_root) + os.pathsep + env.get("PYTHONPATH", ""))
 
             if args.dev:
                 env["CHACC_DEV_MODE"] = "true"

@@ -193,8 +193,8 @@ async def load_dev_modules(
     """
     if not DEVELOPMENT_MODE and not PLUGIN_AUTO_DISCOVERY:
         return
-    
-    source = PLUGINS_DIR.split('/')[-1] if "/" in PLUGINS_DIR else PLUGINS_DIR
+
+    source = PLUGINS_DIR.split("/")[-1] if "/" in PLUGINS_DIR else PLUGINS_DIR
 
     chacc_logger.info(f"Discovering plugins from {source} directory...")
 

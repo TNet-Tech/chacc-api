@@ -17,8 +17,6 @@ from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, DEPENDENCY_
 from src.database import get_db, ModuleRecord
 from src.core_services import BackboneContext
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
-
 from .discovery import discover_and_import_models
 from .archive import (
     extract_module_names_from_chacc_files,
@@ -27,6 +25,8 @@ from .archive import (
     unzip_modules,
 )
 from .metadata import sync_database_with_filesystem
+
+chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
 
 async def load_single_module(
@@ -74,7 +74,9 @@ async def load_single_module(
         chacc_logger.warning(f"Failed to discover models for module {module_name}: {e}")
 
     if discover_only:
-        chacc_logger.info(f"Model discovery complete for module '{module_name}' (discover_only mode)")
+        chacc_logger.info(
+            f"Model discovery complete for module '{module_name}' (discover_only mode)"
+        )
         return True
 
     entry_point_str = module_metadata.get("entry_point")
@@ -262,10 +264,13 @@ async def load_modules(
                     discover_only=True,
                 )
             except Exception as e:
-                chacc_logger.error(f"Error discovering models for module '{record.name}': {e}", exc_info=True)
+                chacc_logger.error(
+                    f"Error discovering models for module '{record.name}': {e}", exc_info=True
+                )
 
         # Run migration after all models are discovered
         from src.migration.runner import run_migration
+
         await run_migration()
 
         # Second pass: load modules with setup execution

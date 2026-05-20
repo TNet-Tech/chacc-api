@@ -8,7 +8,9 @@ import os
 import sys
 import importlib.util
 
-chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(log_level=__import__("src.logger", fromlist=["LogLevels"]).LogLevels.INFO)
+chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(
+    log_level=__import__("src.logger", fromlist=["LogLevels"]).LogLevels.INFO
+)
 
 
 async def run_module_tests(module_name: str, module_path: str, test_entry_point: str):
