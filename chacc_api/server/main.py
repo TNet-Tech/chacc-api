@@ -75,7 +75,7 @@ async def onStartupLifespan(app: FastAPI):
     if not modules_table_exists:
         await run_migration()
 
-        print("First migration completed. Loading modules...")
+        chacc_logger.info("First migration completed. Loading modules...")
 
     if DEVELOPMENT_MODE:
         chacc_logger.info("=" * 65)
@@ -91,8 +91,6 @@ async def onStartupLifespan(app: FastAPI):
         chacc_logger.info(f"PRODUCTION MODE: Loading modules from {MODULES_LOADED_DIR} directory")
         chacc_logger.info("=" * 65)
         await load_modules(app, backbone_context)
-
-    await run_migration()
 
     yield
 

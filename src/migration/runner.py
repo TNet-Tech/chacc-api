@@ -216,6 +216,11 @@ class MigrationRunner:
         """
         metadata = model_metadata or metadata_obj
 
+        # Log discovered tables for debugging
+        chacc_logger.info(f"Migration: discovered {len(metadata.tables)} tables in metadata")
+        for table_name in sorted(metadata.tables.keys()):
+            chacc_logger.debug(f"  - {table_name}")
+
         preview_result = await self.preview(metadata)
 
         if self.mode == MigrationMode.PREVIEW:
