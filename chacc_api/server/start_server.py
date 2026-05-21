@@ -28,9 +28,7 @@ def start_server(_logger=None):
     elif _log is None:
         _log = configure_logging(log_level=LogLevels.INFO)
 
-    _log.info(
-        f"Starting server at {host}:{port} (reload=False, debug={debug})"
-    )
+    _log.info(f"Starting server at {host}:{port} (reload=False, debug={debug})")
 
     try:
         import uvicorn

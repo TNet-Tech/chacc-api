@@ -26,7 +26,6 @@ from src.redis_service import RedisService
 __all__ = [
     # Core
     "BackboneContext",
-    
     # Database
     "ChaCCBaseModel",
     "register_model",
@@ -35,7 +34,6 @@ __all__ = [
     "initialize_database_models",
     "metadata_obj",
     "engine",
-    
     # Services
     "RedisService",
 ]

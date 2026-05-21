@@ -11,13 +11,9 @@ from sqlalchemy import (
     func,
     MetaData,
 )
-from sqlalchemy import UniqueConstraint, PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
-from alembic.runtime.migration import MigrationContext
-from alembic.operations import Operations
-from alembic.autogenerate import compare_metadata
 
 from .constants import DATABASE_ENGINE, DATABASE_URL
 from .logger import LogLevels, configure_logging

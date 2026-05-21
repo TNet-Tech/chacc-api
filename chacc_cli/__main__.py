@@ -100,7 +100,7 @@ def main():
         action="store_true",
         help="Run in development mode with auto-reload (uses uvicorn_config.py).",
     )
-    
+
     run_server_parser.add_argument(
         "--host",
         type=str,
