@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from src.logger import configure_logging, LogLevels
 from src.constants import (
+    BASE_DIR,
     PLUGINS_DIR,
     MODULES_LOADED_DIR,
     DEPENDENCY_CACHE_DIR,
@@ -152,15 +153,14 @@ async def resolve_dependencies(modules: Dict[str, Dict], enabled_modules: List[s
 
     requirements = {}
 
-    backbone_req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
+    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
     if os.path.exists(backbone_req_path):
         with open(backbone_req_path, "r") as f:
             requirements["backbone"] = f.read()
 
     for module_name, module_info in modules.items():
         module_path = module_info["module_path"]
-        module_root = os.path.dirname(module_path)
-        req_path = os.path.join(module_root, "requirements.txt")
+        req_path = os.path.join(module_path, "requirements.txt")
         if os.path.exists(req_path):
             with open(req_path, "r") as f:
                 requirements[module_name] = f.read()

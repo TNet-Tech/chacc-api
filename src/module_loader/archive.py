@@ -10,7 +10,7 @@ import zipfile
 import json
 import shutil
 from typing import Dict, List, Tuple
-from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, BASE_DIR
 from src.database import ModuleRecord
 
 chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(
@@ -89,7 +89,7 @@ async def collect_module_requirements() -> Dict[str, str]:
     """
     modules_requirements = {}
 
-    backbone_req_path = os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt")
+    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
     if os.path.exists(backbone_req_path):
         with open(backbone_req_path, "r") as f:
             modules_requirements["backbone"] = f.read()
