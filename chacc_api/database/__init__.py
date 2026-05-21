@@ -8,7 +8,6 @@ from ...src.database import (
     get_db,
     ModuleRecord,
     initialize_database_models,
-    run_automatic_migration,
     metadata_obj,
     engine,
 )
@@ -19,7 +18,6 @@ __all__ = [
     "get_db",
     "ModuleRecord",
     "initialize_database_models",
-    "run_automatic_migration",
     "metadata_obj",
     "engine",
 ]

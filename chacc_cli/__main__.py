@@ -100,6 +100,16 @@ def main():
         action="store_true",
         help="Run in development mode with auto-reload (uses uvicorn_config.py).",
     )
+    
+    run_server_parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to bind the server to. Defaults to '0.0.0.0'.",
+    )
+    run_server_parser.add_argument(
+        "--port", type=int, default=8085, help="Port to bind the server to. Defaults to 8085."
+    )
     run_server_parser.add_argument("--debug", action="store_true", help="Enable debug mode.")
 
     args = parser.parse_args()
@@ -122,6 +132,9 @@ def main():
             env = os.environ.copy()
 
             env["PYTHONPATH"] = str(str(project_root) + os.pathsep + env.get("PYTHONPATH", ""))
+
+            env["CHACC_HOST"] = args.host
+            env["CHACC_PORT"] = str(args.port)
 
             if args.dev:
                 env["CHACC_DEV_MODE"] = "true"

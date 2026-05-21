@@ -1,12 +1,10 @@
 import os
 from decouple import config
 
-# Always use current working directory for all paths
-# This ensures the package works correctly whether installed regularly or editable
 BASE_DIR = os.getcwd()
 
 MODULES_INSTALLED_DIR = os.path.join(
-    BASE_DIR, config("MODULES_INSTALLED_DIR", default="modules_installed", cast=str)
+    BASE_DIR, config("MODULES_INSTALLED_DIR", default=".modules_installed", cast=str)
 )
 MODULES_LOADED_DIR = os.path.join(
     BASE_DIR, config("MODULES_LOADED_DIR", default=".modules_loaded", cast=str)
@@ -21,7 +19,6 @@ DEPENDENCY_CACHE_DIR = os.path.join(
 BACKBONE_REQUIREMENTS_LOCK_FILE = f"{DEPENDENCY_CACHE_DIR}/compiled_requirements.lock"
 DEPENDENCY_CACHE_FILE = f"{DEPENDENCY_CACHE_DIR}/dependency_cache.json"
 
-# Migration settings
 MIGRATION_MODE = config("MIGRATION_MODE", default="auto", cast=str)
 MIGRATION_BACKUP = config("MIGRATION_BACKUP", default=False, cast=bool)
 MIGRATION_BACKUP_DIR = os.path.join(
@@ -29,7 +26,6 @@ MIGRATION_BACKUP_DIR = os.path.join(
 )
 MIGRATION_AUTO_DROP = config("MIGRATION_AUTO_DROP", default=False, cast=bool)
 
-# Development mode detection (set via --dev flag in CLI)
 DEVELOPMENT_MODE = config("CHACC_DEV_MODE", default=False, cast=bool)
 ENABLE_PLUGIN_HOT_RELOAD = config("ENABLE_PLUGIN_HOT_RELOAD", default=False, cast=bool)
 ENABLE_PLUGIN_DEPENDENCY_RESOLUTION = config(
@@ -37,7 +33,6 @@ ENABLE_PLUGIN_DEPENDENCY_RESOLUTION = config(
 )
 PLUGIN_AUTO_DISCOVERY = config("PLUGIN_AUTO_DISCOVERY", default=False, cast=bool)
 
-# Redis Configuration
 REDIS_ENABLED = config("REDIS_ENABLED", default=False, cast=bool)
 REDIS_HOST = config("REDIS_HOST", default="localhost", cast=str)
 REDIS_PORT = config("REDIS_PORT", default=6379, cast=int)
@@ -51,13 +46,11 @@ DATABASE_PASSWORD = config("DATABASE_PASSWORD", default="")
 DATABASE_HOST = config("DATABASE_HOST", default="localhost")
 DATABASE_PORT = config("DATABASE_PORT", default="5432", cast=int)
 
-# CORS Configuration
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="*", cast=str)
 CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default=True, cast=bool)
 CORS_ALLOW_METHODS = config("CORS_ALLOW_METHODS", default="*", cast=str)
 CORS_ALLOW_HEADERS = config("CORS_ALLOW_HEADERS", default="*", cast=str)
 
-# Secret Key for JWT
 SECRET_KEY = config("SECRET_KEY", default="", cast=str)
 
 if "postgres" in DATABASE_ENGINE.lower():

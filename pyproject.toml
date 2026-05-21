@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chacc-api"
-version = "1.0.0b3"
+version = "1.0.0b4"
 description = "ChaCC API - A modular FastAPI application for extensible APIs"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -64,8 +64,15 @@ Issues = "https://github.com/jonas1015/chacc-api/issues"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-where = [".", "src"]
-include = ["chacc_cli", "chacc_api", "chacc_api.*", "src", "src.migration", "src.services"]
+where = ["."]
+include = [
+    "chacc_cli*",
+    "chacc_api*",
+    "src",
+    "src.migration",
+    "src.module_loader",
+    "src.services",
+]
 exclude = ["tests*", "deployment*"]
 
 [tool.setuptools.package-data]

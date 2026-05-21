@@ -136,6 +136,7 @@ plugins
 modules_installed
 .modules_loaded
 .modules_upload
+backups/
 *.chacc
 
 # IDE

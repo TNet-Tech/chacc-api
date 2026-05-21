@@ -40,7 +40,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - chacc_modules:/app/modules_installed
+      - chacc_modules:/app/.modules_installed
       - chacc_plugins:/app/plugins
     restart: unless-stopped
     healthcheck:

@@ -29,7 +29,7 @@ from src.chacc_dependency_manager import (
     resolve_chacc_dependencies as re_resolve_dependencies,
 )
 
-from src.module_loader import (
+from src.module_loader.archive import (
     get_chacc_filepath,
 )
 
