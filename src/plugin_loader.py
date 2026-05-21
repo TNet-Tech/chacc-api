@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from src.logger import configure_logging, LogLevels
 from src.constants import (
+    BASE_DIR,
     PLUGINS_DIR,
     MODULES_LOADED_DIR,
     DEPENDENCY_CACHE_DIR,
@@ -21,7 +22,7 @@ from src.constants import (
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
     PLUGIN_AUTO_DISCOVERY,
 )
-from src.module_loader import load_single_module
+from src.module_loader.loader import load_single_module
 
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
@@ -152,15 +153,14 @@ async def resolve_dependencies(modules: Dict[str, Dict], enabled_modules: List[s
 
     requirements = {}
 
-    backbone_req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
+    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
     if os.path.exists(backbone_req_path):
         with open(backbone_req_path, "r") as f:
             requirements["backbone"] = f.read()
 
     for module_name, module_info in modules.items():
         module_path = module_info["module_path"]
-        module_root = os.path.dirname(module_path)
-        req_path = os.path.join(module_root, "requirements.txt")
+        req_path = os.path.join(module_path, "requirements.txt")
         if os.path.exists(req_path):
             with open(req_path, "r") as f:
                 requirements[module_name] = f.read()
@@ -243,6 +243,34 @@ async def _load_modules(
         if not _module_state.should_reload(module_name, module_info["module_path"]):
             chacc_logger.debug(f"Module '{module_name}' unchanged, skipping")
             continue
+
+        chacc_logger.info(f"Discovering models for module: {module_name} from {source}")
+
+        try:
+            from src.module_loader.loader import discover_and_import_models
+
+            discover_and_import_models(
+                module_info["module_path"],
+                module_name,
+                backbone_context.logger,
+            )
+            chacc_logger.info(f"Model discovery complete for module '{module_name}'")
+        except Exception as e:
+            chacc_logger.error(
+                f"Error discovering models for module '{module_name}': {e}", exc_info=True
+            )
+
+    try:
+        from src.migration.runner import run_migration
+
+        chacc_logger.info("Running database migrations after model discovery...")
+        await run_migration()
+        chacc_logger.info("Database migrations completed.")
+    except Exception as e:
+        chacc_logger.error(f"Migration failed during module loading: {e}", exc_info=True)
+
+    for module_name in modules_to_load:
+        module_info = modules[module_name]
 
         chacc_logger.info(f"Loading module: {module_name} from {source}")
 

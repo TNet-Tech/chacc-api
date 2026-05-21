@@ -6,6 +6,7 @@ standalone dependency manager package with ChaCC's database and module system.
 """
 
 import os
+from src.constants import BASE_DIR
 from typing import Optional
 from chacc import DependencyManager
 
@@ -55,7 +56,7 @@ class ChaCCDependencyManager:
                         req_content = f.read()
                     modules_requirements[module_name] = req_content
 
-            backbone_req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
+            backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
             if os.path.exists(backbone_req_path):
                 with open(backbone_req_path, "r") as f:
                     backbone_reqs = f.read()

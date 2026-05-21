@@ -242,7 +242,6 @@ async def load_modules(
 
         updated_records = query.all()
 
-        # First pass: discover models only (no setup execution)
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)
@@ -268,12 +267,10 @@ async def load_modules(
                     f"Error discovering models for module '{record.name}': {e}", exc_info=True
                 )
 
-        # Run migration after all models are discovered
         from src.migration.runner import run_migration
 
         await run_migration()
 
-        # Second pass: load modules with setup execution
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)

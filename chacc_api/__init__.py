@@ -9,22 +9,18 @@ Usage:
     from chacc_api.database import register_model, get_db
 """
 
-# Re-export core services
 from src.core_services import BackboneContext
 
-# Re-export database models and utilities
 from src.database import (
     ChaCCBaseModel,
     register_model,
     get_db,
     ModuleRecord,
     initialize_database_models,
-    run_automatic_migration,
     metadata_obj,
     engine,
 )
 
-# Re-export services
 from src.redis_service import RedisService
 
 __all__ = [
@@ -36,7 +32,6 @@ __all__ = [
     "get_db",
     "ModuleRecord",
     "initialize_database_models",
-    "run_automatic_migration",
     "metadata_obj",
     "engine",
     # Services

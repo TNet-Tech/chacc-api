@@ -22,14 +22,14 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from src.logger import LogLevels, configure_logging
-from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, BASE_DIR
 from src.database import get_db, ModuleRecord
 from src.chacc_dependency_manager import (
     invalidate_module_cache,
     resolve_chacc_dependencies as re_resolve_dependencies,
 )
 
-from src.module_loader import (
+from src.module_loader.archive import (
     get_chacc_filepath,
 )
 
@@ -145,7 +145,7 @@ async def install_chacc_module_endpoint(
             except KeyError:
                 pass
 
-        backbone_req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
+        backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
         if os.path.exists(backbone_req_path):
             with open(backbone_req_path, "r") as f:
                 module_requirements["backbone"] = f.read()
@@ -279,7 +279,7 @@ async def enable_module_endpoint(
             detail=f"Could not read module requirements: {e}",
         )
 
-    backbone_req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
+    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
     if os.path.exists(backbone_req_path):
         with open(backbone_req_path, "r") as f:
             module_requirements["backbone"] = f.read()

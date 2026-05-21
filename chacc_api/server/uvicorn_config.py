@@ -1,5 +1,6 @@
 """
-Uvicorn configuration to prevent auto-reloader loops.
+Uvicorn configuration for development mode with auto-reload.
+Reads host, port, and debug settings from environment variables.
 """
 
 import os
@@ -17,7 +18,6 @@ from chacc_api.utils import (
 )
 
 
-# Get relative paths for uvicorn (it needs paths relative to cwd)
 def get_relative_path(abs_path):
     """Convert absolute path to relative path from base directory."""
     if abs_path.startswith(BASE_DIR):
@@ -25,10 +25,14 @@ def get_relative_path(abs_path):
     return abs_path
 
 
+# Read host and port from environment variables (set by CLI --host / --port)
+_host = os.environ.get("CHACC_HOST", "0.0.0.0")
+_port = int(os.environ.get("CHACC_PORT", "8085"))
+
 config = {
     "app": "main:app",
-    "host": "0.0.0.0",
-    "port": 8080,
+    "host": _host,
+    "port": _port,
     "reload": True,
     "reload_dirs": ["src", "main.py"],
     "reload_excludes": [
