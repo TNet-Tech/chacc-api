@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chacc-api"
-version = "1.0.0b4"
+version = "1.0.0b3.1"
 description = "ChaCC API - A modular FastAPI application for extensible APIs"
 readme = "README.md"
 license = {text = "Apache-2.0"}
