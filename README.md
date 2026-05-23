@@ -21,6 +21,10 @@ ChaCC API provides a flexible foundation for building modular applications. Inst
 - Developing reusable API modules that can be shared across projects
 - Rapid prototyping with pluggable functionality
 
+## Who Uses ChaCC?
+
+- **Jonas** — uses ChaCC API for development of modules such as [Official Authentication Module](https://github.com/Jonas1015/chacc-authentication).
+
 ## Installation
 
 ### Prerequisites
