@@ -2,6 +2,13 @@
 
 ChaCC API is a modular FastAPI application platform that allows you to build extensible APIs through pluggable modules.
 
+
+[![PyPI](https://img.shields.io/pypi/v/chacc-api?label=PyPI&color=blue)](https://pypi.org/project/chacc-api/)
+[![Python](https://img.shields.io/pypi/pyversions/chacc-api?label=Python&color=blue)](https://pypi.org/project/chacc-api/)
+[![License](https://img.shields.io/pypi/l/chacc-api?label=License&color=blue)](https://github.com/jonas1015/chacc-api/blob/main/LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/jonas1015/chacc-api/ci.yml?label=CI)](https://github.com/Jonas1015/chacc-api/actions/workflows/ci.yml)
+---
+
 ## What is ChaCC API
 
 ChaCC API provides a flexible foundation for building modular applications. Instead of building a monolithic API, you can create separate modules that can be installed, enabled, disabled, and updated independently.
@@ -234,3 +241,11 @@ chacc deploy my_module.chacc
 ## License
 
 Licensed under the Apache License, Version 2.0. See LICENSE file for details.
+
+### Contributors
+
+This project exists thanks to all the people who contribute.  
+Right now, that’s me, [Jonas](https://github.com/jonas1015), but I’d love your help.
+
+Want to be on this list? Check out [CONTRIBUTING.md](CONTRIBUTING.md) and open a PR.  
+Even a typo fix counts!
