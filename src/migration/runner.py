@@ -371,7 +371,12 @@ class MigrationRunner:
             else:
                 table_name = details[1]
                 column = details[2]
-            op.add_column(table_name, column)
+            
+            if self._is_postgres:
+                op.add_column(table_name, column)
+            else:
+                with op.batch_alter_table(table_name) as batch_op:
+                    batch_op.add_column(column)
 
         elif op_type == "drop_column":
             table_name, column = details[1], details[2]
@@ -392,7 +397,11 @@ class MigrationRunner:
                 details[3],
                 details[4],
             )
-            op.alter_column(table_name, column.name, type_=new_type)
+            if self._is_postgres:
+                op.alter_column(table_name, column.name, type_=new_type)
+            else:
+                with op.batch_alter_table(table_name) as batch_op:
+                    batch_op.alter_column(column.name, type_=new_type)
 
         elif op_type == "modify_nullable":
             table_name, column, _, new_nullable = (
@@ -401,7 +410,11 @@ class MigrationRunner:
                 details[3],
                 details[4],
             )
-            op.alter_column(table_name, column.name, nullable=new_nullable)
+            if self._is_postgres:
+                op.alter_column(table_name, column.name, nullable=new_nullable)
+            else:
+                with op.batch_alter_table(table_name) as batch_op:
+                    batch_op.alter_column(column.name, nullable=new_nullable)
 
         elif op_type == "modify_default":
             table_name, column, _, new_default = (
@@ -410,13 +423,23 @@ class MigrationRunner:
                 details[3],
                 details[4],
             )
-            op.alter_column(table_name, column.name, server_default=new_default)
+            if self._is_postgres:
+                op.alter_column(table_name, column.name, server_default=new_default)
+            else:
+                with op.batch_alter_table(table_name) as batch_op:
+                    batch_op.alter_column(column.name, server_default=new_default)
 
         elif op_type == "add_index":
             index = details[1]
-            op.create_index(
-                index.name, index.table.name, [c.name for c in index.columns], unique=index.unique
-            )
+            if self._is_postgres:
+                op.create_index(
+                    index.name, index.table.name, [c.name for c in index.columns], unique=index.unique
+                )
+            else:
+                with op.batch_alter_table(index.table.name) as batch_op:
+                    batch_op.create_index(
+                        index.name, [c.name for c in index.columns], unique=index.unique
+                    )
 
         elif op_type == "drop_index":
             index = details[1]
@@ -428,13 +451,24 @@ class MigrationRunner:
 
         elif op_type == "create_foreign_key":
             fk = details[1]
-            op.create_foreign_key(
-                fk.name,
-                fk.table.name,
-                fk.referred_table.name,
-                [c.name for c in fk.columns],
-                [rc.name for rc in fk.referred_columns],
-            )
+            if self._is_postgres:
+                op.create_foreign_key(
+                    fk.name,
+                    fk.table.name,
+                    fk.referred_table.name,
+                    [c.name for c in fk.columns],
+                    [rc.name for rc in fk.referred_columns],
+                )
+            else:
+                with op.batch_alter_table(fk.table.name) as batch_op:
+                    batch_op.create_foreign_key(
+                        fk.name,
+                        fk.table.name,
+                        fk.referred_table.name,
+                        [c.name for c in fk.columns],
+                        [rc.name for rc in fk.referred_columns],
+                    )
+                
 
         elif op_type == "drop_foreign_key":
             fk = details[1]
@@ -476,7 +510,7 @@ class MigrationRunner:
                                 columns,
                             )
                     except Exception as e:
-                        chacc_logger.warning(f"Failed to create constraint {constraint.name}: {e}")
+                         chacc_logger.warning(f"Failed to create constraint {constraint.name}: {e}")
 
         else:
             chacc_logger.warning(f"Unknown operation type: {op_type}")
