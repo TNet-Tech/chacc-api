@@ -11,9 +11,10 @@ from sqlalchemy import (
     func,
     MetaData,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.types import TypeDecorator
 
 from .constants import DATABASE_ENGINE, DATABASE_URL
 from .logger import LogLevels, configure_logging
@@ -21,7 +22,35 @@ from .core_services import BackboneContext
 
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
-if DATABASE_ENGINE == "postgresql":
+
+class GUID(TypeDecorator):
+    """
+    Cross-database compatible UUID type.
+
+    Uses native UUID on PostgreSQL, String(36) on SQLite and other databases.
+    This prevents Alembic from detecting false-positive type changes.
+    """
+
+    impl = String(36)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if "postgres" in dialect.name:
+            return dialect.type_descriptor(PGUUID(as_uuid=True))
+        return dialect.type_descriptor(String(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return uuid.UUID(value)
+
+
+if "postgres" in DATABASE_ENGINE:
     engine = create_engine(DATABASE_URL)
 else:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -59,7 +88,7 @@ class ChaCCBaseModel:
         return cls.__name__.lower() + "s"
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False, index=True)
+    uuid = Column(GUID, default=uuid.uuid4, unique=True, nullable=False, index=True)
 
 
 @register_model

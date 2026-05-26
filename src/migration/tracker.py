@@ -142,20 +142,21 @@ class MigrationTracker:
         if checksum is None:
             checksum = hashlib.sha256(f"{version}:{description}".encode()).hexdigest()[:64]
 
-        rollback_value = "TRUE" if self._is_postgres else 0
+        rollback_int = 1 if rollback_available else 0
 
         with self.engine.connect() as conn:
             conn.execute(
                 text(f"""
                 INSERT INTO {TRACKER_TABLE}
                 (version_num, description, checksum, applied_at, rollback_available)
-                VALUES (:version, :desc, :checksum, :applied_at, {rollback_value})
+                VALUES (:version, :desc, :checksum, :applied_at, :rollback)
             """),
                 {
                     "version": version,
                     "desc": description,
                     "checksum": checksum,
                     "applied_at": datetime.now(timezone.utc).isoformat(),
+                    "rollback": rollback_int,
                 },
             )
             conn.commit()
