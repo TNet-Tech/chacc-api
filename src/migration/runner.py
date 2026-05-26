@@ -19,7 +19,7 @@ from alembic.autogenerate import compare_metadata
 from src.logger import configure_logging, LogLevels
 from src.constants import DEVELOPMENT_MODE, MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
 from src.database import engine as default_engine, metadata_obj
-from src.migration.tracker import create_tracker
+from src.migration.tracker import create_tracker, TRACKER_TABLE
 from src.migration.backup import create_backup
 
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
@@ -66,11 +66,13 @@ class MigrationRunner:
 
         self._pending_migrations: List[Dict] = []
         self._applied_migrations: List[Dict] = []
+    _version_counter = 0
 
     def _generate_version(self, operation_type: str, table_name: str) -> str:
         """Generate a version string for a migration."""
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        return f"{timestamp}_{operation_type}_{table_name}"
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        MigrationRunner._version_counter += 1
+        return f"{timestamp}_{MigrationRunner._version_counter}_{operation_type}_{table_name}"
 
     def _generate_checksum(self, diff: List[tuple]) -> str:
         """Generate checksum for a set of operations."""
@@ -136,18 +138,29 @@ class MigrationRunner:
         for op in diff:
             op_type = op[0]
 
-            if op_type == "add_table":
-                table_name = op[1].name
-            elif op_type in ("drop_table",):
-                table_name = op[1].name
-            elif op_type in (
-                "add_column",
-                "drop_column",
-                "modify_type",
-                "modify_nullable",
-                "modify_default",
-            ):
-                table_name = op[1] or (op[2].table.name if hasattr(op[2], "table") else "unknown")
+            if op_type == "modify_type":
+                table_name = op[2] if op[2] else "unknown"
+            elif op_type in ("drop_table", "remove_table"):
+                table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
+            elif op_type == "add_table":
+                table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
+            elif op_type in ("add_column", "drop_column"):
+                if op[1] is None and len(op) > 2 and hasattr(op[2], "table"):
+                    table_name = op[2].table.name
+                elif op[1] is None:
+                    table_name = "unknown"
+                else:
+                    table_name = op[1]
+            elif op_type in ("add_index", "add_constraint"):
+                if len(op) > 1 and hasattr(op[1], "table"):
+                    table_name = op[1].table.name
+                else:
+                    table_name = "unknown"
+            elif op_type == "create_foreign_key":
+                if len(op) > 1 and hasattr(op[1], "table"):
+                    table_name = op[1].table.name
+                else:
+                    table_name = "unknown"
             else:
                 table_name = "unknown"
 
@@ -199,7 +212,19 @@ class MigrationRunner:
                 table.bind = self.engine
 
             diff = compare_metadata(context, metadata)
-            return list(diff) if diff else []
+            
+            filtered_diff = []
+            for op in (diff or []):
+                op_type = op[0]
+                if op_type in ("drop_table", "remove_table"):
+                    if hasattr(op[1], "name") and op[1].name == TRACKER_TABLE:
+                        chacc_logger.debug(
+                            f"Skipping {op_type} for {TRACKER_TABLE} (not in model metadata)"
+                        )
+                        continue
+                filtered_diff.append(op)
+            
+            return filtered_diff
 
     async def run(self, model_metadata: MetaData = None) -> Dict[str, Any]:
         """
@@ -216,7 +241,6 @@ class MigrationRunner:
         """
         metadata = model_metadata or metadata_obj
 
-        # Log discovered tables for debugging
         chacc_logger.info(f"Migration: discovered {len(metadata.tables)} tables in metadata")
         for table_name in sorted(metadata.tables.keys()):
             chacc_logger.debug(f"  - {table_name}")
@@ -278,7 +302,6 @@ class MigrationRunner:
     async def _apply_migrations(self, migrations: List[Dict], metadata: MetaData):
         """Apply migrations to database."""
 
-        # Get already applied migrations to skip duplicates
         applied_versions = self.tracker.get_applied()
 
         with self.engine.begin() as conn:
@@ -289,12 +312,10 @@ class MigrationRunner:
                 for migration in migrations:
                     version = migration["version"]
 
-                    # Skip if already applied
                     if version in applied_versions:
                         chacc_logger.info(f"Skipping already applied migration: {version}")
                         continue
 
-                    # Skip unknown migrations (phantom migrations with unknown table names)
                     if "_unknown" in version:
                         chacc_logger.warning(
                             f"Skipping phantom migration with unknown table: {version}"
@@ -308,19 +329,20 @@ class MigrationRunner:
 
                     description = self._generate_migration_description([details])
 
-                    rollback_value = "FALSE" if self._is_postgres else 0
+                    rollback_int = 0
 
                     conn.execute(
-                        text(f"""
+                        text("""
                         INSERT INTO chacc_migration_log 
                         (version_num, description, checksum, applied_at, rollback_available)
-                        VALUES (:version, :desc, :checksum, :applied_at, {rollback_value})
+                        VALUES (:version, :desc, :checksum, :applied_at, :rollback)
                     """),
                         {
                             "version": version,
                             "desc": description[:200],
                             "checksum": self._generate_checksum([details]),
                             "applied_at": datetime.now(timezone.utc).isoformat(),
+                            "rollback": rollback_int,
                         },
                     )
 
@@ -409,6 +431,19 @@ class MigrationRunner:
         elif op_type == "drop_foreign_key":
             fk = details[1]
             op.drop_constraint(fk.name, fk.table.name, type_="foreignkey")
+
+        elif op_type == "add_constraint":
+            if len(details) > 1:
+                constraint = details[1]
+                if hasattr(constraint, "table") and hasattr(constraint, "name"):
+                    try:
+                        op.create_constraint(
+                            constraint.name,
+                            constraint.table.name,
+                            type_=getattr(constraint, "type", "unique"),
+                        )
+                    except Exception as e:
+                        chacc_logger.warning(f"Failed to create constraint {constraint.name}: {e}")
 
         else:
             chacc_logger.warning(f"Unknown operation type: {op_type}")
