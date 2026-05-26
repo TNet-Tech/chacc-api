@@ -1,3 +1,6 @@
+import os
+from importlib.resources import files
+
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +24,23 @@ from src.env_validator import validate_environment, ValidationError
 
 from src.migration.runner import run_migration
 from src.redis_service import RedisService
+
+
+def copy_sample_env():
+    """Copy .env.sample from package to current working directory if .env.sample doesn't exist."""
+    if not os.path.exists(".env.sample"):
+        try:
+            sample_env = files("chacc_api").joinpath(".env.sample")
+            if sample_env.is_file():
+                env_content = sample_env.read_text(encoding="utf-8")
+                with open(".env.sample", "w", encoding="utf-8") as f:
+                    f.write(env_content)
+                chacc_logger.info("Created .env.sample from .env.sample for reference")
+            else:
+                chacc_logger.warning("Could not find .env.sample in package")
+        except Exception as e:
+            chacc_logger.warning(f"Failed to copy .env.sample: {e}")
+
 
 chacc_logger = configure_logging(log_level=LogLevels.DEBUG)
 
@@ -93,6 +113,9 @@ async def onStartupLifespan(app: FastAPI):
         chacc_logger.info(f"PRODUCTION MODE: Loading modules from {MODULES_LOADED_DIR} directory")
         chacc_logger.info("=" * 65)
         await load_modules(app, backbone_context)
+
+    # Copy .env.sample to .env if .env doesn't exist
+    copy_sample_env()
 
     yield
 
