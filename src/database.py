@@ -26,10 +26,11 @@ chacc_logger = configure_logging(log_level=LogLevels.INFO)
 class GUID(TypeDecorator):
     """
     Cross-database compatible UUID type.
-    
+
     Uses native UUID on PostgreSQL, String(36) on SQLite and other databases.
     This prevents Alembic from detecting false-positive type changes.
     """
+
     impl = String(36)
     cache_ok = True
 
@@ -47,6 +48,7 @@ class GUID(TypeDecorator):
         if value is None:
             return None
         return uuid.UUID(value)
+
 
 if "postgres" in DATABASE_ENGINE:
     engine = create_engine(DATABASE_URL)

@@ -66,6 +66,7 @@ class MigrationRunner:
 
         self._pending_migrations: List[Dict] = []
         self._applied_migrations: List[Dict] = []
+
     _version_counter = 0
 
     def _generate_version(self, operation_type: str, table_name: str) -> str:
@@ -212,9 +213,9 @@ class MigrationRunner:
                 table.bind = self.engine
 
             diff = compare_metadata(context, metadata)
-            
+
             filtered_diff = []
-            for op in (diff or []):
+            for op in diff or []:
                 op_type = op[0]
                 if op_type in ("drop_table", "remove_table"):
                     if hasattr(op[1], "name") and op[1].name == TRACKER_TABLE:
@@ -223,7 +224,7 @@ class MigrationRunner:
                         )
                         continue
                 filtered_diff.append(op)
-            
+
             return filtered_diff
 
     async def run(self, model_metadata: MetaData = None) -> Dict[str, Any]:
@@ -371,7 +372,7 @@ class MigrationRunner:
             else:
                 table_name = details[1]
                 column = details[2]
-            
+
             if self._is_postgres:
                 op.add_column(table_name, column)
             else:
@@ -433,7 +434,10 @@ class MigrationRunner:
             index = details[1]
             if self._is_postgres:
                 op.create_index(
-                    index.name, index.table.name, [c.name for c in index.columns], unique=index.unique
+                    index.name,
+                    index.table.name,
+                    [c.name for c in index.columns],
+                    unique=index.unique,
                 )
             else:
                 with op.batch_alter_table(index.table.name) as batch_op:
@@ -468,7 +472,6 @@ class MigrationRunner:
                         [c.name for c in fk.columns],
                         [rc.name for rc in fk.referred_columns],
                     )
-                
 
         elif op_type == "drop_foreign_key":
             fk = details[1]
@@ -510,7 +513,7 @@ class MigrationRunner:
                                 columns,
                             )
                     except Exception as e:
-                         chacc_logger.warning(f"Failed to create constraint {constraint.name}: {e}")
+                        chacc_logger.warning(f"Failed to create constraint {constraint.name}: {e}")
 
         else:
             chacc_logger.warning(f"Unknown operation type: {op_type}")
