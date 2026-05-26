@@ -122,7 +122,7 @@ async def load_single_module(
 
     setup_func = getattr(module, func_name, None)
     if not setup_func or not callable(setup_func):
-        chacc_logger.warning(
+        chacc_logger.error(
             f"Plugin '{module_name}': Entry point function '{func_name}' not found or not callable after import."
         )
         return False
@@ -156,7 +156,7 @@ async def load_single_module(
 
         return True
     else:
-        chacc_logger.warning(f"Plugin '{module_name}': Setup function did not return an APIRouter.")
+        chacc_logger.error(f"Plugin '{module_name}': Setup function did not return an APIRouter.")
         return False
 
 

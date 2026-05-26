@@ -287,7 +287,7 @@ async def _load_modules(
                 _module_state.track(module_name, module_info["module_path"])
                 chacc_logger.info(f"Module '{module_name}' loaded successfully")
             else:
-                chacc_logger.warning(f"Module '{module_name}' failed to load")
+                chacc_logger.error(f"Module '{module_name}' failed to load")
 
         except Exception as e:
             chacc_logger.error(f"Error loading module '{module_name}': {e}", exc_info=True)

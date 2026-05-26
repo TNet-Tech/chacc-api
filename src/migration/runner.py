@@ -375,7 +375,11 @@ class MigrationRunner:
 
         elif op_type == "drop_column":
             table_name, column = details[1], details[2]
-            op.drop_column(table_name, column.name)
+            if self._is_postgres:
+                op.drop_column(table_name, column.name)
+            else:
+                with op.batch_alter_table(table_name) as batch_op:
+                    batch_op.drop_column(column.name)
 
         elif op_type == "drop_table":
             table = details[1]
@@ -416,7 +420,11 @@ class MigrationRunner:
 
         elif op_type == "drop_index":
             index = details[1]
-            op.drop_index(index.name, index.table.name)
+            if self._is_postgres:
+                op.drop_index(index.name, index.table.name)
+            else:
+                with op.batch_alter_table(index.table.name) as batch_op:
+                    batch_op.drop_index(index.name)
 
         elif op_type == "create_foreign_key":
             fk = details[1]
@@ -430,18 +438,43 @@ class MigrationRunner:
 
         elif op_type == "drop_foreign_key":
             fk = details[1]
-            op.drop_constraint(fk.name, fk.table.name, type_="foreignkey")
+            if self._is_postgres:
+                op.drop_constraint(fk.name, fk.table.name, type_="foreignkey")
+            else:
+                with op.batch_alter_table(fk.table.name) as batch_op:
+                    batch_op.drop_constraint(fk.name, type_="foreignkey")
+
+        elif op_type == "drop_constraint":
+            constraint = details[1]
+            if self._is_postgres:
+                op.drop_constraint(constraint.name, constraint.table.name, type_="unique")
+            else:
+                with op.batch_alter_table(constraint.table.name) as batch_op:
+                    batch_op.drop_constraint(constraint.name, type_="unique")
 
         elif op_type == "add_constraint":
             if len(details) > 1:
                 constraint = details[1]
                 if hasattr(constraint, "table") and hasattr(constraint, "name"):
                     try:
-                        op.create_constraint(
-                            constraint.name,
-                            constraint.table.name,
-                            type_=getattr(constraint, "type", "unique"),
-                        )
+                        if hasattr(constraint, "columns"):
+                            columns = [c.name for c in constraint.columns]
+                        elif hasattr(constraint, "c"):
+                            columns = [c.name for c in constraint.c]
+                        else:
+                            columns = []
+                        if not self._is_postgres:
+                            with op.batch_alter_table(constraint.table.name) as batch_op:
+                                batch_op.create_unique_constraint(
+                                    constraint.name,
+                                    columns,
+                                )
+                        else:
+                            op.create_unique_constraint(
+                                constraint.name,
+                                constraint.table.name,
+                                columns,
+                            )
                     except Exception as e:
                         chacc_logger.warning(f"Failed to create constraint {constraint.name}: {e}")
 
