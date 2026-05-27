@@ -330,7 +330,7 @@ class MigrationRunner:
 
                     description = self._generate_migration_description([details])
 
-                    rollback_int = 0
+                    rollback_value = False if "postgres" in DATABASE_ENGINE.lower() else 0
 
                     conn.execute(
                         text("""
@@ -343,7 +343,7 @@ class MigrationRunner:
                             "desc": description[:200],
                             "checksum": self._generate_checksum([details]),
                             "applied_at": datetime.now(timezone.utc).isoformat(),
-                            "rollback": rollback_int,
+                            "rollback": rollback_value,
                         },
                     )
 

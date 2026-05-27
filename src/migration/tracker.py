@@ -142,7 +142,7 @@ class MigrationTracker:
         if checksum is None:
             checksum = hashlib.sha256(f"{version}:{description}".encode()).hexdigest()[:64]
 
-        rollback_int = 1 if rollback_available else 0
+        rollback_value = rollback_available if self._is_postgres else (1 if rollback_available else 0)
 
         with self.engine.connect() as conn:
             conn.execute(
@@ -156,7 +156,7 @@ class MigrationTracker:
                     "desc": description,
                     "checksum": checksum,
                     "applied_at": datetime.now(timezone.utc).isoformat(),
-                    "rollback": rollback_int,
+                    "rollback": rollback_value,
                 },
             )
             conn.commit()
