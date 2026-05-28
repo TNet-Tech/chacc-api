@@ -77,8 +77,14 @@ class DatabaseBackup:
                 await self._backup_postgresql(backup_path)
 
             if db_info["is_sqlite"]:
+                import asyncio
+                loop = asyncio.get_event_loop()
                 latest_path = os.path.join(self.backup_dir, "chacc_backup_latest.db")
-                shutil.copy2(backup_path, latest_path)
+
+                def copy_latest():
+                    shutil.copy2(backup_path, latest_path)
+
+                await loop.run_in_executor(None, copy_latest)
 
             chacc_logger.info(f"Backup created successfully: {backup_path}")
             return backup_path
@@ -89,17 +95,25 @@ class DatabaseBackup:
 
     async def _backup_sqlite(self, backup_path: str):
         """Create SQLite backup."""
-
+        import asyncio
+        loop = asyncio.get_event_loop()
         db_path = SQLITE_DB_PATH
 
-        if os.path.exists(db_path):
-            shutil.copy2(db_path, backup_path)
+        def sync_copy():
+            if os.path.exists(db_path):
+                shutil.copy2(db_path, backup_path)
+            return os.path.exists(db_path)
+
+        exists = await loop.run_in_executor(None, sync_copy)
+        if exists:
             chacc_logger.info(f"SQLite database copied to {backup_path}")
         else:
             raise RuntimeError(f"Database file not found: {db_path}")
 
     async def _backup_postgresql(self, backup_path: str):
         """Create PostgreSQL backup using pg_dump."""
+        import asyncio
+        loop = asyncio.get_event_loop()
         db_user = DATABASE_USER
         db_password = DATABASE_PASSWORD
         db_host = DATABASE_HOST
@@ -124,7 +138,10 @@ class DatabaseBackup:
             db_name,
         ]
 
-        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        def run_pg_dump():
+            return subprocess.run(cmd, env=env, capture_output=True, text=True)
+
+        result = await loop.run_in_executor(None, run_pg_dump)
 
         if result.returncode != 0:
             raise RuntimeError(f"pg_dump failed: {result.stderr}")
@@ -166,13 +183,21 @@ class DatabaseBackup:
 
     async def _restore_sqlite(self, backup_path: str):
         """Restore SQLite database."""
+        import asyncio
+        loop = asyncio.get_event_loop()
         db_path = SQLITE_DB_PATH
 
-        shutil.copy2(backup_path, db_path)
+        def sync_copy():
+            shutil.copy2(backup_path, db_path)
+
+        await loop.run_in_executor(None, sync_copy)
         chacc_logger.info(f"SQLite database restored from {backup_path}")
+
 
     async def _restore_postgresql(self, backup_path: str):
         """Restore PostgreSQL database using psql."""
+        import asyncio
+        loop = asyncio.get_event_loop()
         db_user = DATABASE_USER
         db_password = DATABASE_PASSWORD
         db_host = DATABASE_HOST
@@ -182,61 +207,72 @@ class DatabaseBackup:
         env = os.environ.copy()
         env["PGPASSWORD"] = db_password
 
-        cmd = [
-            "psql",
-            "-h",
-            db_host,
-            "-p",
-            str(db_port),
-            "-U",
-            db_user,
-            "-d",
-            "postgres",
-            "-c",
-            f"DROP DATABASE IF EXISTS {db_name}",
-        ]
+        def run_psql_restore():
+            cmd = [
+                "psql",
+                "-h",
+                db_host,
+                "-p",
+                str(db_port),
+                "-U",
+                db_user,
+                "-d",
+                "postgres",
+                "-c",
+                f"DROP DATABASE IF EXISTS {db_name}",
+            ]
 
-        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
 
-        if result.returncode != 0:
+            if result.returncode != 0:
+                return ("drop_warning", result.stderr.strip())
+
+            cmd = [
+                "psql",
+                "-h",
+                db_host,
+                "-p",
+                str(db_port),
+                "-U",
+                db_user,
+                "-d",
+                "postgres",
+                "-c",
+                f"CREATE DATABASE {db_name}",
+            ]
+
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            if result.returncode != 0:
+                return ("create_error", result.stderr)
+
+            cmd = [
+                "psql",
+                "-h",
+                db_host,
+                "-p",
+                str(db_port),
+                "-U",
+                db_user,
+                "-d",
+                db_name,
+                "-f",
+                backup_path,
+            ]
+
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            if result.returncode != 0:
+                return ("restore_error", result.stderr)
+
+            return ("success", None)
+
+        result, error = await loop.run_in_executor(None, run_psql_restore)
+
+        if result == "drop_warning":
             chacc_logger.warning(
-                f"Database drop warning (may be expected if DB did not exist): {result.stderr.strip()}"
+                f"Database drop warning (may be expected if DB did not exist): {error}"
             )
-
-        cmd = [
-            "psql",
-            "-h",
-            db_host,
-            "-p",
-            str(db_port),
-            "-U",
-            db_user,
-            "-d",
-            "postgres",
-            "-c",
-            f"CREATE DATABASE {db_name}",
-        ]
-
-        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
-
-        cmd = [
-            "psql",
-            "-h",
-            db_host,
-            "-p",
-            str(db_port),
-            "-U",
-            db_user,
-            "-d",
-            db_name,
-            "-f",
-            backup_path,
-        ]
-
-        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            raise RuntimeError(f"psql restore failed: {result.stderr}")
+        elif result == "restore_error":
+            raise RuntimeError(f"psql restore failed: {error}")
 
         chacc_logger.info(f"PostgreSQL database restored from {backup_path}")
 
