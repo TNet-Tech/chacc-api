@@ -1,4 +1,32 @@
 {
   "projectName": "chacc-api",
-  "projectOwner": "jonas1015"
+  "projectOwner": "jonas1015",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "jonas1015",
+      "name": "Jonas G Mwambimbi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/54990284?v=4",
+      "profile": "https://github.com/jonas1015",
+      "contributions": [
+        "code",
+        "ideas",
+        "infra",
+        "test",
+        "design",
+        "docs"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "linkToUsage": true,
+  "skipCi": true,
+  "commitConvention": "angular",
+  "commitType": "docs"
 }
