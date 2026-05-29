@@ -78,6 +78,7 @@ class DatabaseBackup:
 
             if db_info["is_sqlite"]:
                 import asyncio
+
                 loop = asyncio.get_event_loop()
                 latest_path = os.path.join(self.backup_dir, "chacc_backup_latest.db")
 
@@ -96,6 +97,7 @@ class DatabaseBackup:
     async def _backup_sqlite(self, backup_path: str):
         """Create SQLite backup."""
         import asyncio
+
         loop = asyncio.get_event_loop()
         db_path = SQLITE_DB_PATH
 
@@ -113,6 +115,7 @@ class DatabaseBackup:
     async def _backup_postgresql(self, backup_path: str):
         """Create PostgreSQL backup using pg_dump."""
         import asyncio
+
         loop = asyncio.get_event_loop()
         db_user = DATABASE_USER
         db_password = DATABASE_PASSWORD
@@ -184,6 +187,7 @@ class DatabaseBackup:
     async def _restore_sqlite(self, backup_path: str):
         """Restore SQLite database."""
         import asyncio
+
         loop = asyncio.get_event_loop()
         db_path = SQLITE_DB_PATH
 
@@ -193,10 +197,10 @@ class DatabaseBackup:
         await loop.run_in_executor(None, sync_copy)
         chacc_logger.info(f"SQLite database restored from {backup_path}")
 
-
     async def _restore_postgresql(self, backup_path: str):
         """Restore PostgreSQL database using psql."""
         import asyncio
+
         loop = asyncio.get_event_loop()
         db_user = DATABASE_USER
         db_password = DATABASE_PASSWORD

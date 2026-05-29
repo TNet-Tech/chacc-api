@@ -132,15 +132,9 @@ def initialize_database_models(backbone_context):
         if enable_audit_fields and enable_audit_fields():
             if not hasattr(model_cls, "created_by_id"):
                 backbone_context.logger.info(f"Adding audit user fields to {model_cls.__name__}.")
-                created_by_col = Column(
-                    Integer, ForeignKey("users.id"), nullable=True, index=True
-                )
-                updated_by_col = Column(
-                    Integer, ForeignKey("users.id"), nullable=True, index=True
-                )
-                deleted_by_col = Column(
-                    Integer, ForeignKey("users.id"), nullable=True, index=True
-                )
+                created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+                updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+                deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
                 setattr(model_cls, "created_by_id", created_by_col)
                 setattr(model_cls, "updated_by_id", updated_by_col)
                 setattr(model_cls, "deleted_by_id", deleted_by_col)

@@ -20,7 +20,7 @@ from alembic.autogenerate import compare_metadata
 
 
 from src.logger import configure_logging, LogLevels
-from src.constants import DEVELOPMENT_MODE, MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
+from src.constants import MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
 from src.database import engine as default_engine, metadata_obj
 from src.migration.tracker import create_tracker, TRACKER_TABLE
 from src.migration.backup import create_backup
@@ -350,7 +350,8 @@ class MigrationRunner:
         applied_versions = await loop.run_in_executor(None, self.tracker.get_applied)
 
         pending = [
-            m for m in migrations
+            m
+            for m in migrations
             if m["version"] not in applied_versions and "_unknown" not in m["version"]
         ]
 
@@ -382,16 +383,13 @@ class MigrationRunner:
 
             try:
                 await asyncio.wait_for(
-                    self._apply_single_migration(version, details, op_type),
-                    timeout=30.0
+                    self._apply_single_migration(version, details, op_type), timeout=30.0
                 )
             except asyncio.TimeoutError:
                 chacc_logger.error(f"Migration timed out: {version}")
                 raise
 
-        chacc_logger.info(
-            f"Migration completed: {len(self._applied_migrations)} changes applied"
-        )
+        chacc_logger.info(f"Migration completed: {len(self._applied_migrations)} changes applied")
 
     async def _apply_single_migration(self, version: str, details: tuple, op_type: str):
         """Apply a single migration in its own transaction."""
@@ -430,7 +428,9 @@ class MigrationRunner:
                     },
                 )
 
-                self._applied_migrations.append({"version": version, "operation": op_type, "details": details})
+                self._applied_migrations.append(
+                    {"version": version, "operation": op_type, "details": details}
+                )
                 chacc_logger.info(f"Applied migration: {version} - {description}")
 
         await loop.run_in_executor(None, sync_apply)

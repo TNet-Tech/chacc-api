@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
 from src.health import health_router
-from src.database import ModuleRecord, initialize_database_models, get_db
+from src.database import initialize_database_models, get_db
 from src.logger import configure_logging, LogLevels
 from src.core_services import BackboneContext
 from src.constants import (
