@@ -244,8 +244,12 @@ Licensed under the Apache License, Version 2.0. See LICENSE file for details.
 
 ### Contributors
 
-This project exists thanks to all the people who contribute.  
-Right now, that’s me, [Jonas](https://github.com/jonas1015), but I’d love your help.
+This project exists thanks to all the people who contribute. Special thanks to these special people:
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+
 
 Want to be on this list? Check out [CONTRIBUTING.md](CONTRIBUTING.md) and open a PR.  
 Even a typo fix counts!
