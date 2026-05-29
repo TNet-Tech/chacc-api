@@ -248,6 +248,9 @@ Licensed under the Apache License, Version 2.0. See LICENSE file for details.
 
 This project exists thanks to all the people who contribute. Special thanks to these special people:
 
+- [Jonas](https://github.com/jonas1015)
+- [Bashiri Idd](https://github.com/bashirii)
+
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
