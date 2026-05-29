@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
 from src.health import health_router
-from src.database import ModuleRecord, initialize_database_models, get_db
+from src.database import initialize_database_models, get_db
 from src.logger import configure_logging, LogLevels
 from src.core_services import BackboneContext
 from src.constants import (
@@ -82,22 +82,10 @@ async def onStartupLifespan(app: FastAPI):
 
     initialize_database_models(backbone_context)
 
-    session = await anext(get_db())
-    modules_table_exists = False
-    try:
-        session.query(ModuleRecord).first()
-        modules_table_exists = True
-        chacc_logger.info("Modules table exists. Proceeding with regular startup sequence.")
-    except Exception:
-        chacc_logger.warning("Modules table does not exist. Running initial migration.")
-        pass
+    # Always run migration to handle schema changes
+    await run_migration()
 
-    if not modules_table_exists:
-        await run_migration()
-
-        chacc_logger.info("First migration completed. Loading modules...")
-    else:
-        chacc_logger.info("Loading modules...")
+    chacc_logger.info("Loading modules...")
 
     if DEVELOPMENT_MODE:
         chacc_logger.info("=" * 65)

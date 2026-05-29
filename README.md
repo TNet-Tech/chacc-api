@@ -7,6 +7,8 @@ ChaCC API is a modular FastAPI application platform that allows you to build ext
 [![Python](https://img.shields.io/pypi/pyversions/chacc-api?label=Python&color=blue)](https://pypi.org/project/chacc-api/)
 [![License](https://img.shields.io/pypi/l/chacc-api?label=License&color=blue)](https://github.com/jonas1015/chacc-api/blob/main/LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/jonas1015/chacc-api/ci.yml?label=CI)](https://github.com/Jonas1015/chacc-api/actions/workflows/ci.yml)
+[![Star on Github](https://img.shields.io/github/stars/jonas1015/chacc-api.svg?style=flat-square)](https://github.com/jonas1015/chacc-api)
+
 ---
 
 ## What is ChaCC API
@@ -244,8 +246,18 @@ Licensed under the Apache License, Version 2.0. See LICENSE file for details.
 
 ### Contributors
 
-This project exists thanks to all the people who contribute.  
-Right now, that’s me, [Jonas](https://github.com/jonas1015), but I’d love your help.
+This project exists thanks to all the people who contribute. Special thanks to these special people:
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+
 
 Want to be on this list? Check out [CONTRIBUTING.md](CONTRIBUTING.md) and open a PR.  
 Even a typo fix counts!

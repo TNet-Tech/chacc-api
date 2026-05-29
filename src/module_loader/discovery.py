@@ -67,7 +67,6 @@ def discover_and_import_models(
             regular = [(fp, rp, f) for fp, rp, f in depth_groups[depth] if f != "__init__.py"]
             inits = [(fp, rp, f) for fp, rp, f in depth_groups[depth] if f == "__init__.py"]
 
-            # ── 3a. Regular .py files first ────────────────────────────────────
             for file_path, rel_path, file in sorted(regular, key=lambda t: t[2]):
                 rel_dir = os.path.dirname(rel_path)
                 module_dotted = _dotted_name(module_import_prefix, rel_dir, file[:-3])
@@ -95,9 +94,9 @@ def discover_and_import_models(
                             f"Skipping {file_path}: its table is already registered in metadata."
                         )
                         continue
-                    logger.warning(f"Relative import issue in {file_path}: {e}")
+                    logger.error(f"Relative import issue in {file_path}: {e}")
                 except SyntaxError as e:
-                    logger.warning(f"SyntaxError in {file_path} (line {e.lineno}): {e.msg}")
+                    logger.error(f"SyntaxError in {file_path} (line {e.lineno}): {e.msg}")
                 except Exception as e:
                     if "already defined for this MetaData instance" in str(e):
                         logger.warning(

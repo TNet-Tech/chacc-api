@@ -1,4 +1,6 @@
 import uuid
+from datetime import datetime
+
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -6,10 +8,11 @@ from sqlalchemy import (
     Integer,
     String,
     create_engine,
-    ForeignKey,
     DateTime,
+    ForeignKey,
     func,
     MetaData,
+    event,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import sessionmaker
@@ -18,7 +21,6 @@ from sqlalchemy.types import TypeDecorator
 
 from .constants import DATABASE_ENGINE, DATABASE_URL
 from .logger import LogLevels, configure_logging
-from .core_services import BackboneContext
 
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
@@ -59,8 +61,8 @@ else:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-_model_registry = set()
-_core_system_models = set()
+_model_registry: set = set()
+_core_system_models: set = set()
 
 convention = {
     "ix": "ix_%(column_0_label)s",
@@ -81,8 +83,7 @@ def register_model(cls):
 @as_declarative(metadata=metadata_obj)
 class ChaCCBaseModel:
     """
-    ChaccBaseModel:
-
+    ChaCCBaseModel: Base model for ChaCC API with UUID, timestamps and soft delete support.
     """
 
     @declared_attr
@@ -91,6 +92,18 @@ class ChaCCBaseModel:
 
     id = Column(Integer, primary_key=True)
     uuid = Column(GUID, default=uuid.uuid4, unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+    deleted_at = Column(DateTime, nullable=True, index=True)
+
+
+@event.listens_for(ChaCCBaseModel, "before_insert", propagate=True)
+@event.listens_for(ChaCCBaseModel, "before_update", propagate=True)
+def _set_timestamps(mapper, connection, target):
+    now = datetime.now()
+    if not getattr(target, "created_at", None):
+        target.created_at = now
+    target.updated_at = now
 
 
 @register_model
@@ -109,7 +122,7 @@ class ModuleRecord(ChaCCBaseModel):
 _core_system_models.add(ModuleRecord)
 
 
-def initialize_database_models(backbone_context: BackboneContext):
+def initialize_database_models(backbone_context):
     enable_audit_fields = backbone_context.get_service("enable_audit_fields")
 
     for model_cls in _model_registry:
@@ -117,35 +130,18 @@ def initialize_database_models(backbone_context: BackboneContext):
             continue
 
         if enable_audit_fields and enable_audit_fields():
-            if not hasattr(model_cls, "created_at"):
-                backbone_context.logger.info(f"Adding audit fields to {model_cls.__name__}.")
-                created_at_col = Column(DateTime, server_default=func.now(), nullable=False)
-                updated_at_col = Column(
-                    DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
-                )
-                deleted_at_col = Column(DateTime, nullable=True, index=True)
-                created_by_id_col = Column(
-                    Integer, ForeignKey("users.id"), nullable=True, index=True
-                )
-                updated_by_id_col = Column(
-                    Integer, ForeignKey("users.id"), nullable=True, index=True
-                )
-                deleted_by_id_col = Column(
-                    Integer, ForeignKey("users.id"), nullable=True, index=True
-                )
-                setattr(model_cls, "created_at", created_at_col)
-                setattr(model_cls, "updated_at", updated_at_col)
-                setattr(model_cls, "deleted_at", deleted_at_col)
-                setattr(model_cls, "created_by_id", created_by_id_col)
-                setattr(model_cls, "updated_by_id", updated_by_id_col)
-                setattr(model_cls, "deleted_by_id", deleted_by_id_col)
+            if not hasattr(model_cls, "created_by_id"):
+                backbone_context.logger.info(f"Adding audit user fields to {model_cls.__name__}.")
+                created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+                updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+                deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+                setattr(model_cls, "created_by_id", created_by_col)
+                setattr(model_cls, "updated_by_id", updated_by_col)
+                setattr(model_cls, "deleted_by_id", deleted_by_col)
                 table = model_cls.__table__
-                table.append_column(created_at_col)
-                table.append_column(updated_at_col)
-                table.append_column(deleted_at_col)
-                table.append_column(created_by_id_col)
-                table.append_column(updated_by_id_col)
-                table.append_column(deleted_by_id_col)
+                table.append_column(created_by_col)
+                table.append_column(updated_by_col)
+                table.append_column(deleted_by_col)
 
 
 async def get_db():

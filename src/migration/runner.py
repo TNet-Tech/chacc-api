@@ -4,12 +4,15 @@ ChaCC Migration Runner.
 Safe migration execution with tracking, backup, and preview capabilities.
 """
 
+import asyncio
 import hashlib
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy import MetaData, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import ProgrammingError, OperationalError
 
 from alembic.runtime.migration import MigrationContext
 from alembic.operations import Operations
@@ -17,7 +20,7 @@ from alembic.autogenerate import compare_metadata
 
 
 from src.logger import configure_logging, LogLevels
-from src.constants import DEVELOPMENT_MODE, MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
+from src.constants import MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
 from src.database import engine as default_engine, metadata_obj
 from src.migration.tracker import create_tracker, TRACKER_TABLE
 from src.migration.backup import create_backup
@@ -41,6 +44,7 @@ class MigrationRunner:
     - Backup before migration
     - Preview/dry-run mode
     - Transaction safety
+    - Idempotent operations (skips already-existing resources)
     """
 
     def __init__(
@@ -55,17 +59,29 @@ class MigrationRunner:
         self._is_postgres = "postgres" in DATABASE_ENGINE.lower()
 
         if create_backup_before is None:
-            self.create_backup = not DEVELOPMENT_MODE
+            self.create_backup = False
         else:
             self.create_backup = create_backup_before
 
         self.backup_dir = backup_dir or MIGRATION_BACKUP_DIR
 
-        self.tracker = create_tracker(self.engine)
-        self.backup = create_backup(self.backup_dir)
+        self._tracker = None
+        self._backup = None
 
         self._pending_migrations: List[Dict] = []
         self._applied_migrations: List[Dict] = []
+
+    @property
+    def tracker(self):
+        if self._tracker is None:
+            self._tracker = create_tracker(self.engine)
+        return self._tracker
+
+    @property
+    def backup(self):
+        if self._backup is None:
+            self._backup = create_backup(self.backup_dir)
+        return self._backup
 
     _version_counter = 0
 
@@ -122,8 +138,15 @@ class MigrationRunner:
             if op_type == "add_table":
                 operations.append(f"CREATE TABLE {op[1].name}")
             elif op_type == "add_column":
-                col_name = op[2].name if len(op) > 2 else "unknown"
-                table = op[1] or op[2].table.name
+                if len(op) >= 4 and op[1] is None:
+                    col_name = op[3].name if hasattr(op[3], "name") else "unknown"
+                    table = op[2]
+                elif len(op) >= 3 and hasattr(op[2], "name"):
+                    col_name = op[2].name
+                    table = op[1]
+                else:
+                    col_name = "unknown"
+                    table = op[1] or op[2] if len(op) > 2 else "unknown"
                 operations.append(f"ADD COLUMN {col_name} TO {table}")
             elif op_type == "drop_table":
                 operations.append(f"DROP TABLE {op[1].name}")
@@ -146,12 +169,12 @@ class MigrationRunner:
             elif op_type == "add_table":
                 table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
             elif op_type in ("add_column", "drop_column"):
-                if op[1] is None and len(op) > 2 and hasattr(op[2], "table"):
-                    table_name = op[2].table.name
-                elif op[1] is None:
-                    table_name = "unknown"
+                if op[1] is None and len(op) > 2:
+                    table_name = op[2]
+                elif hasattr(op[1], "name") and hasattr(op[1], "table"):
+                    table_name = op[1].table.name
                 else:
-                    table_name = op[1]
+                    table_name = op[1] or "unknown"
             elif op_type in ("add_index", "add_constraint"):
                 if len(op) > 1 and hasattr(op[1], "table"):
                     table_name = op[1].table.name
@@ -171,6 +194,22 @@ class MigrationRunner:
                 {"version": version, "operation": op_type, "table": table_name, "details": op}
             )
 
+        def migration_sort_key(m):
+            op_type = m["operation"]
+            table = m["table"]
+            priority = {
+                "add_table": 0,
+                "add_column": 1,
+                "add_constraint": 2,
+                "add_index": 3,
+                "create_foreign_key": 4,
+                "modify_type": 5,
+                "modify_nullable": 6,
+                "modify_default": 7,
+            }
+            return (priority.get(op_type, 99), table)
+
+        migrations.sort(key=migration_sort_key)
         return migrations
 
     async def preview(self, model_metadata: MetaData = None) -> Dict[str, Any]:
@@ -189,7 +228,10 @@ class MigrationRunner:
             for table in metadata.tables.values():
                 table.bind = self.engine
 
-        diff = self._get_diff(metadata)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.tracker._ensure_table)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            diff = await loop.run_in_executor(executor, self._get_diff, metadata)
 
         if self.mode == MigrationMode.AUTO:
             diff = self._filter_safe_operations(diff)
@@ -261,7 +303,8 @@ class MigrationRunner:
             return {"status": "up_to_date", "message": "No migrations to apply"}
 
         backup_path = None
-        if self.create_backup:
+
+        if self.create_backup and self.mode != MigrationMode.AUTO:
             try:
                 backup_path = await self.backup.create_backup()
                 chacc_logger.info(f"Backup created: {backup_path}")
@@ -303,60 +346,94 @@ class MigrationRunner:
     async def _apply_migrations(self, migrations: List[Dict], metadata: MetaData):
         """Apply migrations to database."""
 
-        applied_versions = self.tracker.get_applied()
+        loop = asyncio.get_event_loop()
+        applied_versions = await loop.run_in_executor(None, self.tracker.get_applied)
 
-        with self.engine.begin() as conn:
+        pending = [
+            m
+            for m in migrations
+            if m["version"] not in applied_versions and "_unknown" not in m["version"]
+        ]
+
+        if not pending:
+            chacc_logger.info("No pending migrations to apply")
+            return
+
+        def sort_key(m):
+            op_type = m["operation"]
+            table = m["table"]
+            priority = {
+                "add_table": 0,
+                "add_column": 1,
+                "add_constraint": 2,
+                "add_index": 3,
+                "create_foreign_key": 4,
+                "modify_type": 5,
+                "modify_nullable": 6,
+                "modify_default": 7,
+            }
+            return (priority.get(op_type, 99), table)
+
+        pending.sort(key=sort_key)
+
+        for migration in pending:
+            version = migration["version"]
+            details = migration["details"]
+            op_type = migration["operation"]
+
             try:
+                await asyncio.wait_for(
+                    self._apply_single_migration(version, details, op_type), timeout=30.0
+                )
+            except asyncio.TimeoutError:
+                chacc_logger.error(f"Migration timed out: {version}")
+                raise
+
+        chacc_logger.info(f"Migration completed: {len(self._applied_migrations)} changes applied")
+
+    async def _apply_single_migration(self, version: str, details: tuple, op_type: str):
+        """Apply a single migration in its own transaction."""
+        loop = asyncio.get_event_loop()
+
+        def sync_apply():
+            with self.engine.begin() as conn:
                 context = MigrationContext.configure(conn)
                 op = Operations(context)
 
-                for migration in migrations:
-                    version = migration["version"]
-
-                    if version in applied_versions:
-                        chacc_logger.info(f"Skipping already applied migration: {version}")
-                        continue
-
-                    if "_unknown" in version:
-                        chacc_logger.warning(
-                            f"Skipping phantom migration with unknown table: {version}"
-                        )
-                        continue
-
-                    details = migration["details"]
-                    op_type = migration["operation"]
-
+                try:
                     self._apply_operation(op, op_type, details)
+                except (ProgrammingError, OperationalError) as e:
+                    error_msg = str(e).lower()
+                    if "already exists" in error_msg or "duplicate" in error_msg:
+                        chacc_logger.debug(f"Skipping {op_type}: resource already exists")
+                        return
+                    raise
 
-                    description = self._generate_migration_description([details])
+                description = self._generate_migration_description([details])
 
-                    rollback_value = False if "postgres" in DATABASE_ENGINE.lower() else 0
+                rollback_value = 0
 
-                    conn.execute(
-                        text("""
-                        INSERT INTO chacc_migration_log 
-                        (version_num, description, checksum, applied_at, rollback_available)
-                        VALUES (:version, :desc, :checksum, :applied_at, :rollback)
-                    """),
-                        {
-                            "version": version,
-                            "desc": description[:200],
-                            "checksum": self._generate_checksum([details]),
-                            "applied_at": datetime.now(timezone.utc).isoformat(),
-                            "rollback": rollback_value,
-                        },
-                    )
-
-                    self._applied_migrations.append(migration)
-                    chacc_logger.info(f"Applied migration: {version} - {description}")
-
-                chacc_logger.info(
-                    f"Migration completed: {len(self._applied_migrations)} changes applied"
+                conn.execute(
+                    text("""
+                    INSERT INTO chacc_migration_log 
+                    (version_num, description, checksum, applied_at, rollback_available)
+                    VALUES (:version, :desc, :checksum, :applied_at, :rollback)
+                """),
+                    {
+                        "version": version,
+                        "desc": description[:200],
+                        "checksum": self._generate_checksum([details]),
+                        "applied_at": datetime.now(timezone.utc).isoformat(),
+                        "rollback": rollback_value,
+                    },
                 )
 
-            except Exception as e:
-                chacc_logger.error(f"Migration operation failed: {e}")
-                raise
+                self._applied_migrations.append(
+                    {"version": version, "operation": op_type, "details": details}
+                )
+                chacc_logger.info(f"Applied migration: {version} - {description}")
+
+        await loop.run_in_executor(None, sync_apply)
 
     def _apply_operation(self, op: Operations, op_type: str, details: tuple):
         """Apply a single migration operation."""
@@ -366,7 +443,7 @@ class MigrationRunner:
             op.create_table(table.name, *table.columns)
 
         elif op_type == "add_column":
-            if details[1] is None:
+            if details[1] is None and len(details) >= 4:
                 table_name = details[2]
                 column = details[3]
             else:
@@ -537,4 +614,8 @@ async def run_migration(mode: str = None, create_backup: bool = None) -> Dict[st
         result = await run_migration()
     """
     runner = create_migration_runner(mode=mode, create_backup_before=create_backup)
+
+    if runner.mode is None:
+        runner.mode = MigrationMode.AUTO
+
     return await runner.run()

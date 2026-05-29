@@ -27,10 +27,13 @@ class MigrationTracker:
     def __init__(self, engine: Engine):
         self.engine = engine
         self._is_postgres = "postgres" in DATABASE_ENGINE.lower()
-        self._ensure_table()
+        self._table_ensured = False
 
     def _ensure_table(self):
         """Create migration tracking table if it doesn't exist."""
+        if self._table_ensured:
+            return
+        self._table_ensured = True
         with self.engine.connect() as conn:
             if self._is_postgres:
                 result = conn.execute(text(f"""
@@ -56,7 +59,7 @@ class MigrationTracker:
                             description TEXT,
                             checksum VARCHAR(64),
                             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            rollback_available BOOLEAN DEFAULT FALSE
+                            rollback_available INTEGER DEFAULT 0
                         )
                     """))
                 else:
@@ -142,7 +145,7 @@ class MigrationTracker:
         if checksum is None:
             checksum = hashlib.sha256(f"{version}:{description}".encode()).hexdigest()[:64]
 
-        rollback_value = rollback_available if self._is_postgres else (1 if rollback_available else 0)
+        rollback_value = 1 if rollback_available else 0
 
         with self.engine.connect() as conn:
             conn.execute(

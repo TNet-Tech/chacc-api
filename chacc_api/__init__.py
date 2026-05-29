@@ -20,7 +20,6 @@ from src.database import (
     metadata_obj,
     engine,
 )
-
 from src.redis_service import RedisService
 
 __all__ = [

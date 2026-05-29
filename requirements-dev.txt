@@ -6,3 +6,4 @@ httpx
 requests
 black
 ruff
+mypy
