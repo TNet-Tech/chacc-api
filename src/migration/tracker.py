@@ -89,6 +89,20 @@ class MigrationTracker:
                         )
                     except Exception as e:
                         chacc_logger.debug(f"Column version_num already of sufficient size: {e}")
+                    try:
+                        conn.execute(
+                            text(
+                                f"ALTER TABLE {TRACKER_TABLE} ALTER COLUMN rollback_available TYPE INTEGER USING CASE WHEN rollback_available THEN 1 ELSE 0 END"
+                            )
+                        )
+                        conn.commit()
+                        chacc_logger.info(
+                            f"Altered {TRACKER_TABLE}: converted rollback_available to INTEGER"
+                        )
+                    except Exception as e2:
+                        chacc_logger.debug(
+                            f"Column rollback_available already INTEGER or conversion failed: {e2}"
+                        )
 
     def get_applied(self) -> Set[str]:
         """
