@@ -18,12 +18,6 @@ from alembic.runtime.migration import MigrationContext
 from alembic.operations import Operations
 from alembic.autogenerate import compare_metadata
 
-# Hook to enable Enum diffs like sync_enum_values, create_enum and drop_enum natively
-try:
-    import alembic_postgresql_enum
-except ImportError:
-    pass
-
 from src.logger import configure_logging, LogLevels
 from src.constants import MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
 from src.database import engine as default_engine, metadata_obj
@@ -31,6 +25,13 @@ from src.migration.tracker import create_tracker, TRACKER_TABLE
 from src.migration.backup import create_backup
 
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
+
+try:
+    import alembic_postgresql_enum
+
+    chacc_logger.info(f"{alembic_postgresql_enum.__name__} loaded - enhanced enum support enabled")
+except ImportError:
+    pass
 
 
 class MigrationMode:
@@ -178,15 +179,34 @@ class MigrationRunner:
             if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
                 op_type = "sync_enum_values"
                 aff_cols = getattr(op, "affected_columns", [])
-                details = (op_type, getattr(op, "schema", None), getattr(op, "name", ""), getattr(op, "new_values", []), aff_cols, getattr(op, "enum_values_to_rename", []))
-                table_name = getattr(aff_cols[0], "table_name", str(aff_cols[0])) if aff_cols else "unknown"
+                details = (
+                    op_type,
+                    getattr(op, "schema", None),
+                    getattr(op, "name", ""),
+                    getattr(op, "new_values", []),
+                    aff_cols,
+                    getattr(op, "enum_values_to_rename", []),
+                )
+                table_name = (
+                    getattr(aff_cols[0], "table_name", str(aff_cols[0])) if aff_cols else "unknown"
+                )
             elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
                 op_type = "create_enum"
-                details = (op_type, getattr(op, "name", ""), getattr(op, "schema", None), getattr(op, "enum_values", []))
+                details = (
+                    op_type,
+                    getattr(op, "name", ""),
+                    getattr(op, "schema", None),
+                    getattr(op, "enum_values", []),
+                )
                 table_name = "unknown"
             elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
                 op_type = "drop_enum"
-                details = (op_type, getattr(op, "name", ""), getattr(op, "schema", None), getattr(op, "enum_values", []))
+                details = (
+                    op_type,
+                    getattr(op, "name", ""),
+                    getattr(op, "schema", None),
+                    getattr(op, "enum_values", []),
+                )
                 table_name = "unknown"
             else:
                 op_type = op[0]
@@ -217,7 +237,11 @@ class MigrationRunner:
                 elif op_type in ("sync_enum_values", "create_enum", "drop_enum"):
                     if op_type == "sync_enum_values" and len(op) > 4 and op[4]:
                         aff_cols = op[4]
-                        table_name = getattr(aff_cols[0], "table_name", str(aff_cols[0])) if aff_cols else "unknown"
+                        table_name = (
+                            getattr(aff_cols[0], "table_name", str(aff_cols[0]))
+                            if aff_cols
+                            else "unknown"
+                        )
                     else:
                         table_name = "unknown"
                 else:
@@ -486,14 +510,25 @@ class MigrationRunner:
                     batch_op.add_column(column)
 
         elif op_type == "sync_enum_values":
-            schema, name, new_values, affected_columns = details[1], details[2], details[3], details[4]
+            schema, name, new_values, affected_columns = (
+                details[1],
+                details[2],
+                details[3],
+                details[4],
+            )
             enum_values_to_rename = details[5] if len(details) > 5 else []
             if hasattr(op, "sync_enum_values"):
                 op.sync_enum_values(
-                    schema, name, new_values, affected_columns, enum_values_to_rename=enum_values_to_rename
+                    schema,
+                    name,
+                    new_values,
+                    affected_columns,
+                    enum_values_to_rename=enum_values_to_rename,
                 )
             else:
-                chacc_logger.warning("sync_enum_values skipped because alembic-postgresql-enum is not loaded.")
+                chacc_logger.warning(
+                    "sync_enum_values skipped because alembic-postgresql-enum is not loaded."
+                )
 
         elif op_type == "create_enum":
             name, schema, enum_values = details[1], details[2], details[3]
