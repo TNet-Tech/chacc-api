@@ -2,6 +2,7 @@ fastapi
 uvicorn
 sqlalchemy
 alembic
+alembic-postgresql-enum
 psycopg2-binary
 slowapi
 python-decouple
