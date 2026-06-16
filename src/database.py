@@ -22,6 +22,11 @@ from sqlalchemy.types import TypeDecorator
 from .constants import DATABASE_ENGINE, DATABASE_URL
 from .logger import LogLevels, configure_logging
 
+try:
+    from uuid import uuid7
+except ImportError:
+    from uuid_utils import uuid7
+
 chacc_logger = configure_logging(log_level=LogLevels.INFO)
 
 
@@ -91,7 +96,7 @@ class ChaCCBaseModel:
         return cls.__name__.lower() + "s"
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(GUID, default=uuid.uuid4, unique=True, nullable=False, index=True)
+    uuid = Column(GUID, default=uuid7, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, nullable=False)
     deleted_at = Column(DateTime, nullable=True, index=True)
