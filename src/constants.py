@@ -45,6 +45,8 @@ DATABASE_USER = config("DATABASE_USER", default="chacc")
 DATABASE_PASSWORD = config("DATABASE_PASSWORD", default="")
 DATABASE_HOST = config("DATABASE_HOST", default="localhost")
 DATABASE_PORT = config("DATABASE_PORT", default="5432", cast=int)
+SQLITE_DATABASE_NAME = config("SQLITE_DATABASE_NAME", default="chaccapi.db", cast=str)
+SQLITE_DATABASE_PATH = config("SQLITE_DATABASE_PATH", default=BASE_DIR, cast=str)
 
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="*", cast=str)
 CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default=True, cast=bool)
@@ -56,9 +58,9 @@ SECRET_KEY = config("SECRET_KEY", default="", cast=str)
 if "postgres" in DATABASE_ENGINE.lower():
     DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 else:
-    DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'chaccapi.db')}"
+    DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, SQLITE_DATABASE_NAME)}"
 
-SQLITE_DB_PATH = os.path.join(BASE_DIR, "chaccapi.db")
+SQLITE_DB_PATH = os.path.join(SQLITE_DATABASE_PATH, SQLITE_DATABASE_NAME)
 
 LOGGER_NAME = "CHACC-API"
 
