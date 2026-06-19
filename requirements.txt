@@ -2,7 +2,9 @@ fastapi
 uvicorn
 sqlalchemy
 alembic
+alembic-postgresql-enum
 psycopg2-binary
+uuid-utils
 slowapi
 python-decouple
 pyjwt

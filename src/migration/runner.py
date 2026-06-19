@@ -18,14 +18,20 @@ from alembic.runtime.migration import MigrationContext
 from alembic.operations import Operations
 from alembic.autogenerate import compare_metadata
 
-
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.constants import MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
 from src.database import engine as default_engine, metadata_obj
 from src.migration.tracker import create_tracker, TRACKER_TABLE
 from src.migration.backup import create_backup
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
+
+try:
+    import alembic_postgresql_enum
+
+    chacc_logger.info(f"{alembic_postgresql_enum.__name__} loaded - enhanced enum support enabled")
+except ImportError:
+    pass
 
 
 class MigrationMode:
@@ -91,18 +97,11 @@ class MigrationRunner:
         MigrationRunner._version_counter += 1
         return f"{timestamp}_{MigrationRunner._version_counter}_{operation_type}_{table_name}"
 
-    def _generate_checksum(self, diff: List[tuple]) -> str:
-        """Generate checksum for a set of operations."""
+    def _generate_checksum(self, diff: List[Any]) -> str:
         content = str(sorted([str(d) for d in diff]))
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
-    def _filter_safe_operations(self, diff: List[tuple]) -> List[tuple]:
-        """
-        Filter out destructive operations for safe mode.
-
-        Removes: drop_table, drop_column, drop_index, drop_constraint
-        Keeps: add_*, create_*, and modify operations
-        """
+    def _filter_safe_operations(self, diff: List[Any]) -> List[Any]:
         safe_operations = [
             "add_table",
             "add_column",
@@ -112,13 +111,23 @@ class MigrationRunner:
             "modify_type",
             "modify_nullable",
             "modify_default",
+            "create_enum",
+            "sync_enum_values",
         ]
 
         safe_diff = []
         dropped_count = 0
 
         for op in diff:
-            op_type = op[0]
+            if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
+                op_type = "sync_enum_values"
+            elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
+                op_type = "create_enum"
+            elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
+                op_type = "drop_enum"
+            else:
+                op_type = op[0]
+
             if op_type in safe_operations:
                 safe_diff.append(op)
             else:
@@ -131,7 +140,6 @@ class MigrationRunner:
         return safe_diff
 
     def _generate_migration_description(self, diff: List[tuple]) -> str:
-        """Generate human-readable description of changes."""
         operations = []
         for op in diff:
             op_type = op[0]
@@ -152,62 +160,116 @@ class MigrationRunner:
                 operations.append(f"DROP TABLE {op[1].name}")
             elif op_type == "drop_column":
                 operations.append(f"DROP COLUMN {op[1].name} FROM {op[1].table.name}")
+            elif op_type == "create_enum":
+                name = op[1] if len(op) > 1 else "unknown"
+                operations.append(f"CREATE ENUM {name}")
+            elif op_type == "sync_enum_values":
+                name = op[2] if len(op) > 2 else "unknown"
+                operations.append(f"SYNC ENUM {name}")
+            elif op_type == "drop_enum":
+                name = op[1] if len(op) > 1 else "unknown"
+                operations.append(f"DROP ENUM {name}")
 
         return "; ".join(operations[:5])
 
-    def _diff_to_migrations(self, diff: List[tuple]) -> List[Dict]:
-        """Convert alembic diff to migration records."""
+    def _diff_to_migrations(self, diff: List[Any]) -> List[Dict]:
         migrations = []
 
         for op in diff:
-            op_type = op[0]
-
-            if op_type == "modify_type":
-                table_name = op[2] if op[2] else "unknown"
-            elif op_type in ("drop_table", "remove_table"):
-                table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
-            elif op_type == "add_table":
-                table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
-            elif op_type in ("add_column", "drop_column"):
-                if op[1] is None and len(op) > 2:
-                    table_name = op[2]
-                elif hasattr(op[1], "name") and hasattr(op[1], "table"):
-                    table_name = op[1].table.name
-                else:
-                    table_name = op[1] or "unknown"
-            elif op_type in ("add_index", "add_constraint"):
-                if len(op) > 1 and hasattr(op[1], "table"):
-                    table_name = op[1].table.name
-                else:
-                    table_name = "unknown"
-            elif op_type == "create_foreign_key":
-                if len(op) > 1 and hasattr(op[1], "table"):
-                    table_name = op[1].table.name
-                else:
-                    table_name = "unknown"
-            else:
+            if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
+                op_type = "sync_enum_values"
+                aff_cols = getattr(op, "affected_columns", [])
+                details = (
+                    op_type,
+                    getattr(op, "schema", None),
+                    getattr(op, "name", ""),
+                    getattr(op, "new_values", []),
+                    aff_cols,
+                    getattr(op, "enum_values_to_rename", []),
+                )
+                table_name = (
+                    getattr(aff_cols[0], "table_name", str(aff_cols[0])) if aff_cols else "unknown"
+                )
+            elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
+                op_type = "create_enum"
+                details = (
+                    op_type,
+                    getattr(op, "name", ""),
+                    getattr(op, "schema", None),
+                    getattr(op, "enum_values", []),
+                )
                 table_name = "unknown"
+            elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
+                op_type = "drop_enum"
+                details = (
+                    op_type,
+                    getattr(op, "name", ""),
+                    getattr(op, "schema", None),
+                    getattr(op, "enum_values", []),
+                )
+                table_name = "unknown"
+            else:
+                op_type = op[0]
+                details = op
+                if op_type == "modify_type":
+                    table_name = op[2] if op[2] else "unknown"
+                elif op_type in ("drop_table", "remove_table"):
+                    table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
+                elif op_type == "add_table":
+                    table_name = op[1].name if hasattr(op[1], "name") else str(op[1])
+                elif op_type in ("add_column", "drop_column"):
+                    if op[1] is None and len(op) > 2:
+                        table_name = op[2]
+                    elif hasattr(op[1], "name") and hasattr(op[1], "table"):
+                        table_name = op[1].table.name
+                    else:
+                        table_name = op[1] or "unknown"
+                elif op_type in ("add_index", "add_constraint"):
+                    if len(op) > 1 and hasattr(op[1], "table"):
+                        table_name = op[1].table.name
+                    else:
+                        table_name = "unknown"
+                elif op_type == "create_foreign_key":
+                    if len(op) > 1 and hasattr(op[1], "table"):
+                        table_name = op[1].table.name
+                    else:
+                        table_name = "unknown"
+                elif op_type in ("sync_enum_values", "create_enum", "drop_enum"):
+                    if op_type == "sync_enum_values" and len(op) > 4 and op[4]:
+                        aff_cols = op[4]
+                        table_name = (
+                            getattr(aff_cols[0], "table_name", str(aff_cols[0]))
+                            if aff_cols
+                            else "unknown"
+                        )
+                    else:
+                        table_name = "unknown"
+                else:
+                    table_name = "unknown"
 
             version = self._generate_version(op_type, table_name)
 
             migrations.append(
-                {"version": version, "operation": op_type, "table": table_name, "details": op}
+                {"version": version, "operation": op_type, "table": table_name, "details": details}
             )
 
         def migration_sort_key(m):
             op_type = m["operation"]
             table = m["table"]
             priority = {
-                "add_table": 0,
-                "add_column": 1,
-                "add_constraint": 2,
-                "add_index": 3,
-                "create_foreign_key": 4,
-                "modify_type": 5,
-                "modify_nullable": 6,
-                "modify_default": 7,
+                "create_enum": 0,
+                "add_table": 1,
+                "add_column": 2,
+                "add_constraint": 3,
+                "add_index": 4,
+                "create_foreign_key": 5,
+                "sync_enum_values": 6,
+                "modify_type": 7,
+                "modify_nullable": 8,
+                "modify_default": 9,
+                "drop_enum": 99,
             }
-            return (priority.get(op_type, 99), table)
+            return (priority.get(op_type, 50), table)
 
         migrations.sort(key=migration_sort_key)
         return migrations
@@ -258,9 +320,10 @@ class MigrationRunner:
 
             filtered_diff = []
             for op in diff or []:
-                op_type = op[0]
+                op_type = op[0] if isinstance(op, tuple) else getattr(op, "op_name", None)
                 if op_type in ("drop_table", "remove_table"):
-                    if hasattr(op[1], "name") and op[1].name == TRACKER_TABLE:
+                    table = op[1] if isinstance(op, tuple) else getattr(op, "table", None)
+                    if hasattr(table, "name") and table.name == TRACKER_TABLE:
                         chacc_logger.debug(
                             f"Skipping {op_type} for {TRACKER_TABLE} (not in model metadata)"
                         )
@@ -359,23 +422,6 @@ class MigrationRunner:
             chacc_logger.info("No pending migrations to apply")
             return
 
-        def sort_key(m):
-            op_type = m["operation"]
-            table = m["table"]
-            priority = {
-                "add_table": 0,
-                "add_column": 1,
-                "add_constraint": 2,
-                "add_index": 3,
-                "create_foreign_key": 4,
-                "modify_type": 5,
-                "modify_nullable": 6,
-                "modify_default": 7,
-            }
-            return (priority.get(op_type, 99), table)
-
-        pending.sort(key=sort_key)
-
         for migration in pending:
             version = migration["version"]
             details = migration["details"]
@@ -407,6 +453,11 @@ class MigrationRunner:
                     if "already exists" in error_msg or "duplicate" in error_msg:
                         chacc_logger.debug(f"Skipping {op_type}: resource already exists")
                         return
+                    if "does not exist" in error_msg:
+                        chacc_logger.warning(
+                            f"Skipping {op_type}: target object does not exist: {e}"
+                        )
+                        return
                     raise
 
                 description = self._generate_migration_description([details])
@@ -437,9 +488,14 @@ class MigrationRunner:
 
     def _apply_operation(self, op: Operations, op_type: str, details: tuple):
         """Apply a single migration operation."""
+        from sqlalchemy.types import Enum as SAEnum
 
         if op_type == "add_table":
             table = details[1]
+            if self._is_postgres:
+                for column in table.columns:
+                    if isinstance(column.type, SAEnum):
+                        column.type.create(op.get_bind(), checkfirst=True)
             op.create_table(table.name, *table.columns)
 
         elif op_type == "add_column":
@@ -451,10 +507,44 @@ class MigrationRunner:
                 column = details[2]
 
             if self._is_postgres:
+                if isinstance(column.type, SAEnum):
+                    column.type.create(op.get_bind(), checkfirst=True)
                 op.add_column(table_name, column)
             else:
                 with op.batch_alter_table(table_name) as batch_op:
                     batch_op.add_column(column)
+
+        elif op_type == "sync_enum_values":
+            schema, name, new_values, affected_columns = (
+                details[1],
+                details[2],
+                details[3],
+                details[4],
+            )
+            enum_values_to_rename = details[5] if len(details) > 5 else []
+            if hasattr(op, "sync_enum_values"):
+                op.sync_enum_values(
+                    schema,
+                    name,
+                    new_values,
+                    affected_columns,
+                    enum_values_to_rename=enum_values_to_rename,
+                )
+            else:
+                chacc_logger.warning(
+                    "sync_enum_values skipped because alembic-postgresql-enum is not loaded."
+                )
+
+        elif op_type == "create_enum":
+            name, schema, enum_values = details[1], details[2], details[3]
+            SAEnum(*enum_values, name=name, schema=schema).create(op.get_bind(), checkfirst=True)
+
+        elif op_type == "drop_enum":
+            name, schema, enum_values = details[1], details[2], details[3]
+            try:
+                op.execute(f"DROP TYPE {name}")
+            except Exception as e:
+                chacc_logger.warning(f"Could not drop enum type {name}: {e}")
 
         elif op_type == "drop_column":
             table_name, column = details[1], details[2]

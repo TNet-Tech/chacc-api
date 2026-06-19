@@ -1,8 +1,7 @@
 # ChaCC API - Docker Compose for Production
 # 
 # Usage:
-#   Pull from Docker Hub (after first release): docker-compose up -d
-#   Build locally (before first release):        docker-compose build && docker-compose up -d
+#   Pull from Docker Hub: docker-compose up -d
 
 version: '3.8'
 
@@ -10,12 +9,8 @@ services:
   chacc:
     image: chacc-api:latest
     container_name: chacc-api
-    # Uncomment to build locally (before first PyPI release):
-    # build:
-    #   context: ../..
-    #   dockerfile: deployment/docker/Dockerfile
     ports:
-      - "8080:8080"
+      - "8085:8085"
     environment:
       - DATABASE_ENGINE=postgresql
       - DATABASE_HOST=db
@@ -44,7 +39,7 @@ services:
       - chacc_plugins:/app/plugins
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8085/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

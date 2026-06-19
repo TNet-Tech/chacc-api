@@ -6,12 +6,12 @@ Must NOT be run in production with development-mode settings.
 
 import os
 import sys
+from chacc_api.utils import configure_logging
 
 os.environ["CHACC_DEV_MODE"] = "false"
 
-from chacc_api.utils import LogLevels, configure_logging
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging()
 
 
 def start_server(_logger=None):
@@ -19,16 +19,11 @@ def start_server(_logger=None):
     _log = _logger
     host = os.environ.get("CHACC_HOST", "0.0.0.0")
     port = int(os.environ.get("CHACC_PORT", "8085"))
-    debug = os.environ.get("CHACC_DEBUG", "false").lower() in ("true", "1", "yes")
 
-    if debug:
-        from chacc_api.utils import LogLevels as _LL
+    if _log is None:
+        _log = configure_logging()
 
-        _log = configure_logging(log_level=_LL.DEBUG)
-    elif _log is None:
-        _log = configure_logging(log_level=LogLevels.INFO)
-
-    _log.info(f"Starting server at {host}:{port} (reload=False, debug={debug})")
+    _log.info(f"Starting server at {host}:{port} (reload=False)")
 
     try:
         import uvicorn

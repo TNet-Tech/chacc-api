@@ -20,9 +20,9 @@ from src.constants import (
     SQLITE_DB_PATH,
 )
 
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 DEFAULT_BACKUP_DIR = MIGRATION_BACKUP_DIR
 

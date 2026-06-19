@@ -20,9 +20,14 @@ from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy.types import TypeDecorator
 
 from .constants import DATABASE_ENGINE, DATABASE_URL
-from .logger import LogLevels, configure_logging
+from .logger import configure_logging, get_default_log_level
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+try:
+    from uuid import uuid7
+except ImportError:
+    from uuid_utils import uuid7
+
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 class GUID(TypeDecorator):
@@ -91,7 +96,7 @@ class ChaCCBaseModel:
         return cls.__name__.lower() + "s"
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(GUID, default=uuid.uuid4, unique=True, nullable=False, index=True)
+    uuid = Column(GUID, default=uuid7, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, nullable=False)
     deleted_at = Column(DateTime, nullable=True, index=True)

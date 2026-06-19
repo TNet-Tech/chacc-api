@@ -9,7 +9,7 @@ from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
 from src.health import health_router
 from src.database import initialize_database_models, get_db
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.core_services import BackboneContext
 from src.constants import (
     DEVELOPMENT_MODE,
@@ -21,7 +21,6 @@ from src.constants import (
     CORS_ALLOW_HEADERS,
 )
 from src.env_validator import validate_environment, ValidationError
-
 from src.migration.runner import run_migration
 from src.redis_service import RedisService
 
@@ -42,7 +41,7 @@ def copy_sample_env():
             chacc_logger.warning(f"Failed to copy .env.sample: {e}")
 
 
-chacc_logger = configure_logging(log_level=LogLevels.DEBUG)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 @asynccontextmanager

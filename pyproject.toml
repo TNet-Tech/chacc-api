@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chacc-api"
-version = "1.0.0-b4"
+version = "1.0.0-b4.post1"
 description = "ChaCC API - A modular FastAPI application for extensible APIs"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -42,6 +42,7 @@ dependencies = [
     "pytest",
     "pytest-asyncio",
     "httpx",
+    "uuid-utils",
 ]
 
 [project.optional-dependencies]

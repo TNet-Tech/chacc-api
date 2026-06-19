@@ -9,10 +9,9 @@ import shutil
 from typing import Dict
 
 from src.constants import MODULES_LOADED_DIR
+from src.logger import configure_logging, get_default_log_level
 
-chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(
-    log_level=__import__("src.logger", fromlist=["LogLevels"]).LogLevels.INFO
-)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 def sync_database_with_filesystem(chacc_to_module_name: Dict[str, str], existing_records: Dict, db):

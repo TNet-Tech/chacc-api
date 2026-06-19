@@ -77,9 +77,9 @@ def test_migration_table_sqlite():
                 conn.execute(text(f"""
                     CREATE TABLE {TRACKER_TABLE} (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        version_num VARCHAR(64) NOT NULL UNIQUE,
+                        version_num VARCHAR(256) NOT NULL UNIQUE,
                         description TEXT,
-                        checksum VARCHAR(64),
+                        checksum VARCHAR(256),
                         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         rollback_available INTEGER DEFAULT 0
                     )

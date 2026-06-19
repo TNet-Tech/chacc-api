@@ -7,7 +7,7 @@ Validates required environment variables and configuration for production deploy
 import re
 from typing import List, Dict, Any
 
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.constants import (
     DEVELOPMENT_MODE,
     DATABASE_ENGINE,
@@ -21,7 +21,7 @@ from src.constants import (
     PLUGIN_AUTO_DISCOVERY,
 )
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 class ValidationError(Exception):

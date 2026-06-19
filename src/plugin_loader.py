@@ -11,7 +11,7 @@ import json
 from typing import Dict, List
 from fastapi import FastAPI
 
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.constants import (
     BASE_DIR,
     PLUGINS_DIR,
@@ -24,7 +24,7 @@ from src.constants import (
 )
 from src.module_loader.loader import load_single_module
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 class ModuleState:

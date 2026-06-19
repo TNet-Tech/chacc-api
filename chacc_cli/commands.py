@@ -9,11 +9,11 @@ import shutil
 import json
 import zipfile
 
-from chacc_api.utils import configure_logging, LogLevels
+from chacc_api.utils import configure_logging
 import requests
 from decouple import config
 
-cli_logger = configure_logging(log_level=LogLevels.INFO)
+cli_logger = configure_logging()
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 

@@ -12,10 +12,9 @@ import shutil
 from typing import Dict, List, Tuple
 from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, BASE_DIR
 from src.database import ModuleRecord
+from src.logger import configure_logging, get_default_log_level
 
-chacc_logger = __import__("src.logger", fromlist=["configure_logging"]).configure_logging(
-    log_level=__import__("src.logger", fromlist=["LogLevels"]).LogLevels.INFO
-)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 def get_chacc_filepath(module_name: str, chacc_to_module_name: dict = None) -> str | None:

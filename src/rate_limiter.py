@@ -14,7 +14,5 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     raise HTTPException(
         status_code=429,
         detail=f"Too many requests. You have exceeded the rate limit of {exc.detail}.",
-        headers={
-            "Retry-After": str(int(exc.detail.split(" ")[0]) / 60)
-        },  # Approximate seconds to wait
+        headers={"Retry-After": str(int(exc.detail.split(" ")[0]) / 60)},
     )
