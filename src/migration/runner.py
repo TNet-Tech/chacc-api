@@ -454,7 +454,9 @@ class MigrationRunner:
                         chacc_logger.debug(f"Skipping {op_type}: resource already exists")
                         return
                     if "does not exist" in error_msg:
-                        chacc_logger.warning(f"Skipping {op_type}: target object does not exist: {e}")
+                        chacc_logger.warning(
+                            f"Skipping {op_type}: target object does not exist: {e}"
+                        )
                         return
                     raise
 
