@@ -1,14 +1,17 @@
-# ChaCC API
+<p style="font-size:3.2em" align="center">  ChaCC API </p>
 
 <a href="https://chacc.dev" target="blank"><p align="center">
   <img src="assets/chacc-icon.ico" alt="ChaCC API" />
 </p></a>
 
-**Build modular APIs with independent, pluggable components.**
 
-ChaCC API is a FastAPI-based platform that lets you build and plug in Python modules like apps. Each module is self-contained – routes, models, logic – and can be installed, updated, or removed without touching the core.
 
-For the full story, visit [chacc.dev](https://chacc.dev).
+<p align="center"><b>Build modular APIs with independent, pluggable components.</b></p>
+
+<p align="center">ChaCC API is a FastAPI-based platform that lets you build and plug in Python modules like apps. Each module is self-contained – routes, models, logic – and can be installed, updated, or removed without touching the core. </p>
+
+<p align="center"> For the full story, visit <a href="https://chacc.dev" target="blank">chacc.dev</a>.</p>
+
 
 ## Why ChaCC?
 
