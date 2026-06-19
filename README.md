@@ -32,7 +32,7 @@ Open [http://localhost:8085/docs](http://localhost:8085/docs) to see your API.
 
 ## Examples
 
-Official modules maintained by the ChaCC team. All modules are actively being developed – testers welcome!:
+Official modules maintained by the ChaCC team. All modules are actively being developed – testers welcome:
 
 - [chacc-authentication](https://github.com/Jonas1015/chacc-authentication) – Auth module with JWT, registration, and login
 - [chacc-file-manager](https://github.com/Jonas1015/chacc-file-manager) – File management with pluggable adapters. Built-in local storage; bring your own for S3, Google Drive, FTP, or any custom backend.
