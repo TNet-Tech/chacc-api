@@ -55,9 +55,9 @@ class MigrationTracker:
                     conn.execute(text(f"""
                         CREATE TABLE {TRACKER_TABLE} (
                             id SERIAL PRIMARY KEY,
-                            version_num VARCHAR(64) NOT NULL UNIQUE,
+                            version_num VARCHAR(256) NOT NULL UNIQUE,
                             description TEXT,
-                            checksum VARCHAR(64),
+                            checksum VARCHAR(256),
                             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             rollback_available INTEGER DEFAULT 0
                         )
@@ -66,9 +66,9 @@ class MigrationTracker:
                     conn.execute(text(f"""
                         CREATE TABLE {TRACKER_TABLE} (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            version_num VARCHAR(64) NOT NULL UNIQUE,
+                            version_num VARCHAR(256) NOT NULL UNIQUE,
                             description TEXT,
-                            checksum VARCHAR(64),
+                            checksum VARCHAR(256),
                             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             rollback_available INTEGER DEFAULT 0
                         )
@@ -80,12 +80,12 @@ class MigrationTracker:
                     try:
                         conn.execute(
                             text(
-                                f"ALTER TABLE {TRACKER_TABLE} ALTER COLUMN version_num TYPE VARCHAR(64)"
+                                f"ALTER TABLE {TRACKER_TABLE} ALTER COLUMN version_num TYPE VARCHAR(256)"
                             )
                         )
                         conn.commit()
                         chacc_logger.info(
-                            f"Altered {TRACKER_TABLE}: increased version_num size to VARCHAR(64)"
+                            f"Altered {TRACKER_TABLE}: increased version_num size to VARCHAR(256)"
                         )
                     except Exception as e:
                         chacc_logger.debug(f"Column version_num already of sufficient size: {e}")
