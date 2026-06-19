@@ -24,7 +24,6 @@ from src.constants import (
 )
 from src.module_loader.loader import load_single_module
 
-
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
 

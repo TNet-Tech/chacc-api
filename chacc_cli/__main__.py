@@ -108,13 +108,13 @@ def main():
         "--port", type=int, default=8085, help="Port to bind the server to. Defaults to 8085."
     )
     run_server_parser.add_argument("--debug", action="store_true", help="Enable debug mode.")
-    
-    
+
     run_server_parser.add_argument(
-        "-v", "--verbose", action="store_true",
+        "-v",
+        "--verbose",
+        action="store_true",
         help="Show detailed logs (DEBUG level) for this invocation.",
     )
-
 
     args = parser.parse_args()
 
