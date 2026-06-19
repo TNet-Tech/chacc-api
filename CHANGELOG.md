@@ -29,6 +29,9 @@
 - Removed stale Docker `8080` exposed port and health check references.
 - Removed local-build instructions from the production Docker Compose file.
 
+### Changed
+- README file has been updated to focus on ChaCC brief intro and link the entire guidance to [chacc.dev](https://chacc.dev)
+
 ## [1.0.0-b4] - 2026-05-30
 
 ### Added
