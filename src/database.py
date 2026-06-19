@@ -20,14 +20,14 @@ from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy.types import TypeDecorator
 
 from .constants import DATABASE_ENGINE, DATABASE_URL
-from .logger import LogLevels, configure_logging
+from .logger import configure_logging, get_default_log_level
 
 try:
     from uuid import uuid7
 except ImportError:
     from uuid_utils import uuid7
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 class GUID(TypeDecorator):

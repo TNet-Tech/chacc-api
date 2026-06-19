@@ -6,10 +6,10 @@ Provides Redis client to modules via context.
 from typing import Optional
 from redis.asyncio import Redis
 
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.constants import REDIS_ENABLED, REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 class RedisService:

@@ -11,9 +11,9 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.constants import DATABASE_ENGINE
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 TRACKER_TABLE = "chacc_migration_log"
 

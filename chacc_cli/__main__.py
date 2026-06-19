@@ -3,8 +3,6 @@ ChaCC CLI - Command Line Interface for ChaCC API module management.
 """
 
 import argparse
-
-from .commands import create_module_scaffold, build_module_chacc, deploy_module
 import subprocess
 import sys
 import os
@@ -100,7 +98,6 @@ def main():
         action="store_true",
         help="Run in development mode with auto-reload (uses uvicorn_config.py).",
     )
-
     run_server_parser.add_argument(
         "--host",
         type=str,
@@ -111,8 +108,17 @@ def main():
         "--port", type=int, default=8085, help="Port to bind the server to. Defaults to 8085."
     )
     run_server_parser.add_argument("--debug", action="store_true", help="Enable debug mode.")
+    
+    
+    run_server_parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Show detailed logs (DEBUG level) for this invocation.",
+    )
+
 
     args = parser.parse_args()
+
+    from .commands import create_module_scaffold, build_module_chacc, deploy_module
 
     if args.command == "create":
         create_module_scaffold(args.module_name, args.output_dir, args.force)
@@ -136,8 +142,14 @@ def main():
             env["CHACC_HOST"] = args.host
             env["CHACC_PORT"] = str(args.port)
 
+            if args.verbose:
+                env["CHACC_VERBOSE"] = "true"
+            else:
+                env.pop("CHACC_VERBOSE", None)
+
             if args.dev:
                 env["CHACC_DEV_MODE"] = "true"
+
                 if args.debug:
                     env["CHACC_DEBUG"] = "true"
                 config_path = package_dir / "uvicorn_config.py"

@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from src.database import get_db
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.constants import DEVELOPMENT_MODE
 from sqlalchemy import text
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 health_router = APIRouter(tags=["Health"])
 

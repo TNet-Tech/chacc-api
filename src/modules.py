@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from src.logger import LogLevels, configure_logging
+from src.logger import configure_logging, get_default_log_level
 from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, BASE_DIR
 from src.database import get_db, ModuleRecord
 from src.chacc_dependency_manager import (
@@ -33,7 +33,7 @@ from src.module_loader.archive import (
     get_chacc_filepath,
 )
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 modules_router = APIRouter(tags=["Core"])

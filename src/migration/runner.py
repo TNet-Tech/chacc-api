@@ -18,13 +18,13 @@ from alembic.runtime.migration import MigrationContext
 from alembic.operations import Operations
 from alembic.autogenerate import compare_metadata
 
-from src.logger import configure_logging, LogLevels
+from src.logger import configure_logging, get_default_log_level
 from src.constants import MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
 from src.database import engine as default_engine, metadata_obj
 from src.migration.tracker import create_tracker, TRACKER_TABLE
 from src.migration.backup import create_backup
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 try:
     import alembic_postgresql_enum

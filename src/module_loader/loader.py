@@ -12,7 +12,7 @@ import importlib
 import inspect
 from fastapi import FastAPI, APIRouter
 
-from src.logger import LogLevels, configure_logging
+from src.logger import get_default_log_level, configure_logging
 from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, DEPENDENCY_CACHE_DIR
 from src.database import get_db, ModuleRecord
 from src.core_services import BackboneContext
@@ -26,7 +26,7 @@ from .archive import (
 )
 from .metadata import sync_database_with_filesystem
 
-chacc_logger = configure_logging(log_level=LogLevels.INFO)
+chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 async def load_single_module(
