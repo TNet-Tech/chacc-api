@@ -58,10 +58,12 @@ if "postgres" in DATABASE_ENGINE.lower():
 else:
     SQLITE_DATABASE_NAME = config("SQLITE_DATABASE_NAME", default="chaccapi.db", cast=str)
     SQLITE_DATABASE_PATH = config("SQLITE_DATABASE_PATH", default=BASE_DIR, cast=str)
-    
+
     SQLITE_DB_PATH = os.path.abspath(os.path.join(SQLITE_DATABASE_PATH, SQLITE_DATABASE_NAME))
-    
-    DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH.replace('\\', '/')}"
+
+    normalized_path = SQLITE_DB_PATH.replace("\\", "/")
+
+    DATABASE_URL = f"sqlite:///{normalized_path}"
 
 
 LOGGER_NAME = "CHACC-API"
