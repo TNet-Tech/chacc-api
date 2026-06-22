@@ -46,6 +46,10 @@ DATABASE_PASSWORD = config("DATABASE_PASSWORD", default="")
 DATABASE_HOST = config("DATABASE_HOST", default="localhost")
 DATABASE_PORT = config("DATABASE_PORT", default="5432", cast=int)
 
+SQLITE_DATABASE_NAME = config("SQLITE_DATABASE_NAME", default="chaccapi.db", cast=str)
+SQLITE_DATABASE_PATH = config("SQLITE_DATABASE_PATH", default=BASE_DIR, cast=str)
+SQLITE_DB_PATH = os.path.abspath(os.path.join(SQLITE_DATABASE_PATH, SQLITE_DATABASE_NAME))
+
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="*", cast=str)
 CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default=True, cast=bool)
 CORS_ALLOW_METHODS = config("CORS_ALLOW_METHODS", default="*", cast=str)
@@ -56,13 +60,8 @@ SECRET_KEY = config("SECRET_KEY", default="", cast=str)
 if "postgres" in DATABASE_ENGINE.lower():
     DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 else:
-    SQLITE_DATABASE_NAME = config("SQLITE_DATABASE_NAME", default="chaccapi.db", cast=str)
-    SQLITE_DATABASE_PATH = config("SQLITE_DATABASE_PATH", default=BASE_DIR, cast=str)
-
-    SQLITE_DB_PATH = os.path.abspath(os.path.join(SQLITE_DATABASE_PATH, SQLITE_DATABASE_NAME))
 
     normalized_path = SQLITE_DB_PATH.replace("\\", "/")
-
     DATABASE_URL = f"sqlite:///{normalized_path}"
 
 

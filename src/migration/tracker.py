@@ -115,6 +115,22 @@ class MigrationTracker:
             result = conn.execute(text(f"SELECT version_num FROM {TRACKER_TABLE}"))
             return {row[0] for row in result.fetchall()}
 
+    def get_applied_checksums(self) -> Set[str]:
+        """
+        Get set of applied migration checksums.
+
+        Returns:
+            Set of checksum strings that have been applied
+        """
+        with self.engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    f"SELECT checksum FROM {TRACKER_TABLE} "
+                    f"WHERE checksum IS NOT NULL"
+                )
+            )
+            return {row[0] for row in result.fetchall()}
+
     def get_applied_migrations(self) -> List[Dict]:
         """
         Get detailed list of applied migrations.
@@ -197,6 +213,66 @@ class MigrationTracker:
             conn.commit()
 
         chacc_logger.info(f"Removed migration record: {version}")
+
+    def get_migration_by_version(self, version: str) -> Optional[Dict]:
+        """
+        Get a migration record by version number.
+
+        Args:
+            version: Migration version to look up
+
+        Returns:
+            Dict with migration details or None
+        """
+        with self.engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    f"SELECT version_num, description, checksum, applied_at, rollback_available "
+                    f"FROM {TRACKER_TABLE} WHERE version_num = :version"
+                ),
+                {"version": version},
+            )
+            row = result.fetchone()
+            if row:
+                return {
+                    "version": row[0],
+                    "description": row[1],
+                    "checksum": row[2],
+                    "applied_at": row[3],
+                    "rollback_available": bool(row[4]),
+                }
+        return None
+
+    def get_migrations_since_version(self, version: str) -> List[Dict]:
+        """
+        Get migrations applied after a specific version.
+
+        Args:
+            version: Migration version boundary
+
+        Returns:
+            List of migration detail dicts
+        """
+        with self.engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    f"SELECT version_num, description, checksum, applied_at, rollback_available "
+                    f"FROM {TRACKER_TABLE} "
+                    f"WHERE id > (SELECT id FROM {TRACKER_TABLE} WHERE version_num = :version) "
+                    f"ORDER BY id"
+                ),
+                {"version": version},
+            )
+            return [
+                {
+                    "version": row[0],
+                    "description": row[1],
+                    "checksum": row[2],
+                    "applied_at": row[3],
+                    "rollback_available": bool(row[4]),
+                }
+                for row in result.fetchall()
+            ]
 
     def is_applied(self, version: str) -> bool:
         """
