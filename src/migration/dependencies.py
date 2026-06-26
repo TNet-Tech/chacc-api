@@ -176,7 +176,7 @@ class MigrationDependencyResolver:
                     result = conn.execute(text("SELECT to_regclass(:qualified_name)"), {"qualified_name": qualified_name})
                     return result.scalar() is not None
 
-            return table_name in sqlalchemy_inspect(self.engine).get_table_names(schema=schema)
+            return table_name in sqlalchemy_inspect(self.engine).get_table_names()
         except Exception as e:
             self.logger.warning(f"Could not inspect table {table_name}: {e}")
             return False

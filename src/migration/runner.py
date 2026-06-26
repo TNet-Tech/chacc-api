@@ -178,12 +178,12 @@ class MigrationRunner:
             return op[1] or "unknown"
 
         if op_type in ("add_index", "add_constraint"):
-            if len(op) > 1 and hasattr(op[1], "table"):
+            if len(op) > 1 and hasattr(op[1], "table") and op[1].table is not None:
                 return op[1].table.name
             return "unknown"
 
         if op_type == "create_foreign_key":
-            if len(op) > 1 and hasattr(op[1], "table"):
+            if len(op) > 1 and hasattr(op[1], "table") and op[1].table is not None:
                 return op[1].table.name
             return "unknown"
 
