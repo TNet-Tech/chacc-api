@@ -93,3 +93,69 @@ class TestTableExists:
         with patch("src.migration.dependencies.sqlalchemy_inspect", return_value=mock_inspector):
             resolver = MigrationDependencyResolver(engine)
             assert resolver.table_exists("public", "users") is False
+
+
+class TestValidateMigrationDependencies:
+    def test_raises_for_missing_table_without_pending_add_table(self):
+        engine = MagicMock()
+        engine.dialect.name = "postgresql"
+        mock_conn = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = None
+        mock_conn.execute.return_value = mock_result
+        engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch("src.migration.dependencies.text"):
+            resolver = MigrationDependencyResolver(engine)
+            migrations = [
+                {
+                    "version": "v1",
+                    "operation": "add_index",
+                    "table": "missing_table",
+                    "details": ("add_index", MagicMock()),
+                    "schema": None,
+                }
+            ]
+            with pytest.raises(ValueError, match="table does not exist"):
+                resolver.validate_migration_dependencies(migrations)
+
+    def test_passes_when_table_exists(self):
+        engine = MagicMock()
+        engine.dialect.name = "postgresql"
+        mock_conn = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = "missing_table"
+        mock_conn.execute.return_value = mock_result
+        engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch("src.migration.dependencies.text"):
+            resolver = MigrationDependencyResolver(engine)
+            migrations = [
+                {
+                    "version": "v1",
+                    "operation": "add_index",
+                    "table": "missing_table",
+                    "details": ("add_index", MagicMock()),
+                    "schema": None,
+                }
+            ]
+            resolver.validate_migration_dependencies(migrations)
+
+
+class TestPostgresSchemaHandling:
+    def test_table_exists_uses_empty_schema_when_none(self):
+        engine = MagicMock()
+        engine.dialect.name = "postgresql"
+        mock_conn = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = "file_records"
+        mock_conn.execute.return_value = mock_result
+        engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch("src.migration.dependencies.text"):
+            resolver = MigrationDependencyResolver(engine)
+            result = resolver.table_exists(None, "file_records")
+            assert result is True

@@ -223,6 +223,11 @@ class MigrationOperationExecutor:
 
         elif op_type == "add_index":
             index = details[1]
+            if index.table is None:
+                self.logger.warning(
+                    f"Skipping add_index '{index.name}': index has no associated table (metadata may be stale)"
+                )
+                return
             if self.is_postgres:
                 op.create_index(
                     index.name,
@@ -239,6 +244,11 @@ class MigrationOperationExecutor:
 
         elif op_type == "drop_index":
             index = details[1]
+            if index.table is None:
+                self.logger.warning(
+                    f"Skipping drop_index '{index.name}': index has no associated table (metadata may be stale)"
+                )
+                return
             if self.is_postgres:
                 op.drop_index(
                     index.name,
@@ -301,6 +311,12 @@ class MigrationOperationExecutor:
             if len(details) > 1:
                 constraint = details[1]
                 if hasattr(constraint, "table") and hasattr(constraint, "name"):
+                    if constraint.table is None:
+                        self.logger.warning(
+                            f"Skipping add_constraint '{constraint.name}': "
+                            "constraint has no associated table (metadata may be stale)"
+                        )
+                        return
                     try:
                         if hasattr(constraint, "columns"):
                             columns = [c.name for c in constraint.columns]

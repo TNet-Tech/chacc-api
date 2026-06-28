@@ -275,6 +275,14 @@ class MigrationDependencyResolver:
                 if enum_name and enum_name in enum_creators:
                     add_dependency(version, enum_creators[enum_name]["version"])
 
+            if op_type == "add_table":
+                table = details[1] if len(details) > 1 else None
+                if table is not None and hasattr(table, "columns"):
+                    for column in table.columns:
+                        enum_name = self.get_enum_name_from_type(getattr(column, "type", None))
+                        if enum_name and enum_name in enum_creators:
+                            add_dependency(version, enum_creators[enum_name]["version"])
+
             if op_type == "create_foreign_key":
                 for referenced_table in self.get_referenced_tables_from_details(op_type, details):
                     referenced_creator = table_creators.get(referenced_table)

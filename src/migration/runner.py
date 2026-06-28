@@ -322,8 +322,14 @@ class MigrationRunner:
                     }
                     ordered.append(synthetic)
                     emitted_synthetic_tables.add(table_identity)
-
-            ordered.append(migration)
+                    ordered.append(migration)
+                else:
+                    chacc_logger.warning(
+                        f"Skipping migration {migration['operation']} on '{table_identity}': "
+                        "cannot determine table structure, table may have been removed or metadata is stale"
+                    )
+            else:
+                ordered.append(migration)
 
         return ordered
 
@@ -334,14 +340,16 @@ class MigrationRunner:
         applied_versions: set,
         applied_checksums: set,
     ) -> bool:
+        
         if migration["version"] in applied_versions:
             return False
 
         if migration["checksum"] in applied_checksums:
-            if migration["operation"] == "add_table" and self._has_pending_dependent_for_table(
-                migration, migrations, applied_versions
-            ):
-                return True
+            if migration["operation"] == "add_table":
+                table_exists = self._dependency_resolver.table_exists(migration.get("schema"), migration["table"])
+                
+                if not table_exists or self._has_pending_dependent_for_table(migration, migrations, applied_versions):
+                    return True
             return False
 
         return True

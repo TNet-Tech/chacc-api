@@ -225,8 +225,14 @@ class TestShouldApplyMigration:
         assert runner._should_apply_migration(migration, [], {"v1"}, set()) is False
 
     def test_skip_when_checksum_applied_no_dependents(self, runner):
+        runner._dependency_resolver.table_exists.return_value = True
         migration = {"version": "v1", "checksum": "cs1", "operation": "add_table", "table": "users"}
         assert runner._should_apply_migration(migration, [], set(), {"cs1"}) is False
+
+    def test_apply_add_table_when_checksum_applied_but_table_missing(self, runner):
+        runner._dependency_resolver.table_exists.return_value = False
+        migration = {"version": "v1", "checksum": "cs1", "operation": "add_table", "table": "users"}
+        assert runner._should_apply_migration(migration, [], set(), {"cs1"}) is True
 
     def test_apply_when_checksum_applied_but_dependents_pending(self, runner):
         migration = {"version": "v1", "checksum": "cs1", "operation": "add_table", "table": "users", "schema": None}
