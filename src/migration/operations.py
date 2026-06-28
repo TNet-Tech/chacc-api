@@ -37,7 +37,7 @@ class MigrationOperationExecutor:
         op_type: str,
         checksum: str = None,
         applied_migrations: List[dict] = None,
-    ):
+):
         checksum = checksum or self.dependency_resolver.generate_checksum([details])
 
         def sync_apply():
@@ -49,6 +49,35 @@ class MigrationOperationExecutor:
                     self.apply_operation(op, op_type, details)
                 except (ProgrammingError, OperationalError) as e:
                     error_msg = str(e).lower()
+                    # For add_table on Postgres, handle enum type conflicts
+                    if op_type == "add_table" and "duplicateobject" in error_msg and self.is_postgres:
+                        # Enum type may already exist - check if table was created despite error
+                        table = details[1] if len(details) > 1 else None
+                        if table:
+                            schema = getattr(table, "schema", None)
+                            if self.dependency_resolver.table_exists(schema, table.name):
+                                # Table was created despite enum conflict (transaction rolled back)
+                                # This is okay - enum already exists and table exists
+                                self.logger.info(
+                                    f"Table '{table.name}' already exists (enum type conflict resolved)"
+                                )
+                                table_name = self.dependency_resolver.get_table_name_from_details(op_type, details)
+                                description = self.generate_migration_description(op_type, table_name)
+                                conn.execute(
+                                    text(f"""
+                                    INSERT INTO {TRACKER_TABLE}
+                                    (version_num, description, checksum, applied_at, rollback_available)
+                                    VALUES (:version, :desc, :checksum, :applied_at, :rollback)
+                                """),
+                                    {
+                                        "version": version,
+                                        "desc": description[:200],
+                                        "checksum": checksum,
+                                        "applied_at": datetime.now(timezone.utc).isoformat(),
+                                        "rollback": 0,
+                                    },
+                                )
+                                return
                     if "already exists" in error_msg or "duplicate" in error_msg:
                         self.logger.debug(f"Skipping {op_type}: resource already exists")
                         return
@@ -106,10 +135,25 @@ class MigrationOperationExecutor:
             table = details[1]
             schema = getattr(table, "schema", None)
             if self.is_postgres:
+                # Pre-create enum types to avoid conflicts
                 for column in table.columns:
                     if isinstance(column.type, SAEnum):
-                        self.create_enum_type(column.type, op.get_bind(), schema)
-            op.create_table(table.name, *table.columns, schema=schema)
+                        try:
+                            self.create_enum_type(column.type, op.get_bind(), schema)
+                        except (ProgrammingError, OperationalError):
+                            pass  # Enum already exists, which is fine
+                
+                # Check if table already exists
+                if self.dependency_resolver.table_exists(schema, table.name):
+                    return
+                
+                # Use raw SQL to create table since SQLAlchemy will try to create
+                # enum types with checkfirst=False which fails if they exist
+                from sqlalchemy.schema import CreateTable
+                create_stmt = CreateTable(table).compile(bind=op.get_bind())
+                op.execute(str(create_stmt))
+            else:
+                op.create_table(table.name, *table.columns, schema=schema)
 
         elif op_type == "add_column":
             if details[1] is None and len(details) >= 4:
