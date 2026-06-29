@@ -67,6 +67,7 @@ async def load_single_module(
 
     chacc_logger.info(f"Module path confirmed: {module_path}")
 
+    # Discover models first (needed so they exist in metadata before import)
     try:
         discover_and_import_models(module_path, module_name, backbone_context.logger)
         chacc_logger.info(f"Auto-discovered models for module '{module_name}'")
@@ -150,7 +151,10 @@ async def load_single_module(
         if hasattr(plugin_router, "routes"):
             chacc_logger.info(f"Module '{module_name}' routes mounted:")
             for route in plugin_router.routes:
-                chacc_logger.info(f"  - {route.path}: {', '.join(route.methods)}")
+                route_path = getattr(route, "path", None)
+                route_methods = getattr(route, "methods", None)
+                if route_path and route_methods:
+                    chacc_logger.info(f"  - {route_path}: {', '.join(route_methods)}")
         else:
             chacc_logger.info(f"Module '{module_name}' has no routes")
 
@@ -253,7 +257,7 @@ async def load_modules(
                 else:
                     metadata = record.meta_data if record.meta_data else {}
 
-                await load_single_module(
+                discovery_success = await load_single_module(
                     module_name=record.name,
                     module_path=module_path,
                     module_metadata=metadata,
@@ -262,14 +266,14 @@ async def load_modules(
                     base_path_prefix=record.base_path_prefix,
                     discover_only=True,
                 )
+                if not discovery_success:
+                    chacc_logger.warning(
+                        f"Model discovery failed for module '{record.name}'"
+                    )
             except Exception as e:
                 chacc_logger.error(
                     f"Error discovering models for module '{record.name}': {e}", exc_info=True
                 )
-
-        from src.migration.runner import run_migration
-
-        await run_migration()
 
         for record in updated_records:
             try:
@@ -282,7 +286,7 @@ async def load_modules(
                 else:
                     metadata = record.meta_data if record.meta_data else {}
 
-                await load_single_module(
+                success = await load_single_module(
                     module_name=record.name,
                     module_path=module_path,
                     module_metadata=metadata,
@@ -290,6 +294,13 @@ async def load_modules(
                     backbone_context=backbone_context,
                     base_path_prefix=record.base_path_prefix,
                 )
+                if not success:
+                    chacc_logger.warning(f"Module '{record.name}' failed to load")
+                    try:
+                        record.is_enabled = False
+                        db.commit()
+                    except Exception:
+                        pass
             except Exception as e:
                 chacc_logger.error(f"Error loading module '{record.name}': {e}", exc_info=True)
                 try:
@@ -297,6 +308,10 @@ async def load_modules(
                     db.commit()
                 except Exception:
                     pass
+
+        from src.migration.runner import run_migration
+
+        await run_migration()
     except Exception as e:
         chacc_logger.error(f"Unexpected error during module loading: {e}", exc_info=True)
         pass

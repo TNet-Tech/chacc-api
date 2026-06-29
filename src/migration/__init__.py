@@ -16,6 +16,8 @@ Usage:
     result = await run_migration(mode="full")
 """
 
+from src.migration.dependencies import MigrationDependencyResolver
+from src.migration.operations import MigrationOperationExecutor
 from src.migration.runner import (
     MigrationRunner,
     MigrationMode,
@@ -28,6 +30,8 @@ from src.migration.backup import DatabaseBackup, create_backup
 __all__ = [
     "MigrationRunner",
     "MigrationMode",
+    "MigrationDependencyResolver",
+    "MigrationOperationExecutor",
     "create_migration_runner",
     "run_migration",
     "MigrationTracker",
