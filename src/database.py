@@ -132,27 +132,69 @@ def register_model(model_cls):
 
 
 def initialize_database_models(backbone_context):
-    import inspect
-
     enable_audit_fields = backbone_context.get_service("enable_audit_fields")
+
+    if not enable_audit_fields or not enable_audit_fields():
+        backbone_context.logger.warning(
+            "Audit fields not enabled or service unavailable; skipping audit schema pass."
+        )
+        return
 
     for model_cls in _all_declarative_subclasses(ChaCCBaseModel):
         if getattr(model_cls, "_is_core", False):
             continue
 
-        if enable_audit_fields and enable_audit_fields():
-            if not hasattr(model_cls, "created_by_id"):
-                backbone_context.logger.info(f"Adding audit user fields to {model_cls.__name__}.")
-                created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-                updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-                deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-                setattr(model_cls, "created_by_id", created_by_col)
-                setattr(model_cls, "updated_by_id", updated_by_col)
-                setattr(model_cls, "deleted_by_id", deleted_by_col)
-                table = model_cls.__table__
-                table.append_column(created_by_col)
-                table.append_column(updated_by_col)
-                table.append_column(deleted_by_col)
+        if not hasattr(model_cls, "created_by_id"):
+            backbone_context.logger.info(f"Adding audit user fields to {model_cls.__name__}.")
+            created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+            updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+            deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+            setattr(model_cls, "created_by_id", created_by_col)
+            setattr(model_cls, "updated_by_id", updated_by_col)
+            setattr(model_cls, "deleted_by_id", deleted_by_col)
+            table = model_cls.__table__
+            table.append_column(created_by_col)
+            table.append_column(updated_by_col)
+            table.append_column(deleted_by_col)
+
+
+def apply_deferred_schema_changes(backbone_context):
+    """
+    Idempotent post-entrypoint schema pass.
+
+    Returns True if metadata_obj was mutated and a targeted migration is required.
+    """
+    enable_audit_fields = backbone_context.get_service("enable_audit_fields")
+
+    if not enable_audit_fields or not enable_audit_fields():
+        backbone_context.logger.debug(
+            "Deferred schema pass: audit fields not enabled; nothing to do."
+        )
+        return False
+    
+
+    mutated = False
+    for model_cls in _all_declarative_subclasses(ChaCCBaseModel):
+        if getattr(model_cls, "_is_core", False):
+            continue
+
+        if not hasattr(model_cls, "created_by_id"):
+            backbone_context.logger.info(
+                f"Deferred schema pass: adding audit fields to {model_cls.__name__}."
+            )
+            created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+            updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+            deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+            setattr(model_cls, "created_by_id", created_by_col)
+            setattr(model_cls, "updated_by_id", updated_by_col)
+            setattr(model_cls, "deleted_by_id", deleted_by_col)
+            table = model_cls.__table__
+            table.append_column(created_by_col)
+            table.append_column(updated_by_col)
+            table.append_column(deleted_by_col)
+            mutated = True
+
+    return mutated
 
 
 def _all_declarative_subclasses(cls):

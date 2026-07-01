@@ -79,11 +79,6 @@ async def onStartupLifespan(app: FastAPI):
 
     app.state.backbone_context = backbone_context
 
-    initialize_database_models(backbone_context)
-
-    # Always run migration to handle schema changes
-    await run_migration()
-
     chacc_logger.info("Loading modules...")
 
     if DEVELOPMENT_MODE:

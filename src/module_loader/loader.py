@@ -14,7 +14,7 @@ from fastapi import FastAPI, APIRouter
 
 from src.logger import get_default_log_level, configure_logging
 from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, DEPENDENCY_CACHE_DIR
-from src.database import get_db, ModuleRecord, initialize_database_models
+from src.database import apply_deferred_schema_changes, get_db, ModuleRecord, initialize_database_models
 from src.core_services import BackboneContext
 
 from .discovery import discover_and_import_models
@@ -318,6 +318,15 @@ async def load_modules(
                     db.commit()
                 except Exception:
                     pass
+
+        try:
+            if apply_deferred_schema_changes(backbone_context):
+                chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
+                from src.migration.runner import run_migration
+                await run_migration()
+                chacc_logger.info("Deferred migration completed.")
+        except Exception as e:
+            chacc_logger.error(f"Deferred schema migration failed: {e}", exc_info=True)
     except Exception as e:
         chacc_logger.error(f"Unexpected error during module loading: {e}", exc_info=True)
         pass
