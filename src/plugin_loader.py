@@ -23,6 +23,7 @@ from src.constants import (
     PLUGIN_AUTO_DISCOVERY,
 )
 from src.module_loader.loader import load_single_module
+from src.database import initialize_database_models
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -262,6 +263,23 @@ async def _load_modules(
                 f"Error discovering models for module '{module_name}': {e}", exc_info=True
             )
 
+    try:
+        from src.database import initialize_database_models
+
+        initialize_database_models(backbone_context)
+        chacc_logger.info("initialize_database_models completed.")
+    except Exception as e:
+        chacc_logger.error(f"initialize_database_models failed: {e}", exc_info=True)
+
+    try:
+        from src.migration.runner import run_migration
+
+        chacc_logger.info("Running database migrations after model discovery...")
+        await run_migration()
+        chacc_logger.info("Database migrations completed.")
+    except Exception as e:
+        chacc_logger.error(f"Migration failed: {e}", exc_info=True)
+
     for module_name in modules_to_load:
         module_info = modules[module_name]
 
@@ -284,14 +302,5 @@ async def _load_modules(
 
         except Exception as e:
             chacc_logger.error(f"Error loading module '{module_name}': {e}", exc_info=True)
-
-    try:
-        from src.migration.runner import run_migration
-
-        chacc_logger.info("Running database migrations after module loading...")
-        await run_migration()
-        chacc_logger.info("Database migrations completed.")
-    except Exception as e:
-        chacc_logger.error(f"Migration failed: {e}", exc_info=True)
 
     chacc_logger.info(f"Module loading from {source} completed")
