@@ -13,6 +13,7 @@ from sqlalchemy import (
     func,
     MetaData,
     event,
+    Table,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import sessionmaker
@@ -66,9 +67,6 @@ else:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-_model_registry: set = set()
-_core_system_models: set = set()
-
 convention = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -77,12 +75,6 @@ convention = {
     "pk": "pk_%(table_name)s",
 }
 metadata_obj = MetaData(naming_convention=convention)
-
-
-def register_model(cls):
-    if cls not in _model_registry:
-        _model_registry.add(cls)
-    return cls
 
 
 @as_declarative(metadata=metadata_obj)
@@ -111,8 +103,8 @@ def _set_timestamps(mapper, connection, target):
     target.updated_at = now
 
 
-@register_model
 class ModuleRecord(ChaCCBaseModel):
+    _is_core = True
     __tablename__ = "modules"
     name = Column(String, unique=True, index=True, nullable=False)
     display_name = Column(String, nullable=True)
@@ -124,14 +116,28 @@ class ModuleRecord(ChaCCBaseModel):
     meta_data = Column(JSON, nullable=True)
 
 
-_core_system_models.add(ModuleRecord)
+def register_model(model_cls):
+    """
+    Idempotent metadata guard for model registration.
+
+    Sole work: check ``metadata_obj.tables`` for the model's table key.
+    - If present: return ``model_cls`` unchanged (skip duplicate registration).
+    - If missing: return ``model_cls`` unchanged and let the declarative
+      base handle registration.
+    """
+    table_key = getattr(model_cls, "__tablename__", None)
+    if table_key and table_key in metadata_obj.tables:
+        return model_cls
+    return model_cls
 
 
 def initialize_database_models(backbone_context):
+    import inspect
+
     enable_audit_fields = backbone_context.get_service("enable_audit_fields")
 
-    for model_cls in _model_registry:
-        if model_cls in _core_system_models:
+    for model_cls in _all_declarative_subclasses(ChaCCBaseModel):
+        if getattr(model_cls, "_is_core", False):
             continue
 
         if enable_audit_fields and enable_audit_fields():
@@ -147,6 +153,12 @@ def initialize_database_models(backbone_context):
                 table.append_column(created_by_col)
                 table.append_column(updated_by_col)
                 table.append_column(deleted_by_col)
+
+
+def _all_declarative_subclasses(cls):
+    for subclass in cls.__subclasses__():
+        yield subclass
+        yield from _all_declarative_subclasses(subclass)
 
 
 async def get_db():
