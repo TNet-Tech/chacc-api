@@ -11,7 +11,7 @@ import importlib.util
 import sys
 import logging
 import graphlib
-from collections import defaultdict, deque
+from collections import defaultdict
 
 
 def _dotted_name(prefix: str, rel_dir: str, file_stem: str) -> str:
@@ -52,7 +52,7 @@ def _parse_imports(file_path: str, module_prefix: str, enclosing: str) -> set[st
                 imported.add(node.module)
             elif node.level > 0:
                 parts = enclosing.split(".")
-                base = ".".join(parts[:-node.level]) if node.level <= len(parts) else ""
+                base = ".".join(parts[: -node.level]) if node.level <= len(parts) else ""
                 if node.module:
                     target = f"{base}.{node.module}" if base else node.module
                     if _is_in_scope(target, module_prefix):

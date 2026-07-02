@@ -1,14 +1,17 @@
 import os
+from pathlib import Path
 from importlib.resources import files
+import base64
 
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
 from src.health import health_router
-from src.database import initialize_database_models, get_db
+from src.database import get_db
 from src.logger import configure_logging, get_default_log_level
 from src.core_services import BackboneContext
 from src.constants import (
@@ -21,7 +24,6 @@ from src.constants import (
     CORS_ALLOW_HEADERS,
 )
 from src.env_validator import validate_environment, ValidationError
-from src.migration.runner import run_migration
 from src.redis_service import RedisService
 
 
@@ -145,15 +147,32 @@ app.state.backbone_context = None
     "/",
     summary="Root Endpoint",
     description="Welcome endpoint for the ChaCC API Backbone",
-    response_description="Welcome message with documentation link",
+    response_description="Welcome page with links to interactive API documentation",
     tags=["Core"],
 )
 async def read_root():
     """
     Root endpoint of the ChaCC API backbone.
-    Returns a welcome message and directs users to the API documentation.
+    Returns a welcome page with links to interactive API documentation.
     """
-    return {"message": "Welcome to the ChaCC API Backbone! Check /docs for API modules."}
+    logo_path = Path(__file__).resolve().parent.parent.parent / "assets" / "chacc-icon.ico"
+    logo_data_uri = ""
+    if logo_path.exists():
+        logo_data_uri = (
+            "data:image/x-icon;base64," + base64.b64encode(logo_path.read_bytes()).decode()
+        )
+
+    logo_img = f'<img src="{logo_data_uri}" alt="ChaCC Logo" class="logo">' if logo_data_uri else ""
+
+    template_path = Path(__file__).resolve().parent / "templates" / "index.html"
+    html_content = template_path.read_text(encoding="utf-8")
+    html_content = html_content.replace("{{logo_img|safe}}", logo_img)
+    html_content = html_content.replace("{{logo_data_uri}}", logo_data_uri)
+
+    return HTMLResponse(
+        content=html_content,
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+    )
 
 
 app.include_router(health_router)

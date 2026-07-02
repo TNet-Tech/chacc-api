@@ -124,10 +124,7 @@ class MigrationTracker:
         """
         with self.engine.connect() as conn:
             result = conn.execute(
-                text(
-                    f"SELECT checksum FROM {TRACKER_TABLE} "
-                    f"WHERE checksum IS NOT NULL"
-                )
+                text(f"SELECT checksum FROM {TRACKER_TABLE} " f"WHERE checksum IS NOT NULL")
             )
             return {row[0] for row in result.fetchall()}
 

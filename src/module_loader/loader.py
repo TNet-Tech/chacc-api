@@ -14,7 +14,12 @@ from fastapi import FastAPI, APIRouter
 
 from src.logger import get_default_log_level, configure_logging
 from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, DEPENDENCY_CACHE_DIR
-from src.database import apply_deferred_schema_changes, get_db, ModuleRecord, initialize_database_models
+from src.database import (
+    apply_deferred_schema_changes,
+    get_db,
+    ModuleRecord,
+    initialize_database_models,
+)
 from src.core_services import BackboneContext
 
 from .discovery import discover_and_import_models
@@ -267,9 +272,7 @@ async def load_modules(
                     discover_only=True,
                 )
                 if not discovery_success:
-                    chacc_logger.warning(
-                        f"Model discovery failed for module '{record.name}'"
-                    )
+                    chacc_logger.warning(f"Model discovery failed for module '{record.name}'")
             except Exception as e:
                 chacc_logger.error(
                     f"Error discovering models for module '{record.name}': {e}", exc_info=True
@@ -323,6 +326,7 @@ async def load_modules(
             if apply_deferred_schema_changes(backbone_context):
                 chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
                 from src.migration.runner import run_migration
+
                 await run_migration()
                 chacc_logger.info("Deferred migration completed.")
         except Exception as e:

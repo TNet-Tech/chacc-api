@@ -23,7 +23,7 @@ from src.constants import (
     PLUGIN_AUTO_DISCOVERY,
 )
 from src.module_loader.loader import load_single_module
-from src.database import initialize_database_models, apply_deferred_schema_changes
+from src.database import apply_deferred_schema_changes
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -198,7 +198,6 @@ async def load_dev_modules(
     source = PLUGINS_DIR.split("/")[-1] if "/" in PLUGINS_DIR else PLUGINS_DIR
 
     chacc_logger.info(f"Discovering plugins from {source} directory...")
-    
 
     modules = discover_plugins()
     if not modules:
@@ -307,6 +306,7 @@ async def _load_modules(
         if apply_deferred_schema_changes(backbone_context):
             chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
             from src.migration.runner import run_migration
+
             await run_migration()
             chacc_logger.info("Deferred migration completed.")
     except Exception as e:

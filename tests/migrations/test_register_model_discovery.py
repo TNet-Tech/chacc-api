@@ -14,7 +14,11 @@ from src.module_loader.discovery import discover_and_import_models
 def _clear_test_models():
     for model_cls in list(ChaCCBaseModel.__subclasses__()):
         for sub in list(model_cls.__subclasses__()):
-            if sub.__name__.startswith("Test") or sub.__name__.startswith("Discovered") or sub.__name__.startswith("Meta"):
+            if (
+                sub.__name__.startswith("Test")
+                or sub.__name__.startswith("Discovered")
+                or sub.__name__.startswith("Meta")
+            ):
                 pass
 
 
@@ -22,14 +26,14 @@ def test_discover_and_import_adds_to_metadata():
     """Verify that discovered modules add their tables to metadata_obj."""
     with tempfile.TemporaryDirectory() as tmpdir:
         model_file = os.path.join(tmpdir, "test_models.py")
-        model_content = '''
+        model_content = """
 from src.database import ChaCCBaseModel
 from sqlalchemy import Column, String
 
 class DiscoveredModel(ChaCCBaseModel):
     __tablename__ = "discovered_models"
     name = Column(String(50))
-'''
+"""
         with open(model_file, "w") as f:
             f.write(model_content)
 
@@ -42,14 +46,14 @@ def test_discover_and_import_adds_to_subclasses():
     """Verify that discovered modules add their classes to ChaCCBaseModel subclasses."""
     with tempfile.TemporaryDirectory() as tmpdir:
         model_file = os.path.join(tmpdir, "test_models.py")
-        model_content = '''
+        model_content = """
 from src.database import ChaCCBaseModel
 from sqlalchemy import Column, String
 
 class MetaTestModel(ChaCCBaseModel):
     __tablename__ = "meta_test_models"
     name = Column(String(50))
-'''
+"""
         with open(model_file, "w") as f:
             f.write(model_content)
 

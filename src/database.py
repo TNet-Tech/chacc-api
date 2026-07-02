@@ -13,7 +13,6 @@ from sqlalchemy import (
     func,
     MetaData,
     event,
-    Table,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import sessionmaker
@@ -171,7 +170,6 @@ def apply_deferred_schema_changes(backbone_context):
             "Deferred schema pass: audit fields not enabled; nothing to do."
         )
         return False
-    
 
     mutated = False
     for model_cls in _all_declarative_subclasses(ChaCCBaseModel):

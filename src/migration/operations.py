@@ -37,7 +37,7 @@ class MigrationOperationExecutor:
         op_type: str,
         checksum: str = None,
         applied_migrations: List[dict] = None,
-):
+    ):
         checksum = checksum or self.dependency_resolver.generate_checksum([details])
 
         def sync_apply():
@@ -50,7 +50,11 @@ class MigrationOperationExecutor:
                 except (ProgrammingError, OperationalError) as e:
                     error_msg = str(e).lower()
                     # For add_table on Postgres, handle enum type conflicts
-                    if op_type == "add_table" and "duplicateobject" in error_msg and self.is_postgres:
+                    if (
+                        op_type == "add_table"
+                        and "duplicateobject" in error_msg
+                        and self.is_postgres
+                    ):
                         # Enum type may already exist - check if table was created despite error
                         table = details[1] if len(details) > 1 else None
                         if table:
@@ -61,8 +65,12 @@ class MigrationOperationExecutor:
                                 self.logger.info(
                                     f"Table '{table.name}' already exists (enum type conflict resolved)"
                                 )
-                                table_name = self.dependency_resolver.get_table_name_from_details(op_type, details)
-                                description = self.generate_migration_description(op_type, table_name)
+                                table_name = self.dependency_resolver.get_table_name_from_details(
+                                    op_type, details
+                                )
+                                description = self.generate_migration_description(
+                                    op_type, table_name
+                                )
                                 conn.execute(
                                     text(f"""
                                     INSERT INTO {TRACKER_TABLE}
@@ -142,14 +150,15 @@ class MigrationOperationExecutor:
                             self.create_enum_type(column.type, op.get_bind(), schema)
                         except (ProgrammingError, OperationalError):
                             pass  # Enum already exists, which is fine
-                
+
                 # Check if table already exists
                 if self.dependency_resolver.table_exists(schema, table.name):
                     return
-                
+
                 # Use raw SQL to create table since SQLAlchemy will try to create
                 # enum types with checkfirst=False which fails if they exist
                 from sqlalchemy.schema import CreateTable
+
                 create_stmt = CreateTable(table).compile(bind=op.get_bind())
                 op.execute(str(create_stmt))
             else:
@@ -382,9 +391,7 @@ class MigrationOperationExecutor:
                                 schema=getattr(constraint.table, "schema", None),
                             )
                     except Exception as e:
-                        self.logger.warning(
-                            f"Failed to create constraint {constraint.name}: {e}"
-                        )
+                        self.logger.warning(f"Failed to create constraint {constraint.name}: {e}")
 
         else:
             self.logger.warning(f"Unknown operation type: {op_type}")

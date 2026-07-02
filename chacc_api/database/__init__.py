@@ -13,7 +13,6 @@ from ...src.database import (
     register_model,
 )
 
-
 __all__ = [
     "ChaCCBaseModel",
     "get_db",

@@ -155,9 +155,7 @@ class MigrationDependencyResolver:
         if op_type == "create_foreign_key" and len(details) > 1:
             referred_table = getattr(details[1], "referred_table", None)
             if referred_table is not None:
-                return {
-                    (getattr(referred_table, "schema", None), self.safe_name(referred_table))
-                }
+                return {(getattr(referred_table, "schema", None), self.safe_name(referred_table))}
         return set()
 
     def get_referenced_tables_from_details(self, op_type: str, details: tuple) -> Set[str]:
@@ -173,7 +171,10 @@ class MigrationDependencyResolver:
             if self.engine.dialect.name == "postgresql":
                 qualified_name = f"{schema}.{table_name}" if schema else table_name
                 with self.engine.connect() as conn:
-                    result = conn.execute(text("SELECT to_regclass(:qualified_name)"), {"qualified_name": qualified_name})
+                    result = conn.execute(
+                        text("SELECT to_regclass(:qualified_name)"),
+                        {"qualified_name": qualified_name},
+                    )
                     return result.scalar() is not None
 
             return table_name in sqlalchemy_inspect(self.engine).get_table_names()
@@ -226,9 +227,7 @@ class MigrationDependencyResolver:
         dependencies: Dict[str, Set[str]] = {
             migration["version"]: set() for migration in migrations
         }
-        dependents: Dict[str, Set[str]] = {
-            migration["version"]: set() for migration in migrations
-        }
+        dependents: Dict[str, Set[str]] = {migration["version"]: set() for migration in migrations}
         table_creators: Dict[str, Dict] = {}
         column_creators: Dict[Tuple[str, str], Dict] = {}
         enum_creators: Dict[str, Dict] = {}
@@ -311,9 +310,8 @@ class MigrationDependencyResolver:
             table_name = migration["table"]
 
             if op_type in self.TABLE_REQUIRED_OPERATIONS:
-                if (
-                    table_identity not in pending_tables
-                    and not self.table_exists(migration.get("schema"), table_name)
+                if table_identity not in pending_tables and not self.table_exists(
+                    migration.get("schema"), table_name
                 ):
                     raise ValueError(
                         f"Cannot apply {op_type} for {table_identity}: "
