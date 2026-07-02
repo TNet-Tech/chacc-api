@@ -27,15 +27,19 @@ def get_chacc_filepath(module_name: str, chacc_to_module_name: dict = None) -> s
     Returns:
         Path to .chacc file if found, None otherwise.
     """
-    if chacc_to_module_name is not None:
-        for chacc_filename, mapped_name in chacc_to_module_name.items():
-            if mapped_name == module_name:
-                chacc_filepath = os.path.join(MODULES_INSTALLED_DIR, chacc_filename)
-                if os.path.exists(chacc_filepath):
-                    chacc_logger.info(
-                        f"Found matching .chacc file for module '{module_name}': {chacc_filename}"
-                    )
-                    return chacc_filepath
+    if chacc_to_module_name is None:
+        chacc_to_module_name = extract_module_names_from_chacc_files(
+            [f for f in os.listdir(MODULES_INSTALLED_DIR) if f.endswith(".chacc")]
+        )
+
+    for chacc_filename, mapped_name in chacc_to_module_name.items():
+        if mapped_name == module_name:
+            chacc_filepath = os.path.join(MODULES_INSTALLED_DIR, chacc_filename)
+            if os.path.exists(chacc_filepath):
+                chacc_logger.info(
+                    f"Found matching .chacc file for module '{module_name}': {chacc_filename}"
+                )
+                return chacc_filepath
 
     return None
 

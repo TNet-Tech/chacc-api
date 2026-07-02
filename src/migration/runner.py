@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import MetaData, text
+from sqlalchemy import MetaData
 from sqlalchemy.engine import Engine
 
 from alembic.runtime.migration import MigrationContext
@@ -149,11 +149,7 @@ class MigrationRunner:
     def _extract_table_name(self, op_type: str, op: Any) -> str:
         if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
             aff_cols = getattr(op, "affected_columns", [])
-            return (
-                getattr(aff_cols[0], "table_name", str(aff_cols[0]))
-                if aff_cols
-                else "unknown"
-            )
+            return getattr(aff_cols[0], "table_name", str(aff_cols[0])) if aff_cols else "unknown"
 
         if hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
             return "unknown"
@@ -242,9 +238,7 @@ class MigrationRunner:
         self._dependency_resolver.validate_migration_dependencies(migrations)
 
     def _table_identity(self, migration: Dict) -> str:
-        return self._dependency_resolver.table_identity(
-            migration.get("schema"), migration["table"]
-        )
+        return self._dependency_resolver.table_identity(migration.get("schema"), migration["table"])
 
     def _has_pending_dependent_for_table(
         self, migration: Dict, migrations: List[Dict], applied_versions: set
@@ -293,18 +287,29 @@ class MigrationRunner:
         return None
 
     def _ensure_missing_table_creators(self, migrations: List[Dict]) -> List[Dict]:
-        pending_tables = {self._table_identity(m) for m in migrations if m["operation"] == "add_table"}
+        pending_tables = {
+            self._table_identity(m) for m in migrations if m["operation"] == "add_table"
+        }
         emitted_synthetic_tables = set()
         ordered = []
 
         for migration in migrations:
             table_identity = self._table_identity(migration)
-            requires_existing_table = migration["operation"] in self._dependency_resolver.TABLE_REQUIRED_OPERATIONS
-            table_missing = table_identity not in pending_tables and not self._dependency_resolver.table_exists(
-                migration.get("schema"), migration["table"]
+            requires_existing_table = (
+                migration["operation"] in self._dependency_resolver.TABLE_REQUIRED_OPERATIONS
+            )
+            table_missing = (
+                table_identity not in pending_tables
+                and not self._dependency_resolver.table_exists(
+                    migration.get("schema"), migration["table"]
+                )
             )
 
-            if requires_existing_table and table_missing and table_identity not in emitted_synthetic_tables:
+            if (
+                requires_existing_table
+                and table_missing
+                and table_identity not in emitted_synthetic_tables
+            ):
                 table_object = self._table_object_from_details(
                     migration["operation"], migration["details"]
                 )
@@ -340,15 +345,19 @@ class MigrationRunner:
         applied_versions: set,
         applied_checksums: set,
     ) -> bool:
-        
+
         if migration["version"] in applied_versions:
             return False
 
         if migration["checksum"] in applied_checksums:
             if migration["operation"] == "add_table":
-                table_exists = self._dependency_resolver.table_exists(migration.get("schema"), migration["table"])
-                
-                if not table_exists or self._has_pending_dependent_for_table(migration, migrations, applied_versions):
+                table_exists = self._dependency_resolver.table_exists(
+                    migration.get("schema"), migration["table"]
+                )
+
+                if not table_exists or self._has_pending_dependent_for_table(
+                    migration, migrations, applied_versions
+                ):
                     return True
             return False
 
@@ -555,9 +564,7 @@ class MigrationRunner:
         pending = [
             m
             for m in migrations
-            if self._should_apply_migration(
-                m, migrations, applied_versions, applied_checksums
-            )
+            if self._should_apply_migration(m, migrations, applied_versions, applied_checksums)
         ]
         pending = self._ensure_missing_table_creators(pending)
         pending = self._build_dependency_graph(pending)

@@ -1,3 +1,95 @@
+# Changelog
+
+**Update now:**
+```bash
+pip install --upgrade chacc-api
+```
+
+## 1.0.0-b4.2
+
+**Beta4.2 fixes a critical startup crash, resolves the audit-schema chicken-and-egg problem, and cleans up model discovery. If you've had issues with module loading or SQLite table detection, this release is for you.**
+
+---
+
+### Added
+
+- **Smarter model discovery** – Modules now load their dependencies in the correct order automatically, even when imports are nested.
+- **Better migration safety** – New dependency resolver and operation executor handle PostgreSQL enum conflicts and ensure migrations run correctly across SQLite and PostgreSQL.
+- **Comprehensive test coverage** – Tests now cover migration ordering, safe operation filtering, schema reflection, and model discovery.
+
+### Fixed
+
+- **Startup crash** – Fixed "Multiple classes found for some modules" crash that occurred when plugin discovery was disabled in development mode.
+- **Double model registration** – Removed the old `_model_registry` and now rely exclusively on SQLAlchemy's declarative metadata. No more duplicate table errors.
+- **SQLite table detection** – Fixed a bug where `table_exists()` returned incorrect results for existing tables.
+- **Audit schema chicken-and-egg** – Split schema initialization into two passes (before and after entry points) so audit fields are applied correctly even when the `enable_audit_fields` service is registered after startup.
+- **Module load failure handling** – Failed modules are now properly disabled, preventing repeated crash loops on restart.
+- **Logging crashes** – Fixed crashes when logging routes that had `None` paths or methods.
+
+### Changed
+
+- **Module loading sequence** – Both dev and prod modes now follow the same sequence: discover models → initialize database → run migrations → load entry points → apply deferred schema changes → optional follow-up migration.
+- **Database initialization** – Now uses `ChaCCBaseModel` subclass enumeration instead of the removed `_model_registry`.
+
+### Removed
+
+- **Redundant startup schema pass** – Removed a duplicate migration run that caused unnecessary migrations in some environments.
+- **`_model_registry`** – The old model registry has been removed in favor of SQLAlchemy's declarative metadata.
+
+### Notes
+
+- **Versioning**: The package metadata uses `1.0.0-b4.post2` for PyPI; the user-facing version is `1.0.0-b4.2`. Both refer to the same release.
+- **Port default**: All references now consistently use port `8085` (previously some docs mentioned `8080`).
+- **`.env` behavior**: The `.env.sample` file is copied from the package to your working directory if missing. This is intentional and unchanged from previous versions.
+
+---
+
+
+## [1.0.0-b4.2] - 2026-07-02
+
+**Beta4.2 fixes a critical startup crash, resolves the audit-schema chicken-and-egg problem, and cleans up model discovery. If you've had issues with module loading or SQLite table detection, this release is for you.**
+
+---
+
+### Added
+
+- **Smarter model discovery** – Modules now load their dependencies in the correct order automatically, even when imports are nested.
+- **Better migration safety** – New dependency resolver and operation executor handle PostgreSQL enum conflicts and ensure migrations run correctly across SQLite and PostgreSQL.
+- **Comprehensive test coverage** – Tests now cover migration ordering, safe operation filtering, schema reflection, and model discovery.
+
+### Fixed
+
+- **Startup crash** – Fixed "Multiple classes found for some modules" crash that occurred when plugin discovery was disabled in development mode.
+- **Double model registration** – Removed the old `_model_registry` and now rely exclusively on SQLAlchemy's declarative metadata. No more duplicate table errors.
+- **SQLite table detection** – Fixed a bug where `table_exists()` returned incorrect results for existing tables.
+- **Audit schema chicken-and-egg** – Split schema initialization into two passes (before and after entry points) so audit fields are applied correctly even when the `enable_audit_fields` service is registered after startup.
+- **Module load failure handling** – Failed modules are now properly disabled, preventing repeated crash loops on restart.
+- **Logging crashes** – Fixed crashes when logging routes that had `None` paths or methods.
+
+### Changed
+
+- **Module loading sequence** – Both dev and prod modes now follow the same sequence: discover models → initialize database → run migrations → load entry points → apply deferred schema changes → optional follow-up migration.
+- **Database initialization** – Now uses `ChaCCBaseModel` subclass enumeration instead of the removed `_model_registry`.
+- **Root endpoint** – `/` now serves a dark-mode HTML welcome page with links to Swagger UI, ReDoc, and chacc.dev documentation, instead of returning raw JSON. The page embeds the ChaCC logo and uses the project's teal/navy color theme.
+
+### Removed
+
+- **Redundant startup schema pass** – Removed a duplicate migration run that caused unnecessary migrations in some environments.
+- **`_model_registry`** – The old model registry has been removed in favor of SQLAlchemy's declarative metadata.
+
+### Notes
+
+- **Versioning**: The package metadata uses `1.0.0-b4.post2` for PyPI; the user-facing version is `1.0.0-b4.2`. Both refer to the same release.
+- **Port default**: All references now consistently use port `8085` (previously some docs mentioned `8080`).
+- **`.env` behavior**: The `.env.sample` file is copied from the package to your working directory if missing. This is intentional and unchanged from previous versions.
+
+---
+
+**Update now:**
+```bash
+pip install --upgrade chacc-api
+```
+
 ## [1.0.0-b4.1] - 2026-06-19
 
 ### Added

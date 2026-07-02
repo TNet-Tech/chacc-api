@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChaCC API</title>
+    <link rel="icon" type="image/x-icon" href="{{logo_data_uri}}">
+    <style>
+        :root {
+            --chacc-teal: #00D2D3;
+            --chacc-navy: #1A242B;
+            --chacc-text: #F2F5F8;
+            --chacc-card: rgba(255, 255, 255, 0.06);
+            --chacc-card-border: rgba(0, 210, 211, 0.24);
+        }
+
+        :root,
+        [data-md-color-scheme="slate"] {
+            --md-primary-fg-color: #1A242B;
+            --md-primary-fg-color--light: #1A242B;
+            --md-primary-fg-color--dark: #00D2D3;
+            --md-accent-fg-color: #00D2D3;
+            --md-accent-fg-color--transparent: rgba(0, 210, 211, 0.12);
+            --md-default-bg-color: #1A242B;
+            --md-default-fg-color: #F2F5F8;
+            --md-typeset-a-color: #00D2D3;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--md-default-bg-color);
+            color: var(--md-default-fg-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 0.5rem;
+            image-rendering: crisp-edges;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+            color: var(--chacc-text) !important;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: rgba(242, 245, 248, 0.7);
+            margin-bottom: 3rem;
+            font-weight: 400;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: var(--chacc-card);
+            border: 1px solid var(--chacc-card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: left;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--chacc-teal);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--chacc-teal);
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: rgba(242, 245, 248, 0.75);
+            margin-bottom: 1.5rem;
+        }
+
+        .card .badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: var(--md-accent-fg-color--transparent);
+            color: var(--chacc-teal);
+            border: 1px solid rgba(0, 210, 211, 0.3);
+        }
+
+        .footer {
+            font-size: 0.85rem;
+            color: rgba(242, 245, 248, 0.5);
+        }
+
+        .footer a {
+            color: var(--chacc-teal);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {{logo_img|safe}}
+        <h1><span>ChaCC</span> API</h1>
+        <p class="subtitle">Modular FastAPI backbone for extensible APIs</p>
+
+        <div class="cards">
+            <a href="/docs" class="card">
+                <h2>Swagger UI</h2>
+                <p>Interactive API explorer with request/response inspection, schema browsing, and direct endpoint execution. Best for exploring available routes and testing APIs interactively.</p>
+                <span class="badge">/docs</span>
+            </a>
+            <a href="/redoc" class="card">
+                <h2>ReDoc</h2>
+                <p>Clean, three-panel documentation layout with detailed schema references, request/response examples, and a structured reading experience. Best for reading API specifications.</p>
+                <span class="badge">/redoc</span>
+            </a>
+            <a href="https://chacc.dev/overview/" target="_blank" rel="noopener" class="card">
+                <h2>Documentation</h2>
+                <p>Comprehensive guides, architecture overviews, and module authoring references on chacc.dev. Best for understanding platform concepts and setup instructions.</p>
+                <span class="badge">chacc.dev</span>
+            </a>
+        </div>
+
+        <p class="footer">
+            ChaCC API Backbone &mdash; <a href="https://chacc.dev" target="_blank" rel="noopener">chacc.dev</a>
+        </p>
+    </div>
+</body>
+</html>

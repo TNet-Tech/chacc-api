@@ -1,10 +1,9 @@
 """Unit tests for src.migration.runner - pure-logic methods."""
 
-import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 import pytest
 
-from src.migration.runner import MigrationRunner, MigrationMode
+from src.migration.runner import MigrationRunner
 
 
 @pytest.fixture
@@ -17,10 +16,12 @@ def mock_engine():
 
 @pytest.fixture
 def runner(mock_engine):
-    with patch("src.migration.runner.MigrationDependencyResolver") as MockResolver, \
-         patch("src.migration.runner.MigrationOperationExecutor") as MockExecutor, \
-         patch("src.migration.runner.create_tracker") as MockTracker, \
-         patch("src.migration.runner.create_backup") as MockBackup:
+    with (
+        patch("src.migration.runner.MigrationDependencyResolver") as MockResolver,
+        patch("src.migration.runner.MigrationOperationExecutor") as MockExecutor,
+        patch("src.migration.runner.create_tracker") as MockTracker,
+        patch("src.migration.runner.create_backup") as MockBackup,
+    ):
         mock_dep = MagicMock()
         mock_dep.TABLE_REQUIRED_OPERATIONS = {
             "add_column",
@@ -235,9 +236,21 @@ class TestShouldApplyMigration:
         assert runner._should_apply_migration(migration, [], set(), {"cs1"}) is True
 
     def test_apply_when_checksum_applied_but_dependents_pending(self, runner):
-        migration = {"version": "v1", "checksum": "cs1", "operation": "add_table", "table": "users", "schema": None}
+        migration = {
+            "version": "v1",
+            "checksum": "cs1",
+            "operation": "add_table",
+            "table": "users",
+            "schema": None,
+        }
         others = [
-            {"version": "v2", "checksum": "cs2", "operation": "add_column", "table": "users", "schema": None}
+            {
+                "version": "v2",
+                "checksum": "cs2",
+                "operation": "add_column",
+                "table": "users",
+                "schema": None,
+            }
         ]
         assert runner._should_apply_migration(migration, others, set(), {"cs1"}) is True
 
@@ -245,31 +258,25 @@ class TestShouldApplyMigration:
 class TestHasPendingDependentForTable:
     def test_returns_true_when_dependent_pending(self, runner):
         migration = {"version": "v1", "operation": "add_table", "table": "users", "schema": None}
-        others = [
-            {"version": "v2", "operation": "add_column", "table": "users", "schema": None}
-        ]
+        others = [{"version": "v2", "operation": "add_column", "table": "users", "schema": None}]
         assert runner._has_pending_dependent_for_table(migration, others, set()) is True
 
     def test_returns_false_when_no_dependents(self, runner):
         migration = {"version": "v1", "operation": "add_table", "table": "users", "schema": None}
-        others = [
-            {"version": "v2", "operation": "add_table", "table": "orders", "schema": None}
-        ]
+        others = [{"version": "v2", "operation": "add_table", "table": "orders", "schema": None}]
         assert runner._has_pending_dependent_for_table(migration, others, set()) is False
 
     def test_returns_false_when_all_applied(self, runner):
         migration = {"version": "v1", "operation": "add_table", "table": "users", "schema": None}
-        others = [
-            {"version": "v2", "operation": "add_column", "table": "users", "schema": None}
-        ]
+        others = [{"version": "v2", "operation": "add_column", "table": "users", "schema": None}]
         assert runner._has_pending_dependent_for_table(migration, others, {"v2"}) is False
 
     def test_ignores_other_tables(self, runner):
-        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = (
+            lambda schema, table: f"{schema}:{table}"
+        )
         migration = {"version": "v1", "operation": "add_table", "table": "users", "schema": None}
-        others = [
-            {"version": "v2", "operation": "add_column", "table": "orders", "schema": None}
-        ]
+        others = [{"version": "v2", "operation": "add_column", "table": "orders", "schema": None}]
         assert runner._has_pending_dependent_for_table(migration, others, set()) is False
 
 
@@ -292,7 +299,9 @@ class TestTableObjectFromDetails:
         table = MagicMock()
         col = MagicMock()
         col.table = table
-        result = runner._table_object_from_details("add_column", ("add_column", None, MagicMock(), col))
+        result = runner._table_object_from_details(
+            "add_column", ("add_column", None, MagicMock(), col)
+        )
         assert result == table
 
     def test_add_column_returns_table_when_table_arg_present(self, runner):
@@ -317,7 +326,9 @@ class TestTableObjectFromDetails:
 class TestEnsureMissingTableCreators:
     def test_inserts_synthetic_add_table(self, runner):
         runner._dependency_resolver.table_exists.return_value = False
-        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = (
+            lambda schema, table: f"{schema}:{table}"
+        )
         table = MagicMock()
         table.name = "users"
         col = MagicMock()
@@ -336,7 +347,9 @@ class TestEnsureMissingTableCreators:
         assert result[0]["table"] == "users"
 
     def test_no_synthetic_when_add_table_pending(self, runner):
-        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = (
+            lambda schema, table: f"{schema}:{table}"
+        )
         table = MagicMock()
         table.name = "users"
         migrations = [
@@ -361,7 +374,9 @@ class TestEnsureMissingTableCreators:
 
     def test_no_duplicate_synthetic_for_same_table(self, runner):
         runner._dependency_resolver.table_exists.return_value = False
-        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = (
+            lambda schema, table: f"{schema}:{table}"
+        )
         table = MagicMock()
         table.name = "users"
         col = MagicMock()
@@ -385,7 +400,9 @@ class TestEnsureMissingTableCreators:
             },
         ]
         result = runner._ensure_missing_table_creators(migrations)
-        synthetic_count = sum(1 for m in result if m["operation"] == "add_table" and m["table"] == "users")
+        synthetic_count = sum(
+            1 for m in result if m["operation"] == "add_table" and m["table"] == "users"
+        )
         assert synthetic_count == 1
 
 
