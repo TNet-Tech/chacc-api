@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ChaCC API</title>
     <link rel="icon" type="image/x-icon" href="{{logo_data_uri}}" />
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
         :root {
             --chacc-teal: #00D2D3;
@@ -16,14 +14,7 @@
             --chacc-card-border: rgba(0, 210, 211, 0.2);
             --chacc-glow: rgba(0, 210, 211, 0.15);
         }
-
-        /* Reset & base */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--chacc-navy);
@@ -33,9 +24,8 @@
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
-            background-image: radial-gradient(circle at 20% 30%, rgba(0, 210, 211, 0.04) 0%, transparent 60%);
+            background-image: radial-gradient(circle at 20% 30%, rgba(0,210,211,0.04) 0%, transparent 60%);
         }
-
         .container {
             max-width: 1100px;
             width: 100%;
@@ -43,11 +33,7 @@
             text-align: center;
             position: relative;
         }
-
-        .header {
-            margin-bottom: 3rem;
-        }
-
+        .header { margin-bottom: 3rem; }
         .logo-wrapper {
             display: flex;
             justify-content: center;
@@ -55,17 +41,17 @@
             gap: 1rem;
             margin-bottom: 1rem;
         }
-
         .logo {
-            width: 120px;
+            width: 80px;
             height: auto;
             image-rendering: crisp-edges;
             filter: drop-shadow(0 0 20px var(--chacc-glow));
         }
-
         .status-badge {
-            display: inline-block;
-            background: rgba(0, 210, 211, 0.15);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(0,210,211,0.15);
             border: 1px solid var(--chacc-teal);
             border-radius: 9999px;
             padding: 0.25rem 0.9rem;
@@ -74,54 +60,43 @@
             letter-spacing: 0.3px;
             text-transform: uppercase;
             color: var(--chacc-teal);
-            margin-left: 0.5rem;
-            vertical-align: middle;
         }
-
         h1 {
             font-size: 3.8rem;
             font-weight: 700;
             letter-spacing: -0.03em;
             line-height: 1.1;
             margin-bottom: 0.25rem;
-            color: var(--chacc-teal);
         }
-        h1 span {
-            color: white;
-        }
-
+        h1 span { color: var(--chacc-teal); }
         .subtitle {
             font-size: 1.3rem;
             font-weight: 400;
-            color: rgba(242, 245, 248, 0.7);
+            color: rgba(242,245,248,0.7);
             margin-top: 0.5rem;
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
         }
-
         .version-tag {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
             margin-top: 1.5rem;
             background: var(--chacc-card);
             border: 1px solid var(--chacc-card-border);
             border-radius: 50px;
             padding: 0.4rem 1.2rem;
             font-size: 0.75rem;
-            color: rgba(242, 245, 248, 0.5);
+            color: rgba(242,245,248,0.5);
         }
-        .version-tag strong {
-            color: var(--chacc-teal);
-            font-weight: 600;
-        }
-
+        .version-tag strong { color: var(--chacc-teal); font-weight: 600; }
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
             margin: 3rem 0 2.5rem;
         }
-
         .card {
             background: var(--chacc-card);
             backdrop-filter: blur(2px);
@@ -137,50 +112,47 @@
             position: relative;
             overflow: hidden;
         }
-
         .card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--chacc-teal), rgba(0, 210, 211, 0.2));
+            background: linear-gradient(90deg, var(--chacc-teal), rgba(0,210,211,0.2));
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-
         .card:hover {
             transform: translateY(-8px);
             border-color: var(--chacc-teal);
-            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 20px 40px -12px rgba(0,0,0,0.6);
         }
-        .card:hover::before {
-            opacity: 1;
-        }
-
+        .card:hover::before { opacity: 1; }
         .card .icon {
             font-size: 2rem;
             color: var(--chacc-teal);
             margin-bottom: 0.75rem;
             opacity: 0.9;
         }
-
+        .card .icon svg {
+            display: block;
+            width: 32px;
+            height: 32px;
+            stroke: currentColor;
+            fill: none;
+        }
         .card h2 {
             font-size: 1.6rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: var(--chacc-text);
         }
-
         .card p {
             font-size: 0.95rem;
             line-height: 1.6;
-            color: rgba(242, 245, 248, 0.7);
+            color: rgba(242,245,248,0.7);
             margin-bottom: 1.5rem;
             flex: 1;
         }
-
         .card .badge {
             align-self: flex-start;
             display: inline-flex;
@@ -190,53 +162,53 @@
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
-            background: rgba(0, 210, 211, 0.1);
+            background: rgba(0,210,211,0.1);
             color: var(--chacc-teal);
-            border: 1px solid rgba(0, 210, 211, 0.25);
+            border: 1px solid rgba(0,210,211,0.25);
             transition: background 0.2s;
         }
-
-        .card:hover .badge {
-            background: rgba(0, 210, 211, 0.18);
+        .card .badge svg {
+            width: 12px;
+            height: 12px;
+            stroke: currentColor;
+            fill: none;
         }
-
+        .card:hover .badge { background: rgba(0,210,211,0.18); }
         .footer {
             margin-top: 2rem;
             font-size: 0.85rem;
-            color: rgba(242, 245, 248, 0.4);
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            color: rgba(242,245,248,0.4);
+            border-top: 1px solid rgba(255,255,255,0.04);
             padding-top: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
         .footer a {
             color: var(--chacc-teal);
             text-decoration: none;
             font-weight: 500;
         }
-        .footer a:hover {
-            text-decoration: underline;
-        }
+        .footer a:hover { text-decoration: underline; }
         .footer .heart {
+            display: inline-flex;
+            align-items: center;
             color: var(--chacc-teal);
             opacity: 0.7;
         }
-
+        .footer .heart svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
         @media (max-width: 640px) {
-            h1 {
-                font-size: 2.5rem;
-            }
-            .subtitle {
-                font-size: 1rem;
-            }
-            .cards {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            .card {
-                padding: 1.5rem;
-            }
-            .logo {
-                width: 60px;
-            }
+            h1 { font-size: 2.5rem; }
+            .subtitle { font-size: 1rem; }
+            .cards { grid-template-columns: 1fr; gap: 1.5rem; }
+            .card { padding: 1.5rem; }
+            .logo { width: 60px; }
         }
     </style>
 </head>
@@ -245,40 +217,94 @@
         <div class="header">
             <div class="logo-wrapper">
                 {{logo_img|safe}}
-                <span class="status-badge"><i class="fas fa-circle" style="font-size: 0.5rem; margin-right: 0.4rem; vertical-align: middle;"></i> Running</span>
+                <span class="status-badge">
+                    <!-- small circle -->
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
+                        <circle cx="4" cy="4" r="3" />
+                    </svg>
+                    Live
+                </span>
             </div>
             <h1><span>ChaCC</span> API</h1>
             <p class="subtitle">Modular FastAPI backbone for extensible APIs</p>
             <div class="version-tag">
-                <i class="fas fa-tag" style="margin-right: 0.4rem;"></i> Version <strong>v1.0.0-b4.2</strong>
+                <!-- tag icon -->
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                Version <strong>v1.0</strong>
             </div>
         </div>
 
         <div class="cards">
             <a href="/docs" class="card">
-                <div class="icon"><i class="fas fa-code"></i></div>
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                </div>
                 <h2>Swagger UI</h2>
                 <p>Interactive API explorer with request/response inspection, schema browsing, and direct endpoint execution.</p>
-                <span class="badge"><i class="fas fa-arrow-right"></i> /docs</span>
+                <span class="badge">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                    /docs
+                </span>
             </a>
 
             <a href="/redoc" class="card">
-                <div class="icon"><i class="fas fa-file-alt"></i></div>
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="8" y1="13" x2="16" y2="13"></line>
+                        <line x1="8" y1="17" x2="16" y2="17"></line>
+                    </svg>
+                </div>
                 <h2>ReDoc</h2>
                 <p>Clean three‑panel documentation with detailed schemas, examples, and a structured reading experience.</p>
-                <span class="badge"><i class="fas fa-arrow-right"></i> /redoc</span>
+                <span class="badge">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                    /redoc
+                </span>
             </a>
 
             <a href="https://chacc.dev/overview/" target="_blank" rel="noopener" class="card">
-                <div class="icon"><i class="fas fa-book-open"></i></div>
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                </div>
                 <h2>Documentation</h2>
                 <p>Comprehensive guides, architecture overviews, and module authoring references on chacc.dev.</p>
-                <span class="badge"><i class="fas fa-external-link-alt"></i> chacc.dev</span>
+                <span class="badge">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    chacc.dev
+                </span>
             </a>
         </div>
 
         <div class="footer">
-            Built with <span class="heart"><i class="fas fa-heart"></i></span> by the ChaCC team &mdash;
+            Built with
+            <span class="heart">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+            </span>
+            by the ChaCC team &mdash;
             <a href="https://chacc.dev" target="_blank" rel="noopener">chacc.dev</a>
         </div>
     </div>
