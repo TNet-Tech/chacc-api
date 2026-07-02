@@ -17,8 +17,10 @@ def test_root_endpoint(client):
     """Test the root endpoint."""
     response = client.get("/")
     assert response.status_code == 200
-    assert "message" in response.json()
-    assert "ChaCC API Backbone" in response.json()["message"]
+    assert "text/html" in response.headers["content-type"]
+    assert "ChaCC" in response.text
+    assert "Swagger UI" in response.text
+    assert "ReDoc" in response.text
 
 
 def test_docs_endpoint(client):

@@ -6,19 +6,20 @@ when building modules for the ChaCC API backbone.
 
 Usage:
     from chacc_api import BackboneContext, ChaCCBaseModel, RedisService
-    from chacc_api.database import register_model, get_db
+    from chacc_api.database import get_db
 """
 
 from src.core_services import BackboneContext
 
 from src.database import (
     ChaCCBaseModel,
-    register_model,
     get_db,
     ModuleRecord,
     initialize_database_models,
+    apply_deferred_schema_changes,
     metadata_obj,
     engine,
+    register_model,
 )
 from src.redis_service import RedisService
 
@@ -27,12 +28,13 @@ __all__ = [
     "BackboneContext",
     # Database
     "ChaCCBaseModel",
-    "register_model",
     "get_db",
     "ModuleRecord",
     "initialize_database_models",
+    "apply_deferred_schema_changes",
     "metadata_obj",
     "engine",
+    "register_model",
     # Services
     "RedisService",
 ]

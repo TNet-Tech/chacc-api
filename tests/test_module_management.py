@@ -117,7 +117,7 @@ def test_upload_valid_chacc(client):
             "version": "1.0.0",
             "author": "Test Author",
             "description": "A simple test module",
-            "entry_point": "main:setup",
+            "entry_point": "module.main:setup",
             "base_path_prefix": "/simple-test",
         }
         zip_file.writestr("module_meta.json", json.dumps(meta_data))
