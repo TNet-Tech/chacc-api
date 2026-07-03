@@ -336,8 +336,32 @@ aside[aria-label*="side"] input[type="search"] {
 .rdoc [class*="method"],
 .rdoc [class*="verb"],
 .rdoc [class*="tag"] {
-  color: var(--chacc-teal) !important;
   font-weight: 700;
+}
+
+.redoc .operation-type.get,
+.rdoc .operation-type.get {
+  color: #61affe !important;
+}
+
+.redoc .operation-type.post,
+.rdoc .operation-type.post {
+  color: #49cc90 !important;
+}
+
+.redoc .operation-type.put,
+.rdoc .operation-type.put {
+  color: #fca130 !important;
+}
+
+.redoc .operation-type.patch,
+.rdoc .operation-type.patch {
+  color: #50e3c2 !important;
+}
+
+.redoc .operation-type.delete,
+.rdoc .operation-type.delete {
+  color: #f93e3e !important;
 }
 
 /* Code / Examples */

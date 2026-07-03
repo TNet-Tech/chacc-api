@@ -152,6 +152,7 @@ def get_themed_redoc_html(request: Request, app_title: str, logo_data_uri: str =
         height: 100% !important;
     }
     .redoc-wrap, .redoc, .rdoc, .rdoc-wrap {
+        min-height: 100vh !important;
         border: none !important;
     }
     """
