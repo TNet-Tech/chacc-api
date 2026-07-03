@@ -452,12 +452,12 @@ aside[aria-label*="side"] input[type="search"] {
 }
 
 .http-verb.get {
-  background-color: #61affe !important;
+  background-color: #1b7bdb !important;
   color: white !important;
 }
 
 .http-verb.post {
-  background-color: #49cc90 !important;
+  background-color: #128f56 !important;
   color: white !important;
 }
 
@@ -467,7 +467,7 @@ aside[aria-label*="side"] input[type="search"] {
 }
 
 .http-verb.patch {
-  background-color: #50e3c2 !important;
+  background-color: #36d3b1 !important;
   color: white !important;
 }
 
@@ -630,9 +630,19 @@ button:hover,
 button:hover,
 [class*="btn"]:hover,
 [class*="button"]:hover {
-  background: var(--chacc-teal) !important;
-  background-color: var(--chacc-teal) !important;
-  color: #ffffff !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: var(--chacc-text) !important;
+  color: var(--chacc-text) !important;
+}
+
+.btn-danger:hover,
+[class*="btn-danger"]:hover,
+[class*="button-danger"]:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: var(--chacc-text) !important;
+  color: var(--chacc-text) !important;
 }
 
 .btn-danger,
