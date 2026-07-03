@@ -182,13 +182,17 @@ async def read_root():
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html(request: Request):
     logo_data_uri = _get_logo_data_uri()
-    return get_themed_swagger_ui_html(request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri)
+    return get_themed_swagger_ui_html(
+        request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri
+    )
 
 
 @app.get("/redoc", include_in_schema=False)
 async def custom_redoc_html(request: Request):
     logo_data_uri = _get_logo_data_uri()
-    return get_themed_redoc_html(request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri)
+    return get_themed_redoc_html(
+        request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri
+    )
 
 
 app.include_router(health_router)

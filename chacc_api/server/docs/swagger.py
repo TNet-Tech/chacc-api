@@ -64,7 +64,9 @@ _SWAGGER_HTML = """<!DOCTYPE html>
 """
 
 
-def get_themed_swagger_ui_html(request: Request, app_title: str, logo_data_uri: str = "") -> HTMLResponse:
+def get_themed_swagger_ui_html(
+    request: Request, app_title: str, logo_data_uri: str = ""
+) -> HTMLResponse:
     css_path = Path(__file__).resolve().parent / "css" / "swagger.css"
     css = css_path.read_text(encoding="utf-8")
 
