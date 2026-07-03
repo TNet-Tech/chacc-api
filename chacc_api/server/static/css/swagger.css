@@ -173,6 +173,12 @@ select {
   fill: var(--chacc-teal) !important;
 }
 
+.dialog-ux {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
 /* Model boxes */
 .swagger-ui .model-box {
   background: var(--chacc-card) !important;
@@ -329,4 +335,146 @@ select {
 .swagger-ui .loading-container .throbber:before,
 .swagger-ui .loading-container .throbber:after {
   background: var(--chacc-teal) !important;
+}
+
+/* Auth modal dialog */
+.modal-ux {
+  background: rgba(26, 36, 43, 0.85) !important;
+  backdrop-filter: blur(4px);
+}
+
+.modal-dialog-ux {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+.modal-ux-inner {
+  background: transparent !important;
+  color: var(--chacc-text) !important;
+}
+
+.modal-ux-header {
+  background: var(--chacc-navy) !important;
+  border-bottom: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.modal-ux-header h3 {
+  color: var(--chacc-teal) !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+.modal-ux-header .close-modal {
+  color: var(--chacc-text) !important;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.modal-ux-header .close-modal:hover {
+  opacity: 1;
+  color: var(--chacc-teal) !important;
+}
+
+.modal-ux-header .close-modal svg {
+  fill: currentColor;
+}
+
+.modal-ux-content {
+  background: transparent !important;
+  color: var(--chacc-text) !important;
+  padding: 1.5rem !important;
+}
+
+.auth-container h4 {
+  color: var(--chacc-teal) !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+}
+
+.auth-container h4 code {
+  background: rgba(0, 210, 211, 0.12) !important;
+  color: var(--chacc-teal) !important;
+  padding: 0.2rem 0.5rem !important;
+  border-radius: 4px !important;
+  font-family: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace !important;
+  font-size: 0.9em !important;
+}
+
+.auth-container .wrapper {
+  margin-bottom: 1rem !important;
+}
+
+.auth-container label {
+  color: var(--chacc-text) !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.4rem !important;
+  display: block !important;
+}
+
+.auth-container input[type="text"],
+.auth-container input[type="password"],
+.auth-container input[type="email"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  color: var(--chacc-text) !important;
+  padding: 0.6rem 0.9rem !important;
+  width: 100% !important;
+  font-size: 0.95rem !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-container input:focus {
+  outline: none !important;
+  border-color: var(--chacc-teal) !important;
+  box-shadow: 0 0 0 3px rgba(0, 210, 211, 0.15) !important;
+}
+
+.auth-container input::placeholder {
+  color: rgba(242, 245, 248, 0.4) !important;
+}
+
+.auth-btn-wrapper {
+  display: flex !important;
+  gap: 0.75rem !important;
+  margin-top: 1.25rem !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn {
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.25rem !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.auth.authorize {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.auth.authorize:hover {
+  background: #00e6e6 !important;
+  border-color: #00e6e6 !important;
+  color: #1A242B !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.btn-done {
+  background: transparent !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.btn-done:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-text) !important;
+  color: #ffffff !important;
 }
