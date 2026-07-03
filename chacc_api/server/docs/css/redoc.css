@@ -325,7 +325,7 @@ aside[aria-label*="side"] input[type="search"] {
 .rdoc .rdoc__content,
 .rdoc [class*="content"] {
   background: var(--chacc-navy) !important;
-  background-color: var(--chacc-teal) !important;
+  background-color: var(--chacc-navy) !important;
   color: var(--chacc-teal) !important;
 }
 
@@ -368,9 +368,24 @@ aside[aria-label*="side"] input[type="search"] {
 .redoc .request-col > *,
 .redoc .scheme-container > *,
 .redoc .try-it > *,
-.redoc .markdown > *,
+.redoc .markdown > * {
   background: transparent !important;
   background-color: transparent !important;
+}
+
+/* Right panel - slightly paler than center + divider */
+.redoc .rightPanel,
+.redoc [class*="rightPanel"],
+.redoc [class*="right-panel"],
+.redoc [class*="RightPanel"],
+.rdoc .rightPanel,
+.rdoc [class*="rightPanel"],
+.rdoc [class*="right-panel"],
+.rdoc [class*="RightPanel"] {
+  background: #243640 !important;
+  background-color: #243640 !important;
+  border-left: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
 }
 
 /* Headings & Titles - Teal */
@@ -711,4 +726,18 @@ span:hover {
 
 span:hover {
   color: var(--chacc-teal) !important;
+}
+
+.react-tabs__tab-list li {
+  border-color: var(--chacc-teal) !important;
+}
+
+.react-tabs__tab--selected {
+  background: var(--chacc-teal) !important;
+  color: var(--chacc-navy) !important;
+  border-color: var(--chacc-teal) !important;
+}
+
+div[id^="tag"] div[id^="operation"]>div:first-of-type {
+  border-right: 1px solid var(--chacc-teal) !important;
 }
