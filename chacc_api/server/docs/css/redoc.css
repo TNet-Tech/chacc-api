@@ -747,6 +747,27 @@ span:hover {
   display: none;
 }
 
-.scrollbar-container>ul svg polygon {
+svg polygon {
   fill: var(--chacc-teal) !important;
+}
+
+div[class^="operation"]>table>tbody {
+  border-left: 1px solid var(--chacc-teal) !important;
+}
+
+td[kind="field"]>span:first-child {
+  display: inline-block !important;
+  width: 20px !important;
+  height: 1px !important;
+  background-color: var(--chacc-teal) !important;
+  vertical-align: middle !important;
+  margin-right: 8px !important;
+}
+
+td>button {
+  border: none !important;
+  background: transparent !important;
+  color: var(--chacc-teal) !important;
+  border-left: 1px solid var(--chacc-teal) !important;
+  padding-left: 8px !important;
 }
