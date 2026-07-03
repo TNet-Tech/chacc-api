@@ -104,7 +104,7 @@ def get_themed_redoc_html(request: Request, app_title: str, logo_data_uri: str =
     }
     .loader-logo {
         width: 36px;
-        height: 36px;
+        height: auto;
         position: relative;
         z-index: 2;
     }

@@ -48,12 +48,12 @@ _SWAGGER_HTML = """<!DOCTYPE html>
                     loader.classList.add('hidden');
                     setTimeout(() => loader.remove(), 500);
                 }
-                const topbar = document.querySelector('.swagger-ui .topbar');
-                if (topbar) {
+                const topbarWrapper = document.querySelector('.swagger-ui .topbar .topbar-wrapper');
+                if (topbarWrapper) {
                     const logo = document.createElement('div');
                     logo.className = 'chacc-docs-logo';
                     logo.innerHTML = '<img src="{logo_data_uri}" alt="ChaCC">';
-                    topbar.insertBefore(logo, topbar.firstChild);
+                    topbarWrapper.insertBefore(logo, topbarWrapper.firstChild);
                 }
             }
         });
@@ -120,7 +120,7 @@ def get_themed_swagger_ui_html(request: Request, app_title: str, logo_data_uri: 
         height: 40px;
     }
     .chacc-docs-logo img {
-        height: 28px;
+        height: 72px;
         width: auto;
     }
     .swagger-ui .topbar {

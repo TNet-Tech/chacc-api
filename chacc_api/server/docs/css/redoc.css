@@ -477,7 +477,7 @@ aside[aria-label*="side"] input[type="search"] {
 }
 
 .http-verb.put {
-  background-color: #fca130 !important;
+  background-color: #ec8c16 !important;
   color: white !important;
 }
 
@@ -738,6 +738,15 @@ span:hover {
   border-color: var(--chacc-teal) !important;
 }
 
-div[id^="tag"] div[id^="operation"]>div:first-of-type {
-  border-right: 1px solid var(--chacc-teal) !important;
+.scrollbar-container div[class*="scrollbar"] {
+  background: var(--chacc-navy) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.scrollbar-container>ul+div {
+  display: none;
+}
+
+.scrollbar-container>ul svg polygon {
+  fill: var(--chacc-teal) !important;
 }
