@@ -42,6 +42,45 @@
   filter: brightness(0) invert(1);
 }
 
+/* Loader / spinner */
+.redoc .loading-container,
+.redoc .loader,
+.redoc [class*="loading"],
+.redoc [class*="spinner"],
+.rdoc [class*="loading"],
+.rdoc [class*="spinner"] {
+  background: var(--chacc-navy) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .loading-container svg,
+.redoc .loader svg,
+.redoc [class*="loading"] svg,
+.redoc [class*="spinner"] svg,
+.rdoc [class*="loading"] svg,
+.rdoc [class*="spinner"] svg {
+  stroke: var(--chacc-teal) !important;
+}
+
+.redoc .loading-container svg *,
+.redoc .loader svg *,
+.redoc [class*="loading"] svg *,
+.redoc [class*="spinner"] svg *,
+.rdoc [class*="loading"] svg *,
+.rdoc [class*="spinner"] svg * {
+  stroke: var(--chacc-teal) !important;
+  fill: var(--chacc-teal) !important;
+}
+
+.redoc .loading-container .throbber,
+.redoc .loading-container .rotator,
+.redoc .loading-container .throbber:before,
+.redoc .loading-container .throbber:after,
+.rdoc [class*="loading"] .throbber,
+.rdoc [class*="loading"] .rotator {
+  background: var(--chacc-teal) !important;
+}
+
 /* Sidebar / menu - MUST be dark navy at any nesting depth */
 .redoc .menu-content,
 .redoc .sidebar,
