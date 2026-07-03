@@ -155,6 +155,68 @@ def get_themed_redoc_html(request: Request, app_title: str, logo_data_uri: str =
         min-height: 100vh !important;
         border: none !important;
     }
+    .chacc-force-dark {
+        background: #1A242B !important;
+        background-color: #1A242B !important;
+    }
+    """
+
+    extra_js = """
+    (function() {
+        const NAVY = '#1A242B';
+        const CARD = '#253038';
+        const TEAL = '#00D2D3';
+        const DARK_TEXT = '#1A242B';
+        const LIGHT_CODE = '#a5f3fc';
+
+        function forceDark(el) {
+            if (!el || el.classList.contains('chacc-force-dark')) return;
+            const cls = (el.className || '').toString();
+            const isCode = /code|pre|example|response|request|highlight|prettyprint/.test(cls);
+
+            el.classList.add('chacc-force-dark');
+
+            if (!isCode) {
+                el.style.color = TEAL;
+            }
+        }
+
+        function processNode(node) {
+            if (node.nodeType === 1) {
+                forceDark(node);
+                if (!/code|pre|textarea|input/.test(node.tagName.toLowerCase())) {
+                    Array.from(node.children).forEach(processNode);
+                }
+            }
+        }
+
+        function applyTheme() {
+            const root = document.querySelector('.redoc-wrap, .redoc, .rdoc-wrap, .rdoc');
+            if (!root) return;
+            processNode(root);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyTheme);
+        } else {
+            applyTheme();
+        }
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(m) {
+                if (m.addedNodes.length) {
+                    m.addedNodes.forEach(function(n) {
+                        if (n.nodeType === 1) processNode(n);
+                    });
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const root = document.querySelector('.redoc-wrap, .redoc, .rdoc-wrap, .rdoc');
+            if (root) observer.observe(root, { childList: true, subtree: true });
+        });
+    })();
     """
 
     html = _REDOC_HTML.replace("{title}", app_title)

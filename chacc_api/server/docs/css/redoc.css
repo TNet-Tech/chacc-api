@@ -4,17 +4,28 @@
   --chacc-navy: #1A242B;
   --chacc-text: #F2F5F8;
   --chacc-card: #253038;
+  --chacc-main: #222D34;
   --chacc-border: rgba(0, 210, 211, 0.24);
   --chacc-danger: #e74c3c;
 }
 
-/* Global base - dark backgrounds, teal text */
+.redoc *, .redoc *::before, .redoc *::after,
+.rdoc *, .rdoc *::before, .rdoc *::after,
+.redoc-wrap *, .redoc-wrap *::before, .redoc-wrap *::after,
+.rdoc-wrap *, .rdoc-wrap *::before, .rdoc-wrap *::after {
+  background-color: var(--chacc-navy) !important;
+}
+
+html,
+body,
 .redoc-wrap,
 .redoc,
 .rdoc,
 .rdoc-wrap {
   background: var(--chacc-navy) !important;
+  background-color: var(--chacc-navy) !important;
   color: var(--chacc-teal) !important;
+  padding-top: 1vh;
 }
 
 .redoc-wrap *,
@@ -24,6 +35,29 @@
   color: var(--chacc-teal) !important;
 }
 
+.redoc .server,
+.redoc [class*="server"],
+.redoc .operation-server,
+.redoc .request-url,
+.redoc .url,
+.redoc [class*="url"],
+.rdoc [class*="server"],
+.rdoc [class*="request-url"],
+.rdoc [class*="url"],
+.redoc .api-info .servers,
+.redoc .api-info .server,
+.redoc .api-info [class*="server"],
+.redoc .operation .request-url,
+.redoc .operation [class*="request-url"],
+.redoc .opblock .opblock-summary-path,
+.redoc .opblock-summary-path,
+.redoc [class*="opblock-summary"] [class*="path"],
+.redoc .opblock .opblock-summary-description,
+.redoc .opblock-summary-description,
+.redoc [class*="opblock-summary"] [class*="description"] {
+  color: #1A242B !important;
+}
+
 /* Header / top bar */
 .redoc .header,
 .redoc .top-bar,
@@ -31,6 +65,7 @@
 .rdoc .rdoc__header,
 .rdoc [class*="header"] {
   background: var(--chacc-navy) !important;
+  background-color: var(--chacc-navy) !important;
   border-bottom: 1px solid var(--chacc-border) !important;
   color: var(--chacc-teal) !important;
 }
@@ -50,6 +85,7 @@
 .rdoc [class*="loading"],
 .rdoc [class*="spinner"] {
   background: var(--chacc-navy) !important;
+  background-color: var(--chacc-navy) !important;
   color: var(--chacc-teal) !important;
 }
 
@@ -116,7 +152,8 @@ aside[aria-label*="side"] {
   background: var(--chacc-navy) !important;
   background-color: var(--chacc-navy) !important;
   color: var(--chacc-teal) !important;
-  border-right: 1px solid var(--chacc-border) !important;
+  border-right: 1px solid var(--chacc-teal) !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4) !important;
 }
 
 .redoc .menu-content > *,
@@ -249,7 +286,8 @@ nav[class*="side"] a.active,
 aside[class*="side"] a.active,
 nav[aria-label*="side"] a.active,
 aside[aria-label*="side"] a.active {
-  background: rgba(0, 210, 211, 0.12) !important;
+  background: rgba(0, 210, 211, 0.25) !important;
+  background-color: rgba(0, 210, 211, 0.25) !important;
   color: var(--chacc-teal) !important;
 }
 
@@ -273,40 +311,66 @@ nav[class*="side"] input[type="search"],
 aside[class*="side"] input[type="search"],
 nav[aria-label*="side"] input[type="search"],
 aside[aria-label*="side"] input[type="search"] {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--chacc-navy) !important;
+  background-color: var(--chacc-navy) !important;
   color: var(--chacc-teal) !important;
   border-color: var(--chacc-border) !important;
 }
 
-/* Main content areas */
+/* Main content wrappers - slightly different from sidebar */
 .redoc .api-info,
 .redoc .introduction,
+.redoc .api-content,
+.redoc .content,
+.rdoc .rdoc__content,
+.rdoc [class*="content"] {
+  background: var(--chacc-navy) !important;
+  background-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Inner content blocks */
 .redoc .section,
 .redoc .operation-summary,
 .redoc .api-operation,
 .redoc .request-response-schema,
-.rdoc .rdoc__content,
-.rdoc [class*="content"],
+.redoc .opblock,
+.redoc .opblock-body,
+.redoc .opblock-description,
+.redoc .response-col,
+.redoc .request-col,
+.redoc .scheme-container,
+.redoc .try-it,
+.redoc .markdown,
 .rdoc [class*="section"],
 .rdoc [class*="operation"],
 .rdoc [class*="schema"] {
   background: var(--chacc-card) !important;
+  background-color: var(--chacc-card) !important;
   border-bottom: 1px solid var(--chacc-border) !important;
   color: var(--chacc-teal) !important;
 }
 
 .redoc .api-info > *,
 .redoc .introduction > *,
+.redoc .api-content > *,
+.redoc .content > *,
+.rdoc .rdoc__content > *,
+.rdoc [class*="content"] > *,
 .redoc .section > *,
 .redoc .operation-summary > *,
 .redoc .api-operation > *,
 .redoc .request-response-schema > *,
-.rdoc .rdoc__content > *,
-.rdoc [class*="content"] > *,
-.rdoc [class*="section"] > *,
-.rdoc [class*="operation"] > *,
-.rdoc [class*="schema"] > * {
+.redoc .opblock > *,
+.redoc .opblock-body > *,
+.redoc .opblock-description > *,
+.redoc .response-col > *,
+.redoc .request-col > *,
+.redoc .scheme-container > *,
+.redoc .try-it > *,
+.redoc .markdown > *,
   background: transparent !important;
+  background-color: transparent !important;
 }
 
 /* Headings & Titles - Teal */
@@ -333,216 +397,276 @@ aside[aria-label*="side"] input[type="search"] {
 .redoc .http-verb,
 .redoc .method,
 .redoc .operation-tag,
+.redoc .opblock-summary-method,
+.redoc .opblock-get,
+.redoc .opblock-post,
+.redoc .opblock-put,
+.redoc .opblock-patch,
+.redoc .opblock-delete,
 .rdoc [class*="method"],
 .rdoc [class*="verb"],
-.rdoc [class*="tag"] {
+.rdoc [class*="tag"],
+.rdoc [class*="opblock-summary-method"],
+.rdoc [class*="opblock-get"],
+.rdoc [class*="opblock-post"],
+.rdoc [class*="opblock-put"],
+.rdoc [class*="opblock-patch"],
+.rdoc [class*="opblock-delete"] {
   font-weight: 700;
 }
 
-.redoc .operation-type.get,
-.rdoc .operation-type.get {
+.operation-type.get,
+.opblock-get,
+.operation-type.get,
+[class*="opblock-get"] {
   color: #61affe !important;
 }
 
 .redoc .operation-type.post,
-.rdoc .operation-type.post {
+.redoc .opblock-post,
+.rdoc .operation-type.post,
+.rdoc [class*="opblock-post"] {
   color: #49cc90 !important;
 }
 
-.redoc .operation-type.put,
-.rdoc .operation-type.put {
+
+.operation-type.put,
+.opblock-put,
+.operation-type.put,
+[class*="opblock-put"] {
   color: #fca130 !important;
 }
 
-.redoc .operation-type.patch,
-.rdoc .operation-type.patch {
+.operation-type.patch,
+.opblock-patch,
+.operation-type.patch,
+[class*="opblock-patch"] {
   color: #50e3c2 !important;
 }
 
-.redoc .operation-type.delete,
-.rdoc .operation-type.delete {
+.operation-type.delete,
+.opblock-delete,
+.operation-type.delete,
+[class*="opblock-delete"] {
   color: #f93e3e !important;
 }
 
-/* Code / Examples */
-.redoc code,
-.redoc pre,
-.redoc .example,
-.redoc .request-content,
-.redoc .response-content,
-.redoc .highlight code,
-.redoc .prettyprint code,
-.rdoc code,
-.rdoc pre,
-.rdoc [class*="code"],
-.rdoc [class*="example"],
-.rdoc [class*="request"],
-.rdoc [class*="response"],
-.rdoc [class*="highlight"] {
+.http-verb.get {
+  background-color: #61affe !important;
+  color: white !important;
+}
+
+.http-verb.post {
+  background-color: #49cc90 !important;
+  color: white !important;
+}
+
+.http-verb.put {
+  background-color: #fca130 !important;
+  color: white !important;
+}
+
+.http-verb.patch {
+  background-color: #50e3c2 !important;
+  color: white !important;
+}
+
+.http-verb.delete {
+  background-color: #f93e3e !important;
+  color: white !important;
+}
+
+code,
+pre,
+.example,
+.request-content,
+.response-content,
+.highlight code,
+.prettyprint code,
+code,
+pre,
+[class*="code"],
+[class*="example"],
+[class*="request"],
+[class*="response"],
+[class*="highlight"] {
   background: rgba(0, 0, 0, 0.35) !important;
+  background-color: rgba(0, 0, 0, 0.35) !important;
   color: #a5f3fc !important;
   border-color: var(--chacc-border) !important;
 }
 
-.redoc code *,
-.redoc pre *,
-.redoc .example *,
-.redoc .request-content *,
-.redoc .response-content *,
-.redoc .highlight code *,
-.redoc .prettyprint code *,
-.rdoc code *,
-.rdoc pre *,
-.rdoc [class*="code"] *,
-.rdoc [class*="example"] *,
-.rdoc [class*="request"] *,
-.rdoc [class*="response"] *,
-.rdoc [class*="highlight"] * {
+code *,
+pre *,
+.example *,
+.request-content *,
+.response-content *,
+.highlight code *,
+.prettyprint code *,
+[class*="code"] *,
+[class*="example"] *,
+[class*="request"] *,
+[class*="response"] *,
+[class*="highlight"] * {
   background: transparent !important;
+  background-color: transparent !important;
 }
 
-/* Tables */
-.redoc table thead tr th,
-.redoc table thead tr td,
-.rdoc table thead tr th,
-.rdoc table thead tr td {
-  background: rgba(0, 210, 211, 0.1) !important;
+table thead tr th,
+table thead tr td,
+table thead tr th,
+table thead tr td {
+  background: rgba(0, 210, 211, 0.25) !important;
+  background-color: rgba(0, 210, 211, 0.25) !important;
   color: var(--chacc-teal) !important;
   border-color: var(--chacc-border) !important;
 }
 
-.redoc table tbody tr td,
-.rdoc table tbody tr td {
+table tbody tr td,
+table tbody tr td {
   color: var(--chacc-teal) !important;
   border-color: var(--chacc-border) !important;
 }
 
 /* Models / Schemas */
-.redoc .model-box,
-.redoc .schema-box,
-.redoc .schema-description,
-.redoc .schema-model,
-.rdoc [class*="model"],
-.rdoc [class*="schema"],
-.rdoc [class*="property"] {
+.model-box,
+.schema-box,
+.schema-description,
+.schema-model,
+.schema,
+.model,
+[class*="model"],
+[class*="schema"],
+[class*="property"] {
   background: var(--chacc-card) !important;
+  background-color: var(--chacc-card) !important;
   border-color: var(--chacc-border) !important;
   color: var(--chacc-teal) !important;
 }
 
-.redoc .model-box *,
-.redoc .schema-box *,
-.redoc .schema-description *,
-.redoc .schema-model *,
-.rdoc [class*="model"] *,
-.rdoc [class*="schema"] *,
-.rdoc [class*="property"] * {
+.model-box *,
+.schema-box *,
+.schema-description *,
+.schema-model *,
+.schema *,
+.model *,
+[class*="model"] *,
+[class*="schema"] *,
+[class*="property"] * {
   background: transparent !important;
+  background-color: transparent !important;
 }
 
-.redoc .model-title,
-.redoc .prop-type,
-.redoc .schema__title,
-.redoc .schema-title,
-.redoc .schema__property-name,
-.redoc .schema__property .schema__prop-name,
-.rdoc [class*="model-title"],
-.rdoc [class*="schema-title"],
-.rdoc [class*="prop-type"] {
+.model-title,
+.prop-type,
+.schema__title,
+.schema-title,
+.schema__property-name,
+.schema__property .schema__prop-name,
+[class*="model-title"],
+[class*="schema-title"],
+[class*="prop-type"] {
   color: var(--chacc-teal) !important;
 }
 
-.redoc .prop-name,
-.redoc .schema__property-name,
-.redoc .model .property,
-.rdoc [class*="prop-name"],
-.rdoc [class*="property-name"] {
+.prop-name,
+.schema__property-name,
+.model .property,
+[class*="prop-name"],
+[class*="property-name"] {
   color: var(--chacc-teal) !important;
 }
 
 /* Links */
-.redoc a,
-.redoc .source-link,
-.rdoc a,
-.rdoc [class*="link"],
-.rdoc [class*="source"] {
+a,
+.source-link,
+a,
+[class*="link"],
+[class*="source"] {
   color: var(--chacc-teal) !important;
 }
 
-.redoc a:hover,
-.rdoc a:hover,
-.rdoc [class*="link"]:hover,
+a:hover,
+.source-link:hover,
+a:hover,
+[class*="link"]:hover,
+[class*="source"]:hover {
+  color: #67f8f9 !important;
+}
 .rdoc [class*="source"]:hover {
   color: #67f8f9 !important;
 }
 
 /* Inputs & Search */
-.redoc input[type="text"],
-.redoc input[type="search"],
-.redoc .search-wrapper,
-.redoc .search-input,
-.rdoc input[type="text"],
-.rdoc input[type="search"],
-.rdoc [class*="search-wrapper"],
-.rdoc [class*="search-input"] {
-  background: rgba(255, 255, 255, 0.08) !important;
+input[type="text"],
+input[type="search"],
+.search-wrapper,
+.search-input,
+input[type="text"],
+input[type="search"],
+[class*="search-wrapper"],
+[class*="search-input"] {
+  background: var(--chacc-navy) !important;
   border-color: var(--chacc-border) !important;
   color: var(--chacc-teal) !important;
 }
 
 /* Buttons */
-.redoc .btn,
-.redoc button,
-.redoc .redoc-btn,
-.rdoc button,
-.rdoc [class*="btn"],
-.rdoc [class*="button"] {
+.btn,
+button,
+.redoc-btn,
+button,
+[class*="btn"],
+[class*="button"] {
   background: transparent !important;
+  background-color: transparent !important;
   border: 1px solid var(--chacc-teal) !important;
   color: var(--chacc-teal) !important;
 }
 
-.redoc .btn:hover,
-.redoc button:hover,
-.redoc .redoc-btn:hover,
-.rdoc button:hover,
-.rdoc [class*="btn"]:hover,
-.rdoc [class*="button"]:hover {
+.btn:hover,
+button:hover,
+.redoc-btn:hover,
+button:hover,
+[class*="btn"]:hover,
+[class*="button"]:hover {
   background: var(--chacc-teal) !important;
+  background-color: var(--chacc-teal) !important;
   color: #ffffff !important;
 }
 
-.redoc .btn-danger,
-.redoc .redoc-btn.btn-danger,
-.rdoc [class*="btn-danger"],
-.rdoc [class*="button-danger"] {
+.btn-danger,
+.redoc-btn.btn-danger,
+[class*="btn-danger"],
+[class*="button-danger"] {
   border-color: var(--chacc-danger) !important;
   color: var(--chacc-danger) !important;
 }
 
-.redoc .btn-danger:hover,
-.rdoc [class*="btn-danger"]:hover,
-.rdoc [class*="button-danger"]:hover {
+.btn-danger:hover,
+[class*="btn-danger"]:hover,
+[class*="button-danger"]:hover {
   background: var(--chacc-danger) !important;
+  background-color: var(--chacc-danger) !important;
   color: #ffffff !important;
 }
 
 /* Tabs */
-.redoc .tab,
-.redoc .tab__item,
-.redoc .tab-link,
-.rdoc [class*="tab"],
-.rdoc [class*="tab-item"],
-.rdoc [class*="tab-link"] {
+.tab,
+.tab__item,
+.tab-link,
+[class*="tab"],
+[class*="tab-item"],
+[class*="tab-link"] {
   color: var(--chacc-teal) !important;
 }
 
-.redoc .tab.active,
-.redoc .tab__item.active,
-.redoc .tab-link.active,
-.rdoc [class*="tab"].active,
-.rdoc [class*="tab-item"].active,
-.rdoc [class*="tab-link"].active {
+.tab.active,
+.tab__item.active,
+.tab-link.active,
+[class*="tab"].active,
+[class*="tab-item"].active,
+[class*="tab-link"].active {
   color: var(--chacc-teal) !important;
   border-color: var(--chacc-teal) !important;
 }
@@ -564,5 +688,17 @@ aside[aria-label*="side"] input[type="search"] {
 }
 .redoc ::-webkit-scrollbar-thumb:hover,
 .rdoc ::-webkit-scrollbar-thumb:hover {
-  background: var(--chacc-teal);
+  background: var(--chacc-navy);
+}
+
+span {
+  background: var(--chacc-navy) !important;
+}
+
+span:hover {
+  background: var(--chacc-navy) !important;
+}
+
+span:hover {
+  color: var(--chacc-teal) !important;
 }
