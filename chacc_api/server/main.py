@@ -127,8 +127,8 @@ async def onStartupLifespan(app: FastAPI):
 
 app = FastAPI(
     title="ChaCC API Backbone",
-    description="A modular FastAPI application for extensible APIs.",
-    version="1.0.0",
+    description="Plug and Play Modular Application for extensible APIs with FastAPI.",
+    version="1.0.0-b4.2",
     docs_url=None,
     redoc_url=None,
     lifespan=onStartupLifespan,
