@@ -30,7 +30,7 @@ from src.redis_service import RedisService
 
 
 def _get_logo_data_uri() -> str:
-    logo_path = Path(__file__).resolve().parent.parent.parent / "assets" / "chacc-icon.ico"
+    logo_path = Path(__file__).resolve().parent.parent / "assets" / "chacc-icon.ico"
     if logo_path.exists():
         return "data:image/x-icon;base64," + base64.b64encode(logo_path.read_bytes()).decode()
     return ""

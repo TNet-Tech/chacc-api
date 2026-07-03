@@ -1,7 +1,7 @@
 <p style="font-size:3.2em" align="center">  ChaCC API </p>
 
 <a href="https://chacc.dev" target="blank"><p align="center">
-  <img src="assets/chacc-icon.ico" alt="ChaCC API" />
+  <img src="chacc_api/assets/chacc-icon.ico" alt="ChaCC API" />
 </p></a>
 
 
