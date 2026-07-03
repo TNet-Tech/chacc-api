@@ -229,13 +229,12 @@
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
                         <circle cx="4" cy="4" r="3" />
                     </svg>
-                    Running
+                    <span class="status-text">Running</span>
                 </span>
             </div>
             <h1><span>ChaCC</span> API</h1>
             <p class="subtitle">Modular FastAPI backbone for extensible APIs</p>
             <div class="version-tag">
-                <!-- tag icon -->
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                     <line x1="7" y1="7" x2="7.01" y2="7"></line>
@@ -314,6 +313,22 @@
             by the ChaCC team &mdash;
             <a href="https://chacc.dev" target="_blank" rel="noopener">chacc.dev</a>
         </div>
+
+        <script>
+            (async () => {
+                try {
+                    const res = await fetch('/health/live');
+                    if (!res.ok) throw new Error('Health check failed');
+                    const data = await res.json();
+                    const mode = (data.mode || 'development').charAt(0).toUpperCase() + (data.mode || 'development').slice(1);
+                    const el = document.querySelector('.status-text');
+                    if (el) el.textContent = mode;
+                } catch (e) {
+                    const el = document.querySelector('.status-text');
+                    if (el) el.textContent = 'Unknown';
+                }
+            })();
+        </script>
     </div>
 </body>
 </html>
