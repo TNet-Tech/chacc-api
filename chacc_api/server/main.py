@@ -7,7 +7,8 @@ from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from chacc_api.server.docs_theming import get_themed_swagger_ui_html, get_themed_redoc_html
+from chacc_api.server.docs.swagger import get_themed_swagger_ui_html
+from chacc_api.server.docs.redoc import get_themed_redoc_html
 from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router

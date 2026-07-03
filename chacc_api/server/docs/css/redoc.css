@@ -1,0 +1,505 @@
+/* === ChaCC dark theme for ReDoc === */
+:root {
+  --chacc-teal: #00D2D3;
+  --chacc-navy: #1A242B;
+  --chacc-text: #F2F5F8;
+  --chacc-card: #253038;
+  --chacc-border: rgba(0, 210, 211, 0.24);
+  --chacc-danger: #e74c3c;
+}
+
+/* Global base - dark backgrounds, teal text */
+.redoc-wrap,
+.redoc,
+.rdoc,
+.rdoc-wrap {
+  background: var(--chacc-navy) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc-wrap *,
+.redoc *,
+.rdoc *,
+.rdoc-wrap * {
+  color: var(--chacc-teal) !important;
+}
+
+/* Header / top bar */
+.redoc .header,
+.redoc .top-bar,
+.redoc .topbar,
+.rdoc .rdoc__header,
+.rdoc [class*="header"] {
+  background: var(--chacc-navy) !important;
+  border-bottom: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .header .logo img,
+.redoc .top-bar .logo img,
+.rdoc .rdoc__header img,
+.rdoc [class*="header"] img {
+  filter: brightness(0) invert(1);
+}
+
+/* Sidebar / menu - MUST be dark navy at any nesting depth */
+.redoc .menu-content,
+.redoc .sidebar,
+.redoc .nav,
+.redoc .redoc-sidebar,
+.redoc aside,
+.redoc [class*="sidebar"],
+.redoc [class*="side-bar"],
+.redoc nav,
+.redoc [role="navigation"],
+.redoc-wrap .menu-content,
+.redoc-wrap .sidebar,
+.redoc-wrap .nav,
+.redoc-wrap aside,
+.redoc-wrap [class*="sidebar"],
+.redoc-wrap [class*="side-bar"],
+.redoc-wrap nav,
+.redoc-wrap [role="navigation"],
+.rdoc .rdoc__sidebar,
+.rdoc .rdoc__menu,
+.rdoc aside,
+.rdoc [class*="sidebar"],
+.rdoc [class*="side-bar"],
+.rdoc nav,
+.rdoc [role="navigation"],
+.sidebar,
+.menu-content,
+.menu,
+nav[class*="side"],
+aside[class*="side"],
+nav[aria-label*="side"],
+aside[aria-label*="side"] {
+  background: var(--chacc-navy) !important;
+  background-color: var(--chacc-navy) !important;
+  color: var(--chacc-teal) !important;
+  border-right: 1px solid var(--chacc-border) !important;
+}
+
+.redoc .menu-content > *,
+.redoc .menu-content > div,
+.redoc .menu-content > ul,
+.redoc .sidebar > *,
+.redoc .sidebar > div,
+.redoc .redoc-sidebar > *,
+.redoc .redoc-sidebar > div,
+.redoc aside > *,
+.redoc aside > div,
+.redoc nav > *,
+.redoc [role="navigation"] > *,
+.redoc [class*="sidebar"] > *,
+.redoc [class*="side-bar"] > *,
+.redoc-wrap .menu-content > *,
+.redoc-wrap .menu-content > div,
+.redoc-wrap .menu-content > ul,
+.redoc-wrap .sidebar > *,
+.redoc-wrap .sidebar > div,
+.redoc-wrap aside > *,
+.redoc-wrap aside > div,
+.redoc-wrap nav > *,
+.redoc-wrap [class*="sidebar"] > *,
+.redoc-wrap [class*="side-bar"] > *,
+.rdoc .rdoc__sidebar > *,
+.rdoc .rdoc__sidebar > div,
+.rdoc .rdoc__menu > *,
+.rdoc .rdoc__menu > div,
+.rdoc aside > *,
+.rdoc aside > div,
+.rdoc nav > *,
+.rdoc [role="navigation"] > *,
+.rdoc [class*="sidebar"] > *,
+.rdoc [class*="side-bar"] > *,
+.sidebar > *,
+.sidebar > div,
+.sidebar > ul,
+.menu-content > *,
+.menu-content > div,
+.menu-content > ul,
+nav[class*="side"] > *,
+aside[class*="side"] > *,
+nav[aria-label*="side"] > *,
+aside[aria-label*="side"] > * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.redoc .menu-content *,
+.redoc .sidebar *,
+.redoc .redoc-sidebar *,
+.redoc aside *,
+.redoc [class*="sidebar"] *,
+.redoc [class*="side-bar"] *,
+.redoc nav *,
+.redoc [role="navigation"] *,
+.redoc-wrap .menu-content *,
+.redoc-wrap .sidebar *,
+.redoc-wrap aside *,
+.redoc-wrap [class*="sidebar"] *,
+.redoc-wrap [class*="side-bar"] *,
+.redoc-wrap nav *,
+.rdoc .rdoc__sidebar *,
+.rdoc .rdoc__menu *,
+.rdoc aside *,
+.rdoc [class*="sidebar"] *,
+.rdoc [class*="side-bar"] *,
+.rdoc nav *,
+.rdoc [role="navigation"] *,
+.sidebar *,
+.menu-content *,
+.menu *,
+nav[class*="side"] *,
+aside[class*="side"] *,
+nav[aria-label*="side"] *,
+aside[aria-label*="side"] * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Sidebar links and items */
+.redoc .menu-item,
+.redoc .menu-item a,
+.redoc .sidebar a,
+.redoc .nav a,
+.redoc .menu-item-link,
+.redoc .menu-item-section,
+.redoc .menu-section-title,
+.redoc-wrap .menu-item,
+.redoc-wrap .menu-item a,
+.redoc-wrap .sidebar a,
+.redoc-wrap .nav a,
+.redoc-wrap .menu-item-link,
+.redoc-wrap .menu-item-section,
+.redoc-wrap .menu-section-title,
+.rdoc [class*="menu-item"],
+.rdoc [class*="menu-link"],
+.rdoc [class*="nav-item"],
+.rdoc [class*="menu-section"],
+.rdoc [class*="section-title"],
+.sidebar a,
+.menu-content a,
+nav[class*="side"] a,
+aside[class*="side"] a,
+nav[aria-label*="side"] a,
+aside[aria-label*="side"] a {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .menu-item.active,
+.redoc .menu-item:hover,
+.redoc .menu-item.active a,
+.redoc .menu-item:hover a,
+.redoc-wrap .menu-item.active,
+.redoc-wrap .menu-item:hover,
+.redoc-wrap .menu-item.active a,
+.redoc-wrap .menu-item:hover a,
+.rdoc [class*="menu-item"].active,
+.rdoc [class*="menu-item"]:hover,
+.rdoc [class*="menu-item"].active a,
+.rdoc [class*="menu-item"]:hover a,
+.rdoc [class*="nav-item"].active,
+.rdoc [class*="nav-item"]:hover,
+.sidebar a.active,
+.sidebar a:hover,
+nav[class*="side"] a.active,
+aside[class*="side"] a.active,
+nav[aria-label*="side"] a.active,
+aside[aria-label*="side"] a.active {
+  background: rgba(0, 210, 211, 0.12) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Search box in sidebar */
+.redoc .search,
+.redoc [class*="search"],
+.redoc input[type="search"],
+.redoc .search-input,
+.redoc .search-wrapper,
+.redoc-wrap .search,
+.redoc-wrap [class*="search"],
+.redoc-wrap input[type="search"],
+.redoc-wrap .search-input,
+.redoc-wrap .search-wrapper,
+.rdoc [class*="search"],
+.rdoc input[type="search"],
+.rdoc [class*="search-input"],
+.rdoc [class*="search-wrapper"],
+.sidebar input[type="search"],
+nav[class*="side"] input[type="search"],
+aside[class*="side"] input[type="search"],
+nav[aria-label*="side"] input[type="search"],
+aside[aria-label*="side"] input[type="search"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+/* Main content areas */
+.redoc .api-info,
+.redoc .introduction,
+.redoc .section,
+.redoc .operation-summary,
+.redoc .api-operation,
+.redoc .request-response-schema,
+.rdoc .rdoc__content,
+.rdoc [class*="content"],
+.rdoc [class*="section"],
+.rdoc [class*="operation"],
+.rdoc [class*="schema"] {
+  background: var(--chacc-card) !important;
+  border-bottom: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .api-info > *,
+.redoc .introduction > *,
+.redoc .section > *,
+.redoc .operation-summary > *,
+.redoc .api-operation > *,
+.redoc .request-response-schema > *,
+.rdoc .rdoc__content > *,
+.rdoc [class*="content"] > *,
+.rdoc [class*="section"] > *,
+.rdoc [class*="operation"] > *,
+.rdoc [class*="schema"] > * {
+  background: transparent !important;
+}
+
+/* Headings & Titles - Teal */
+.redoc h1,
+.redoc h2,
+.redoc h3,
+.redoc h4,
+.redoc h5,
+.redoc .title,
+.redoc .api-info .title,
+.redoc .section-title,
+.redoc .operation-summary .title,
+.rdoc h1,
+.rdoc h2,
+.rdoc h3,
+.rdoc h4,
+.rdoc h5,
+.rdoc [class*="title"],
+.rdoc [class*="heading"] {
+  color: var(--chacc-teal) !important;
+}
+
+/* HTTP Methods & Tags */
+.redoc .http-verb,
+.redoc .method,
+.redoc .operation-tag,
+.rdoc [class*="method"],
+.rdoc [class*="verb"],
+.rdoc [class*="tag"] {
+  color: var(--chacc-teal) !important;
+  font-weight: 700;
+}
+
+/* Code / Examples */
+.redoc code,
+.redoc pre,
+.redoc .example,
+.redoc .request-content,
+.redoc .response-content,
+.redoc .highlight code,
+.redoc .prettyprint code,
+.rdoc code,
+.rdoc pre,
+.rdoc [class*="code"],
+.rdoc [class*="example"],
+.rdoc [class*="request"],
+.rdoc [class*="response"],
+.rdoc [class*="highlight"] {
+  background: rgba(0, 0, 0, 0.35) !important;
+  color: #a5f3fc !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.redoc code *,
+.redoc pre *,
+.redoc .example *,
+.redoc .request-content *,
+.redoc .response-content *,
+.redoc .highlight code *,
+.redoc .prettyprint code *,
+.rdoc code *,
+.rdoc pre *,
+.rdoc [class*="code"] *,
+.rdoc [class*="example"] *,
+.rdoc [class*="request"] *,
+.rdoc [class*="response"] *,
+.rdoc [class*="highlight"] * {
+  background: transparent !important;
+}
+
+/* Tables */
+.redoc table thead tr th,
+.redoc table thead tr td,
+.rdoc table thead tr th,
+.rdoc table thead tr td {
+  background: rgba(0, 210, 211, 0.1) !important;
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.redoc table tbody tr td,
+.rdoc table tbody tr td {
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+/* Models / Schemas */
+.redoc .model-box,
+.redoc .schema-box,
+.redoc .schema-description,
+.redoc .schema-model,
+.rdoc [class*="model"],
+.rdoc [class*="schema"],
+.rdoc [class*="property"] {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .model-box *,
+.redoc .schema-box *,
+.redoc .schema-description *,
+.redoc .schema-model *,
+.rdoc [class*="model"] *,
+.rdoc [class*="schema"] *,
+.rdoc [class*="property"] * {
+  background: transparent !important;
+}
+
+.redoc .model-title,
+.redoc .prop-type,
+.redoc .schema__title,
+.redoc .schema-title,
+.redoc .schema__property-name,
+.redoc .schema__property .schema__prop-name,
+.rdoc [class*="model-title"],
+.rdoc [class*="schema-title"],
+.rdoc [class*="prop-type"] {
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .prop-name,
+.redoc .schema__property-name,
+.redoc .model .property,
+.rdoc [class*="prop-name"],
+.rdoc [class*="property-name"] {
+  color: var(--chacc-teal) !important;
+}
+
+/* Links */
+.redoc a,
+.redoc .source-link,
+.rdoc a,
+.rdoc [class*="link"],
+.rdoc [class*="source"] {
+  color: var(--chacc-teal) !important;
+}
+
+.redoc a:hover,
+.rdoc a:hover,
+.rdoc [class*="link"]:hover,
+.rdoc [class*="source"]:hover {
+  color: #67f8f9 !important;
+}
+
+/* Inputs & Search */
+.redoc input[type="text"],
+.redoc input[type="search"],
+.redoc .search-wrapper,
+.redoc .search-input,
+.rdoc input[type="text"],
+.rdoc input[type="search"],
+.rdoc [class*="search-wrapper"],
+.rdoc [class*="search-input"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Buttons */
+.redoc .btn,
+.redoc button,
+.redoc .redoc-btn,
+.rdoc button,
+.rdoc [class*="btn"],
+.rdoc [class*="button"] {
+  background: transparent !important;
+  border: 1px solid var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .btn:hover,
+.redoc button:hover,
+.redoc .redoc-btn:hover,
+.rdoc button:hover,
+.rdoc [class*="btn"]:hover,
+.rdoc [class*="button"]:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+.redoc .btn-danger,
+.redoc .redoc-btn.btn-danger,
+.rdoc [class*="btn-danger"],
+.rdoc [class*="button-danger"] {
+  border-color: var(--chacc-danger) !important;
+  color: var(--chacc-danger) !important;
+}
+
+.redoc .btn-danger:hover,
+.rdoc [class*="btn-danger"]:hover,
+.rdoc [class*="button-danger"]:hover {
+  background: var(--chacc-danger) !important;
+  color: #ffffff !important;
+}
+
+/* Tabs */
+.redoc .tab,
+.redoc .tab__item,
+.redoc .tab-link,
+.rdoc [class*="tab"],
+.rdoc [class*="tab-item"],
+.rdoc [class*="tab-link"] {
+  color: var(--chacc-teal) !important;
+}
+
+.redoc .tab.active,
+.redoc .tab__item.active,
+.redoc .tab-link.active,
+.rdoc [class*="tab"].active,
+.rdoc [class*="tab-item"].active,
+.rdoc [class*="tab-link"].active {
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+}
+
+/* Scrollbar */
+.redoc ::-webkit-scrollbar,
+.rdoc ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.redoc ::-webkit-scrollbar-track,
+.rdoc ::-webkit-scrollbar-track {
+  background: var(--chacc-navy);
+}
+.redoc ::-webkit-scrollbar-thumb,
+.rdoc ::-webkit-scrollbar-thumb {
+  background: var(--chacc-border);
+  border-radius: 4px;
+}
+.redoc ::-webkit-scrollbar-thumb:hover,
+.rdoc ::-webkit-scrollbar-thumb:hover {
+  background: var(--chacc-teal);
+}
