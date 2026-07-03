@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
 from importlib.resources import files
-import base64
 
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.staticfiles import FileResponse
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from slowapi.errors import RateLimitExceeded
@@ -27,13 +27,6 @@ from src.constants import (
 )
 from src.env_validator import validate_environment, ValidationError
 from src.redis_service import RedisService
-
-
-def _get_logo_data_uri() -> str:
-    logo_path = Path(__file__).resolve().parent.parent / "assets" / "chacc-icon.ico"
-    if logo_path.exists():
-        return "data:image/x-icon;base64," + base64.b64encode(logo_path.read_bytes()).decode()
-    return ""
 
 
 def copy_sample_env():
@@ -151,6 +144,11 @@ app.state.mounted_routers = {}
 
 app.state.backbone_context = None
 
+static_dir = Path(__file__).resolve().parent / "static"
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
 
 @app.get(
     "/",
@@ -164,35 +162,20 @@ async def read_root():
     Root endpoint of the ChaCC API backbone.
     Returns a welcome page with links to interactive API documentation.
     """
-    logo_data_uri = _get_logo_data_uri()
-
-    logo_img = f'<img src="{logo_data_uri}" alt="ChaCC Logo" class="logo">' if logo_data_uri else ""
-
-    template_path = Path(__file__).resolve().parent / "templates" / "index.html"
-    html_content = template_path.read_text(encoding="utf-8")
-    html_content = html_content.replace("{{logo_img|safe}}", logo_img)
-    html_content = html_content.replace("{{logo_data_uri}}", logo_data_uri)
-
-    return HTMLResponse(
-        content=html_content,
+    return FileResponse(
+        TEMPLATES_DIR / "index.html",
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
     )
 
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html(request: Request):
-    logo_data_uri = _get_logo_data_uri()
-    return get_themed_swagger_ui_html(
-        request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri
-    )
+    return get_themed_swagger_ui_html(request, app_title="ChaCC API Backbone")
 
 
 @app.get("/redoc", include_in_schema=False)
 async def custom_redoc_html(request: Request):
-    logo_data_uri = _get_logo_data_uri()
-    return get_themed_redoc_html(
-        request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri
-    )
+    return get_themed_redoc_html(request, app_title="ChaCC API Backbone")
 
 
 app.include_router(health_router)
