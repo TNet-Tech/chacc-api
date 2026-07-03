@@ -3,10 +3,12 @@ from pathlib import Path
 from importlib.resources import files
 import base64
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from chacc_api.server.docs.swagger import get_themed_swagger_ui_html
+from chacc_api.server.docs.redoc import get_themed_redoc_html
 from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
@@ -25,6 +27,13 @@ from src.constants import (
 )
 from src.env_validator import validate_environment, ValidationError
 from src.redis_service import RedisService
+
+
+def _get_logo_data_uri() -> str:
+    logo_path = Path(__file__).resolve().parent.parent.parent / "assets" / "chacc-icon.ico"
+    if logo_path.exists():
+        return "data:image/x-icon;base64," + base64.b64encode(logo_path.read_bytes()).decode()
+    return ""
 
 
 def copy_sample_env():
@@ -118,10 +127,10 @@ async def onStartupLifespan(app: FastAPI):
 
 app = FastAPI(
     title="ChaCC API Backbone",
-    description="A modular FastAPI application for extensible APIs.",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    description="Plug and Play Modular Application for extensible APIs with FastAPI.",
+    version="1.0.0-b4.2",
+    docs_url=None,
+    redoc_url=None,
     lifespan=onStartupLifespan,
 )
 
@@ -155,12 +164,7 @@ async def read_root():
     Root endpoint of the ChaCC API backbone.
     Returns a welcome page with links to interactive API documentation.
     """
-    logo_path = Path(__file__).resolve().parent.parent.parent / "assets" / "chacc-icon.ico"
-    logo_data_uri = ""
-    if logo_path.exists():
-        logo_data_uri = (
-            "data:image/x-icon;base64," + base64.b64encode(logo_path.read_bytes()).decode()
-        )
+    logo_data_uri = _get_logo_data_uri()
 
     logo_img = f'<img src="{logo_data_uri}" alt="ChaCC Logo" class="logo">' if logo_data_uri else ""
 
@@ -173,6 +177,18 @@ async def read_root():
         content=html_content,
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
     )
+
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html(request: Request):
+    logo_data_uri = _get_logo_data_uri()
+    return get_themed_swagger_ui_html(request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri)
+
+
+@app.get("/redoc", include_in_schema=False)
+async def custom_redoc_html(request: Request):
+    logo_data_uri = _get_logo_data_uri()
+    return get_themed_redoc_html(request, app_title="ChaCC API Backbone", logo_data_uri=logo_data_uri)
 
 
 app.include_router(health_router)

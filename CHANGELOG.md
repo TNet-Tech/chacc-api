@@ -32,6 +32,7 @@ pip install --upgrade chacc-api
 - **Module loading sequence** – Both dev and prod modes now follow the same sequence: discover models → initialize database → run migrations → load entry points → apply deferred schema changes → optional follow-up migration.
 - **Database initialization** – Now uses `ChaCCBaseModel` subclass enumeration instead of the removed `_model_registry`.
 - **Root endpoint** – `/` now serves a dark-mode HTML welcome page with links to Swagger UI, ReDoc, and chacc.dev documentation, instead of returning raw JSON. The page embeds the ChaCC logo and uses the project's teal/navy color theme.
+- **Docs theming** – Swagger UI and ReDoc are now themed to match the ChaCC teal/navy dark mode, using the same color palette as the welcome page. Custom CSS is injected directly into standalone docs pages built from CDN resources. Buttons use teal outlines with white text and teal backgrounds on hover. Cancel/danger buttons are dark with a red hover state. Titles, loaders, and all text use theme colors.
 
 
 ### Removed

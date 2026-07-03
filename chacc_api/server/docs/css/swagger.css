@@ -1,0 +1,332 @@
+/* === ChaCC dark theme for Swagger UI === */
+:root {
+  --chacc-teal: #00D2D3;
+  --chacc-navy: #1A242B;
+  --chacc-text: #F2F5F8;
+  --chacc-card: #253038;
+  --chacc-border: rgba(0, 210, 211, 0.24);
+  --chacc-danger: #e74c3c;
+}
+
+html, body {
+  background: var(--chacc-navy) !important;
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui {
+  background: var(--chacc-navy) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Top navigation bar */
+.swagger-ui .topbar {
+  background: var(--chacc-navy) !important;
+  border-bottom: 1px solid var(--chacc-border) !important;
+}
+
+.swagger-ui .topbar .link {
+  display: none !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper input[type="text"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.version-stamp {
+  display: none !important;
+}
+
+/* Info section */
+.swagger-ui .info {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 8px !important;
+}
+
+.swagger-ui .info .title,
+.swagger-ui .info h1,
+.swagger-ui .info h2,
+.swagger-ui .info h3,
+.swagger-ui .info h4,
+.swagger-ui .info h5 {
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .info p,
+.swagger-ui .info table {
+  color: var(--chacc-text) !important;
+}
+
+/* Operation tags and summaries */
+.swagger-ui .opblock-tag,
+.swagger-ui .opblock .opblock-summary {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .opblock-tag:hover,
+.swagger-ui .opblock .opblock-summary:hover {
+  background: rgba(0, 210, 211, 0.08) !important;
+}
+
+.swagger-ui .opblock .opblock-summary-description,
+.swagger-ui .opblock .opblock-summary-path,
+.swagger-ui .opblock .opblock-summary-method {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .opblock-description-wrapper,
+.swagger-ui .opblock-external-docs-wrapper,
+.swagger-ui .opblock-body {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .opblock .opblock-section-header {
+  background-color: var(--chacc-navy) !important;
+}
+
+.opblock-title,
+.opblock-description .renderedMarkdown h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+.parameters-container .parameters-col_name .parameter__name,.parameter__type,.parameter__deprecated,.parameter__in {
+  color: var(--chacc-teal) !important;
+}
+
+.parameters-container .parameters-col_name .parameter__name.required span,::after{
+  color: rgb(255, 50, 50) !important;
+}
+
+select {
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+  background-color: var(--chacc-navy) !important;
+  
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 16px !important;
+
+  padding-right: 32px !important;
+}
+
+.body-param__text {
+  color: var(--chacc-teal) !important;
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  
+}
+
+.expand-operation,
+.authorization__btn svg.unlocked path,
+.opblock-control-arrow svg.arrow path {
+  fill: var(--chacc-text) !important;
+}
+
+.execute.opblock-control__btn {
+  color: var(--chacc-teal) !important;
+}
+
+.execute.opblock-control__btn:hover {
+  background: var(--chacc-navy) !important;
+  color: #ffffff !important;
+}
+
+.json-schema-2020-12 .json-schema-2020-12-accordion {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.json-schema-2020-12-expand-deep-button {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.json-schema-2020-12,
+.json-schema-2020-12__title,
+.json-schema-2020-12-expand-deep-button,
+.json-schema-2020-12__attribute {
+  color: var(--chacc-teal) !important;
+}
+
+.json-schema-2020-12-accordion__icon svg path {
+  fill: var(--chacc-teal) !important;
+}
+
+/* Model boxes */
+.swagger-ui .model-box {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui .model-title {
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .model .model-box {
+  color: var(--chacc-text) !important;
+}
+
+/* Tables */
+.swagger-ui table thead tr th,
+.swagger-ui table thead tr td {
+  background: rgba(0, 210, 211, 0.08) !important;
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui table tbody tr td {
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+/* Scheme container */
+.swagger-ui .scheme-container {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+/* Buttons */
+.swagger-ui .btn {
+  background: transparent !important;
+  border: 1px solid var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.swagger-ui .btn:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .btn.cancel {
+  border-color: var(--chacc-danger) !important;
+  color: var(--chacc-danger) !important;
+  background: transparent !important;
+}
+
+.swagger-ui .btn.cancel:hover {
+  background: var(--chacc-danger) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .execute-btn {
+  border-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+  background: transparent !important;
+}
+
+.swagger-ui .execute-btn:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .authorize__btn {
+  border-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+  background: transparent !important;
+}
+
+.swagger-ui .authorize__btn:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+/* Response section */
+.swagger-ui .response-col_description {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .response-control-media-type__title {
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .response-col_links .operation-link {
+  color: var(--chacc-teal) !important;
+}
+
+/* Tabs */
+.swagger-ui .tab li {
+  color: var(--chacc-text) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui .tab li.active {
+  background: rgba(0, 210, 211, 0.08) !important;
+  border-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Code blocks */
+.swagger-ui .opblock-body pre {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: var(--chacc-text) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui .markdown p,
+.swagger-ui .markdown code,
+.swagger-ui .markdown pre {
+  color: var(--chacc-text) !important;
+}
+
+/* Inputs and selects */
+.swagger-ui input[type="text"],
+.swagger-ui input[type="password"],
+.swagger-ui input[type="email"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .select {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+/* Model content */
+.swagger-ui .model-box .model-box__model {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .model .model-toggle {
+  filter: invert(1);
+}
+
+.swagger-ui .parameters-col_description p,
+.swagger-ui .parameters-col_description .model {
+  color: var(--chacc-text) !important;
+}
+
+/* Loader */
+.swagger-ui .loading-container {
+  background: var(--chacc-navy) !important;
+}
+
+.swagger-ui .loading-container .throbber .rotator,
+.swagger-ui .loading-container .throbber:before,
+.swagger-ui .loading-container .throbber:after {
+  background: var(--chacc-teal) !important;
+}
