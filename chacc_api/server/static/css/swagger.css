@@ -102,7 +102,7 @@ h4,
 h5,
 h6,
 p,
-.parameters-container .parameters-col_name .parameter__name,.parameter__type,.parameter__deprecated,.parameter__in {
+.parameters-container .parameters-col_name .parameter__name,.parameter__name.required,.parameter__type,.parameter__deprecated,.parameter__in {
   color: var(--chacc-teal) !important;
 }
 
@@ -132,7 +132,87 @@ select {
   color: var(--chacc-teal) !important;
   background: var(--chacc-card) !important;
   border-color: var(--chacc-border) !important;
-  
+}
+
+.opblock-body .file-upload,
+.opblock-body .file-uploader,
+.opblock-body .file-input,
+.parameters-container .file-upload,
+.parameters-container .file-uploader,
+.parameters-container .file-input {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+}
+
+.opblock-body input[type="file"],
+.parameters-container input[type="file"] {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  color: var(--chacc-text) !important;
+  padding: 0.5rem !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  min-height: 40px !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button,
+.parameters-container input[type="file"]::file-selector-button,
+.opblock-body input[type="file"]::-webkit-file-upload-button,
+.parameters-container input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button:hover,
+.parameters-container input[type="file"]::file-selector-button:hover,
+.opblock-body input[type="file"]::-webkit-file-upload-button:hover,
+.parameters-container input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button,
+.parameters-container input[type="file"]::file-selector-button,
+.opblock-body input[type="file"]::-webkit-file-upload-button,
+.parameters-container input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button:hover,
+.parameters-container input[type="file"]::file-selector-button:hover,
+.opblock-body input[type="file"]::-webkit-file-upload-button:hover,
+.parameters-container input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.opblock-body .body-param__text,
+.parameters-container .body-param__text {
+  min-height: 120px !important;
+  font-family: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace !important;
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
 }
 
 .expand-operation,
@@ -306,10 +386,57 @@ select {
   color: var(--chacc-text) !important;
 }
 
-.swagger-ui .select {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: var(--chacc-border) !important;
+.swagger-ui input[type="file"] {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
   color: var(--chacc-text) !important;
+  padding: 0.5rem !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  min-height: 40px !important;
+}
+
+.swagger-ui input[type="file"]::file-selector-button,
+.swagger-ui input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui input[type="file"]::file-selector-button:hover,
+.swagger-ui input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.swagger-ui .file-upload,
+.swagger-ui .file-uploader,
+.swagger-ui .opblock-body .file-upload,
+.swagger-ui .opblock-body .file-uploader {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+  margin-top: 0.5rem !important;
+}
+
+.swagger-ui .body-param__text {
+  color: var(--chacc-teal) !important;
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  min-height: 120px !important;
+  font-family: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace !important;
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
 }
 
 /* Model content */
@@ -348,6 +475,8 @@ select {
   border: 1px solid var(--chacc-border) !important;
   border-radius: 12px !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+  position: relative !important;
+  z-index: 10001 !important;
 }
 
 .modal-ux-inner {
@@ -407,19 +536,27 @@ select {
 
 .auth-container .wrapper {
   margin-bottom: 1rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.4rem !important;
 }
 
-.auth-container label {
-  color: var(--chacc-text) !important;
-  font-size: 0.85rem !important;
-  font-weight: 500 !important;
-  margin-bottom: 0.4rem !important;
+.auth-container .wrapper label {
+  margin-bottom: 0 !important;
   display: block !important;
+}
+
+.auth-container section {
+  margin-top: 0 !important;
+  display: block !important;
+  overflow: visible !important;
 }
 
 .auth-container input[type="text"],
 .auth-container input[type="password"],
-.auth-container input[type="email"] {
+.auth-container input[type="email"],
+.auth-container input[type="file"],
+.auth-container select {
   background: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid var(--chacc-border) !important;
   border-radius: 6px !important;
@@ -428,9 +565,40 @@ select {
   width: 100% !important;
   font-size: 0.95rem !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 1 !important;
+  pointer-events: auto !important;
 }
 
-.auth-container input:focus {
+.auth-container input[type="file"] {
+  padding: 0.4rem 0.6rem !important;
+  cursor: pointer !important;
+}
+
+.auth-container input[type="file"]::file-selector-button,
+.auth-container input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+}
+
+.auth-container input[type="file"]::file-selector-button:hover,
+.auth-container input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.auth-container input:focus,
+.auth-container select:focus {
   outline: none !important;
   border-color: var(--chacc-teal) !important;
   box-shadow: 0 0 0 3px rgba(0, 210, 211, 0.15) !important;
