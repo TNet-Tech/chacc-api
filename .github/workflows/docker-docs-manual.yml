@@ -1,24 +1,28 @@
-name: Build and Push to Docker Hub
+name: Manual Docs Build
 
 on:
   push:
     branches:
       - develop
       - main
-  pull_request:
-    types:
-      - closed
+  workflow_dispatch:
+    inputs:
+      docs_tag:
+        description: 'Custom docs Docker tag to use (optional, e.g., v1.0.0)'
+        required: false
+        default: ''
 
 jobs:
-  build-and-push:
+  docker-docs-manual:
     runs-on: ubuntu-latest
     if: >-
-      (github.event_name == 'push' && contains(github.event.head_commit.message, 'release')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && contains(github.event.pull_request.body, 'release'))
+      (github.event_name == 'push' && contains(github.event.head_commit.message, 'build docs'))
+      || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -36,7 +40,6 @@ jobs:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/chacc-docs
           tags: |
             type=raw,value=latest
-            type=raw,value=${{ github.sha }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -44,6 +47,8 @@ jobs:
           context: ./chacc-docs
           file: ./chacc-docs/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ inputs.docs_tag != '' && format('{0}/chacc-docs:{1}', secrets.DOCKERHUB_USERNAME, inputs.docs_tag) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64

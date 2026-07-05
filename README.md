@@ -49,7 +49,7 @@ We welcome contributions! Check out [CONTRIBUTING.md](CONTRIBUTING.md) to get st
 
 ## Changelog
 
-See what's new in each release: [CHANGELOG.md](CHANGELOG.md)
+See what's new in each release: [chacc.dev/changelog](https://chacc.dev/changelog)
 
 [![PyPI](https://img.shields.io/pypi/v/chacc-api?label=PyPI&color=blue)](https://pypi.org/project/chacc-api/)
 [![Python](https://img.shields.io/pypi/pyversions/chacc-api?label=Python&color=blue)](https://pypi.org/project/chacc-api/)

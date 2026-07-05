@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Code formatting tool** – Switched from Black to Ruff formatter. All code is now formatted using `ruff format` with the same 100-character line length. You can run `ruff format .` to auto-format and `ruff format --check .` to verify formatting.
+
+- **Documentation workflow** – Documentation Docker images are now built and pushed automatically when a release is published. Manual documentation builds can be triggered by including "build docs" in a commit message on the develop or main branch, or via the workflow_dispatch workflow in GitHub Actions.
+
+- **Changelog location** – The changelog has been moved to `chacc-docs/docs/changelog.md`. The root `CHANGELOG.md` file has been removed. See the [changelog on chacc.dev](https://chacc.dev/changelog) for the complete history.
+
+- **ChaCC Theme Applied in Swagger UI and ReDoc** - Added custom ChaCC theme styling to Swagger UI and ReDoc interfaces for consistent branding.
+
+### Added
+
+- **Manual Docker workflows** – Added separate workflows for manual Docker builds:
+  - `.github/workflows/docker-manual.yml` – Build and push main Docker image on demand
+  - `.github/workflows/docker-docs-manual.yml` – Build and push documentation Docker image on demand
+
+---
+
 ## 1.0.0-b4.2
 
 **Beta4.2 fixes a critical startup crash, resolves the audit-schema chicken-and-egg problem, and cleans up model discovery. We have brought you better landing page. If you've had issues with module loading or SQLite table detection, this release is for you.**
