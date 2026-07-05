@@ -272,8 +272,8 @@ class TestHasPendingDependentForTable:
         assert runner._has_pending_dependent_for_table(migration, others, {"v2"}) is False
 
     def test_ignores_other_tables(self, runner):
-        runner._dependency_resolver.table_identity.side_effect = (
-            lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: (
+            f"{schema}:{table}"
         )
         migration = {"version": "v1", "operation": "add_table", "table": "users", "schema": None}
         others = [{"version": "v2", "operation": "add_column", "table": "orders", "schema": None}]
@@ -326,8 +326,8 @@ class TestTableObjectFromDetails:
 class TestEnsureMissingTableCreators:
     def test_inserts_synthetic_add_table(self, runner):
         runner._dependency_resolver.table_exists.return_value = False
-        runner._dependency_resolver.table_identity.side_effect = (
-            lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: (
+            f"{schema}:{table}"
         )
         table = MagicMock()
         table.name = "users"
@@ -347,8 +347,8 @@ class TestEnsureMissingTableCreators:
         assert result[0]["table"] == "users"
 
     def test_no_synthetic_when_add_table_pending(self, runner):
-        runner._dependency_resolver.table_identity.side_effect = (
-            lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: (
+            f"{schema}:{table}"
         )
         table = MagicMock()
         table.name = "users"
@@ -374,8 +374,8 @@ class TestEnsureMissingTableCreators:
 
     def test_no_duplicate_synthetic_for_same_table(self, runner):
         runner._dependency_resolver.table_exists.return_value = False
-        runner._dependency_resolver.table_identity.side_effect = (
-            lambda schema, table: f"{schema}:{table}"
+        runner._dependency_resolver.table_identity.side_effect = lambda schema, table: (
+            f"{schema}:{table}"
         )
         table = MagicMock()
         table.name = "users"

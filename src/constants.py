@@ -60,7 +60,6 @@ SECRET_KEY = config("SECRET_KEY", default="", cast=str)
 if "postgres" in DATABASE_ENGINE.lower():
     DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 else:
-
     normalized_path = SQLITE_DB_PATH.replace("\\", "/")
     DATABASE_URL = f"sqlite:///{normalized_path}"
 

@@ -74,7 +74,8 @@ def test_migration_table_sqlite():
         print("Test 2a: Create tracker table on SQLite:")
         try:
             with engine.begin() as conn:
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE TABLE {TRACKER_TABLE} (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         version_num VARCHAR(256) NOT NULL UNIQUE,
@@ -83,7 +84,8 @@ def test_migration_table_sqlite():
                         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         rollback_available INTEGER DEFAULT 0
                     )
-                """))
+                """)
+                )
             print("  SUCCESS: Table created")
         except Exception as e:
             print(f"  FAILED: {type(e).__name__}: {e}")
@@ -113,11 +115,13 @@ def test_migration_table_sqlite():
         try:
             with engine.begin() as conn:
                 rollback_value = 0
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     INSERT INTO {TRACKER_TABLE} 
                     (version_num, description, rollback_available)
                     VALUES ('test_002', 'Test migration 2', {rollback_value})
-                """))
+                """)
+                )
             print("  SUCCESS: Insert with inline integer")
         except Exception as e:
             print(f"  FAILED: {type(e).__name__}: {e}")
@@ -160,10 +164,12 @@ def test_server_default_sqlite():
             Base.metadata.create_all(engine)
 
             with engine.begin() as conn:
-                conn.execute(text("""
+                conn.execute(
+                    text("""
                     ALTER TABLE test_defaults_existing 
                     ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                """))
+                """)
+                )
             print("  SUCCESS: Column added with CURRENT_TIMESTAMP constant")
         except Exception as e:
             print(f"  Note: {type(e).__name__}: {e}")
@@ -181,10 +187,12 @@ def test_server_default_sqlite():
             Base.metadata.create_all(engine)
 
             with engine.begin() as conn:
-                conn.execute(text("""
+                conn.execute(
+                    text("""
                     ALTER TABLE test_text_default 
                     ADD COLUMN created_at TIMESTAMP DEFAULT (datetime('now'))
-                """))
+                """)
+                )
             print("  SUCCESS: Column added with datetime('now') function")
         except Exception as e:
             print(f"  Note: {type(e).__name__}: {e}")

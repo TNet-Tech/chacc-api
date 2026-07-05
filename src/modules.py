@@ -98,9 +98,7 @@ async def get_current_user_optional(request: Request) -> Optional[object]:
                 "multipart/form-data": {
                     "schema": {
                         "type": "object",
-                        "properties": {
-                            "file": {"type": "string", "format": "binary"}
-                        },
+                        "properties": {"file": {"type": "string", "format": "binary"}},
                         "required": ["file"],
                     }
                 }
@@ -127,9 +125,7 @@ async def install_chacc_module_endpoint_no_slash(
                 "multipart/form-data": {
                     "schema": {
                         "type": "object",
-                        "properties": {
-                            "file": {"type": "string", "format": "binary"}
-                        },
+                        "properties": {"file": {"type": "string", "format": "binary"}},
                         "required": ["file"],
                     }
                 }
