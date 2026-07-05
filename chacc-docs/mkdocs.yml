@@ -17,12 +17,12 @@ nav:
     - CLI: cli.md
     - Deployment: deployment.md
   - DEVELOPMENT:
-      Modules:
-       - modules.md
-      Available Modules:
-      - Summary: official-modules/index.md
-      - Chacc Authentication: official-modules/authentication.md
-      - Chacc File Manager: official-modules/file-manager.md
+      - Modules:
+        - modules.md
+      - Available Modules:
+        - Summary: official-modules/index.md
+        - Chacc Authentication: official-modules/authentication.md
+        - Chacc File Manager: official-modules/file-manager.md
   - USEFUL INFORMATION:
     - Troubleshooting: troubleshooting.md
     - Changelog: changelog.md

@@ -4,7 +4,7 @@ services:
   docs:
     image: jonas1015/chacc-docs:latest
     # build:
-    #   context: ./chacc-docs
+    #   context: .
     #   dockerfile: Dockerfile
     ports:
       - "8000:80"

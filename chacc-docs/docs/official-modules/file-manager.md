@@ -120,11 +120,11 @@ Modules call the service directly and only provide `created_by_module`.
 
 ```mermaid
 flowchart TD
-    A[save_file called] --> B{use_module_dir?}
-    B -->|No| C[STORAGE_DIR/{uuid}]
-    B -->|Yes| D{channel provided?}
-    D -->|No| E[STORAGE_DIR/{module_name}/{uuid}]
-    D -->|Yes| F[STORAGE_DIR/{module_name}/{channel}/{uuid}]
+    A["save_file called"] --> B{"use_module_dir?"}
+    B -->|No| C["STORAGE_DIR/{uuid}"]
+    B -->|Yes| D{"channel provided?"}
+    D -->|No| E["STORAGE_DIR/{module_name}/{uuid}"]
+    D -->|Yes| F["STORAGE_DIR/{module_name}/{channel}/{uuid}"]
 ```
 
 Examples:
