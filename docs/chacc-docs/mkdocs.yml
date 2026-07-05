@@ -1,0 +1,90 @@
+site_name: ChaCC API
+site_url: https://chacc.dev/
+site_description: Documentation for ChaCC API, a plug and play FastAPI modular platform.
+site_author: ChaCC API
+repo_url: https://github.com/jonas1015/chacc-api
+docs_dir: docs
+
+nav:
+  - Home: index.md
+  - GETTING STARTED:
+    - Overview: overview.md
+  - GUIDES:
+    - Installation: installation.md
+    - Configuration: configuration.md
+    - Core API: core-api.md
+    - Database and Migrations: database-migrations.md
+    - CLI: cli.md
+    - Deployment: deployment.md
+  - DEVELOPMENT:
+      Modules:
+       - modules.md
+      Available Modules:
+      - Summary: official-modules/index.md
+      - Chacc Authentication: official-modules/authentication.md
+      - Chacc File Manager: official-modules/file-manager.md
+  - USEFUL INFORMATION:
+    - Troubleshooting: troubleshooting.md
+    - Changelog: changelog.md
+
+theme:
+  name: material
+  logo: assets/img/chacc-icon.ico
+  favicon: assets/img/chacc-icon.ico
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.sections
+    - navigation.collapsible
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - assets/css/custom.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jonas1015/chacc-api
+      name: ChaCC API on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/chacc-api/
+      name: ChaCC API on PyPI
+  copyright: Copyright &copy; 2026 ChaCC API
