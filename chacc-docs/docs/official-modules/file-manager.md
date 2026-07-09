@@ -140,7 +140,7 @@ The endpoint handles:
 - `Content-Disposition: inline` by default (for `<img>`, `<video>` tags)
 - `?download=1` forces `Content-Disposition: attachment` (download prompt)
 - `Range` headers for partial content (video seeking, resumable downloads)
-- `ETag` and `Cache-Control` headers (1-year immutable cache)
+- `ETag` and `Cache-Control` headers (configurable cache TTL, revalidated via `ETag`)
 
 No custom route is needed. The file manager provides this endpoint automatically.
 
@@ -360,6 +360,7 @@ CHACC_FILE_MANAGER_MAX_FILE_SIZE=52428800
 CHACC_FILE_MANAGER_STREAM_THRESHOLD=10485760
 CHACC_FILE_MANAGER_UPLOAD_CHUNK_SIZE=65536
 CHACC_FILE_MANAGER_ALLOWED_CONTENT_TYPES=image/jpeg,image/png,application/pdf
+CHACC_FILE_MANAGER_FILE_CACHE_MAX_AGE=300
 ```
 
 | Variable | Default | Description |
@@ -369,6 +370,7 @@ CHACC_FILE_MANAGER_ALLOWED_CONTENT_TYPES=image/jpeg,image/png,application/pdf
 | `STREAM_THRESHOLD` | `10485760` | Files larger than this are streamed to a temp file instead of loaded into memory (10 MB). |
 | `UPLOAD_CHUNK_SIZE` | `8192` | Bytes to read per chunk when streaming from `UploadFile`. |
 | `ALLOWED_CONTENT_TYPES` | `""` (allow all) | Comma-separated MIME types allowed. Empty means no restriction. |
+| `FILE_CACHE_MAX_AGE` | `300` | `Cache-Control` `max-age` (seconds) for served files. `immutable` is intentionally omitted so clients revalidate via `ETag` — deletions take effect on next revalidation. Set to `0` to effectively disable caching. |
 
 ### Determining the right thresholds
 
@@ -423,10 +425,12 @@ Successful file serves include:
 ```http
 Content-Type: <file content_type>
 Content-Disposition: inline; filename="photo.jpg"
-Cache-Control: public, max-age=31536000, immutable
+Cache-Control: public, max-age=3600
 ETag: "<sha256_checksum>"
 Accept-Ranges: bytes  (only on range requests)
 ```
+
+The `Cache-Control` `max-age` is controlled by `FILE_CACHE_MAX_AGE` (default `3600`). `immutable` is deliberately not sent so clients revalidate against the `ETag`; when a file is deleted the next revalidation returns `404` instead of a stale cached copy.
 
 ## Security
 
