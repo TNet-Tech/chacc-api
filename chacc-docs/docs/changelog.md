@@ -18,6 +18,12 @@
   - `.github/workflows/docker-manual.yml` – Build and push main Docker image on demand
   - `.github/workflows/docker-docs-manual.yml` – Build and push documentation Docker image on demand
 
+
+### Fixed
+
+- **AutoIncrement Indexed ID** – Fixed auto-increment behavior for indexed primary keys from `ChaCCBaseModel`.
+
+
 ---
 
 ## 1.0.0-b4.2
