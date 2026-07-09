@@ -97,24 +97,7 @@ async def get_current_user_optional(request: Request, credentials: Optional[HTTP
         )
 
 
-@modules_router.post(
-    "/modules",
-    dependencies=[],
-    openapi_extra={
-        "requestBody": {
-            "content": {
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {"file": {"type": "string", "format": "binary"}},
-                        "required": ["file"],
-                    }
-                }
-            },
-            "required": True,
-        }
-    },
-)
+@modules_router.post("/modules", dependencies=[])
 async def install_chacc_module_endpoint_no_slash(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -124,24 +107,7 @@ async def install_chacc_module_endpoint_no_slash(
     return await install_chacc_module_endpoint(file, db, current_user)
 
 
-@modules_router.post(
-    "/modules/",
-    dependencies=[],
-    openapi_extra={
-        "requestBody": {
-            "content": {
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {"file": {"type": "string", "format": "binary"}},
-                        "required": ["file"],
-                    }
-                }
-            },
-            "required": True,
-        }
-    },
-)
+@modules_router.post("/modules/", dependencies=[])
 async def install_chacc_module_endpoint(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),

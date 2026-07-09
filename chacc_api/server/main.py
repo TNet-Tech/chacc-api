@@ -7,7 +7,7 @@ from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.staticfiles import FileResponse
-from chacc_api.server.docs.swagger import get_themed_swagger_ui_html
+from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from slowapi.errors import RateLimitExceeded
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
@@ -126,6 +126,7 @@ app = FastAPI(
     redoc_url=None,
     lifespan=onStartupLifespan,
 )
+patch_binary_file_schema(app)
 
 allowed_origins = [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
 app.add_middleware(

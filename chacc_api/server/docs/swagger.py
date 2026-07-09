@@ -1,4 +1,5 @@
-from fastapi import Request
+from fastapi import FastAPI, Request
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
 
 _SWAGGER_HTML = """<!DOCTYPE html>
@@ -64,3 +65,48 @@ def get_themed_swagger_ui_html(request: Request, app_title: str) -> HTMLResponse
     html = _SWAGGER_HTML.replace("{title}", app_title)
     html = html.replace("{openapi_url}", request.app.openapi_url)
     return HTMLResponse(content=html)
+
+
+def _fix_binary_file_schemas(node: object) -> None:
+    """Recursively rewrite OpenAPI 3.1 binary-file schemas to the legacy binary form.
+
+    FastAPI/Pydantic emit `{"type": "string", "contentMediaType": "..."}` for
+    `UploadFile` fields under OpenAPI 3.1, but swagger-ui-dist@5 only renders a
+    file-picker widget for the OpenAPI 3.0-style `{"type": "string", "format": "binary"}`.
+    Without this, every file-upload endpoint needs a hand-written `openapi_extra`
+    override just to get a working file input in the UI.
+    """
+    if isinstance(node, dict):
+        if node.get("type") == "string" and "contentMediaType" in node:
+            node.pop("contentMediaType", None)
+            node.pop("contentEncoding", None)
+            node["format"] = "binary"
+        for value in node.values():
+            _fix_binary_file_schemas(value)
+    elif isinstance(node, list):
+        for item in node:
+            _fix_binary_file_schemas(item)
+
+
+def patch_binary_file_schema(app: FastAPI) -> None:
+    """Install a custom openapi() on `app` so file-upload fields render correctly.
+
+    Call this once, right after creating the FastAPI app. After this, plain
+    `file: UploadFile = File(...)` parameters get a working Swagger UI file
+    picker with no per-endpoint `openapi_extra` boilerplate required.
+    """
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+        _fix_binary_file_schemas(schema)
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
