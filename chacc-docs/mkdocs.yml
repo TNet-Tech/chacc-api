@@ -39,8 +39,10 @@ theme:
     text: Roboto
     code: Roboto Mono
   features:
+    - navigation.indexes
     - navigation.sections
     - navigation.collapsible
+    - navigation.footer
     - navigation.top
     - toc.follow
     - search.suggest

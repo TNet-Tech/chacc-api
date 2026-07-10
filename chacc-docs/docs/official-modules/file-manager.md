@@ -146,24 +146,34 @@ No custom route is needed. The file manager provides this endpoint automatically
 
 ## Installation
 
-As a ChaCC module, the file manager is installed like any other plugin:
+As a ChaCC module, the file manager is installed for 2 scenarios:
 
+- Clone the repository:
 ```bash
-chacc add chacc-file-manager
+git clone https://github.com/jonas1015/chacc-file-manager
 ```
 
-Or if building from source:
+- Move it into `plugins/` if in chacc development mode (this will be it).
+
+- For production, you will need to build it first:
 
 ```bash
-chacc build chacc-file-manager.chacc
+# Ensure you're running this command in an activated environment with chacc-api installed.
+chacc build chacc-file-manager
 ```
 
-After installation, the file service is available via:
+- You will see `chacc-file-manager.chacc` file in your location.
+- Install this file using `POST /modules` endpoint of your running chacc instance.
+- Done you have chacc file manager already running in your chacc installation.
+
+> During development:
+
+- After installation, the file service is available via:
 ```python
 file_service = get_module_context().get_service("file_service")
 ```
 
-The module requires `aiofiles`, `uuid_utils`, `sqlalchemy`, and `fastapi`. These will be installed automatically when you add the module via `chacc add`.
+- The module requires `aiofiles`, `uuid_utils`, `sqlalchemy`, and `fastapi`. These will be installed automatically when you add the module via l`plugins/` or `POST /modules`.
 
 ## Unified `file` Parameter
 
