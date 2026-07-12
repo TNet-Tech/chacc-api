@@ -3,4 +3,6 @@ include main.py
 include uvicorn_config.py
 include start_server.py
 include chacc_api/.env.sample
+recursive-include chacc_api/server/templates *.html
+recursive-include assets *
 recursive-include chacc_cli *.template
