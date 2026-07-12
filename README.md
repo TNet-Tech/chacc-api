@@ -47,6 +47,9 @@ Full docs, guides, and API reference: [chacc.dev](https://chacc.dev)
 
 We welcome contributions! Check out [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
+## Join the Community
+Connect with people that uses ChaCC API on GitHub discussions. [Click here](https://github.com/jonas1015/chacc-api/discussions)
+
 ## Changelog
 
 See what's new in each release: [chacc.dev/changelog](https://chacc.dev/changelog)
@@ -56,4 +59,5 @@ See what's new in each release: [chacc.dev/changelog](https://chacc.dev/changelo
 [![License](https://img.shields.io/pypi/l/chacc-api?label=License&color=blue)](https://github.com/jonas1015/chacc-api/blob/main/LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/jonas1015/chacc-api/ci.yml?label=CI)](https://github.com/Jonas1015/chacc-api/actions/workflows/ci.yml)
 [![Star on Github](https://img.shields.io/github/stars/jonas1015/chacc-api.svg?style=flat-square)](https://github.com/jonas1015/chacc-api)
+[![Discussions](https://img.shields.io/badge/Join-Discussions-blue)](https://github.com/jonas1015/chacc-api/discussions)
 
