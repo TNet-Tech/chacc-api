@@ -41,7 +41,9 @@ modules_router = APIRouter(tags=["Core"])
 security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user_optional(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[object]:
+async def get_current_user_optional(
+    request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Optional[object]:
     """
     Optional authentication dependency.
 
@@ -81,7 +83,7 @@ async def get_current_user_optional(request: Request, credentials: Optional[HTTP
             )
         credentials_obj = HTTPAuthorizationCredentials(scheme="Bearer", credentials=credentials)
         current_user = await get_current_user(credentials_obj)
-        
+
         if not current_user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
