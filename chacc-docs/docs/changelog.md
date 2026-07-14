@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Module naming convention** – Module directories now use underscores instead of hyphens (e.g., `chacc_file_manager` instead of `chacc-file-manager`) to align with Python naming standards. This enables consistent use of the standard import system throughout the module loading pipeline. Module metadata `name` fields must also use underscores. **Migration required**: Rename your module directories and update `module_meta.json` files.
+
 - **Code formatting tool** – Switched from Black to Ruff formatter. All code is now formatted using `ruff format` with the same 100-character line length. You can run `ruff format .` to auto-format and `ruff format --check .` to verify formatting.
 
 - **Documentation workflow** – Documentation Docker images are now built and pushed automatically when a release is published. Manual documentation builds can be triggered by including "build docs" in a commit message on the develop or main branch, or via the workflow_dispatch workflow in GitHub Actions.
@@ -20,6 +22,8 @@
 
 
 ### Fixed
+
+- **Module loading duplicate class registration** – Fixed "Multiple classes found for path" SQLAlchemy errors when loading modules by refactoring the discovery and setup phases to use a consistent import mechanism. Both phases now use the same module objects from `sys.modules`, eliminating duplicate SQLAlchemy declarative registry entries.
 
 - **AutoIncrement Indexed ID** – Fixed auto-increment behavior for indexed primary keys from `ChaCCBaseModel`.
 
