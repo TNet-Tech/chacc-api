@@ -6,7 +6,7 @@
 
 ## Overview
 
-`chacc-authentication` is the official ChaCC API module that handles user identity. It registers a `get_current_user` dependency that other modules can use to protect their routes.
+`chacc_authentication` is the official ChaCC API module that handles user identity. It registers a `get_current_user` dependency that other modules can use to protect their routes.
 
 ### What it provides
 
@@ -21,7 +21,7 @@
 
 | Field | Value |
 |---|---|
-| Name | `chacc-authentication` |
+| Name | `chacc_authentication` |
 | Display name | Authentication Module |
 | Version | `0.1.0` |
 | Author | Jonas G Mwambimbi |
@@ -261,14 +261,8 @@ erDiagram
 Install the module into a ChaCC API project:
 
 ```bash
-chacc build plugins/chacc-authentication
+chacc build plugins/chacc_authentication
 chacc deploy
-```
-
-Or install from PyPI when available:
-
-```bash
-pip install chacc-authentication
 ```
 
 ### Requirements
@@ -603,7 +597,7 @@ This only happens once. Change the password after first login.
 ## Module Structure
 
 ```
-chacc-authentication/
+chacc_authentication/
 ├── module/
 │   ├── __init__.py
 │   ├── main.py              # setup_plugin entry point

@@ -150,7 +150,7 @@ As a ChaCC module, the file manager is installed for 2 scenarios:
 
 - Clone the repository:
 ```bash
-git clone https://github.com/jonas1015/chacc-file-manager
+git clone https://github.com/jonas1015/chacc_file_manager
 ```
 
 - Move it into `plugins/` if in chacc development mode (this will be it).
@@ -159,10 +159,10 @@ git clone https://github.com/jonas1015/chacc-file-manager
 
 ```bash
 # Ensure you're running this command in an activated environment with chacc-api installed.
-chacc build chacc-file-manager
+chacc build chacc_file_manager
 ```
 
-- You will see `chacc-file-manager.chacc` file in your location.
+- You will see `chacc_file_manager.chacc` file in your location.
 - Install this file using `POST /modules` endpoint of your running chacc instance.
 - Done you have chacc file manager already running in your chacc installation.
 
