@@ -1,0 +1,648 @@
+/* === ChaCC dark theme for Swagger UI === */
+:root {
+  --chacc-teal: #00D2D3;
+  --chacc-navy: #1A242B;
+  --chacc-text: #F2F5F8;
+  --chacc-card: #253038;
+  --chacc-border: rgba(0, 210, 211, 0.24);
+  --chacc-danger: #e74c3c;
+}
+
+html, body {
+  background: var(--chacc-navy) !important;
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui {
+  background: var(--chacc-navy) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Top navigation bar */
+.swagger-ui .topbar {
+  background: var(--chacc-navy) !important;
+  border-bottom: 1px solid var(--chacc-border) !important;
+}
+
+.swagger-ui .topbar .link {
+  display: none !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper input[type="text"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.version-stamp {
+  display: none !important;
+}
+
+/* Info section */
+.swagger-ui .info {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 8px !important;
+}
+
+.swagger-ui .info .title,
+.swagger-ui .info h1,
+.swagger-ui .info h2,
+.swagger-ui .info h3,
+.swagger-ui .info h4,
+.swagger-ui .info h5 {
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .info p,
+.swagger-ui .info table {
+  color: var(--chacc-text) !important;
+}
+
+/* Operation tags and summaries */
+.swagger-ui .opblock-tag,
+.swagger-ui .opblock .opblock-summary {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .opblock-tag:hover,
+.swagger-ui .opblock .opblock-summary:hover {
+  background: rgba(0, 210, 211, 0.08) !important;
+}
+
+.swagger-ui .opblock .opblock-summary-description,
+.swagger-ui .opblock .opblock-summary-path,
+.swagger-ui .opblock .opblock-summary-method {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .opblock-description-wrapper,
+.swagger-ui .opblock-external-docs-wrapper,
+.swagger-ui .opblock-body {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .opblock .opblock-section-header {
+  background-color: var(--chacc-navy) !important;
+}
+
+.opblock-title,
+.opblock-description .renderedMarkdown h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+.parameters-container .parameters-col_name .parameter__name,.parameter__name.required,.parameter__type,.parameter__deprecated,.parameter__in {
+  color: var(--chacc-teal) !important;
+}
+
+.parameters-container .parameters-col_name .parameter__name.required span,::after{
+  color: rgb(255, 50, 50) !important;
+}
+
+select {
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+  background-color: var(--chacc-navy) !important;
+  
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 16px !important;
+
+  padding-right: 32px !important;
+}
+
+.body-param__text {
+  color: var(--chacc-teal) !important;
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.opblock-body .file-upload,
+.opblock-body .file-uploader,
+.opblock-body .file-input,
+.parameters-container .file-upload,
+.parameters-container .file-uploader,
+.parameters-container .file-input {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+}
+
+.opblock-body input[type="file"],
+.parameters-container input[type="file"] {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  color: var(--chacc-text) !important;
+  padding: 0.5rem !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  min-height: 40px !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button,
+.parameters-container input[type="file"]::file-selector-button,
+.opblock-body input[type="file"]::-webkit-file-upload-button,
+.parameters-container input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button:hover,
+.parameters-container input[type="file"]::file-selector-button:hover,
+.opblock-body input[type="file"]::-webkit-file-upload-button:hover,
+.parameters-container input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button,
+.parameters-container input[type="file"]::file-selector-button,
+.opblock-body input[type="file"]::-webkit-file-upload-button,
+.parameters-container input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.opblock-body input[type="file"]::file-selector-button:hover,
+.parameters-container input[type="file"]::file-selector-button:hover,
+.opblock-body input[type="file"]::-webkit-file-upload-button:hover,
+.parameters-container input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.opblock-body .body-param__text,
+.parameters-container .body-param__text {
+  min-height: 120px !important;
+  font-family: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace !important;
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
+}
+
+.expand-operation,
+.authorization__btn svg.unlocked path,
+.opblock-control-arrow svg.arrow path {
+  fill: var(--chacc-text) !important;
+}
+
+.execute.opblock-control__btn {
+  color: var(--chacc-teal) !important;
+}
+
+.execute.opblock-control__btn:hover {
+  background: var(--chacc-navy) !important;
+  color: #ffffff !important;
+}
+
+.json-schema-2020-12 .json-schema-2020-12-accordion {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.json-schema-2020-12-expand-deep-button {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+}
+
+.json-schema-2020-12,
+.json-schema-2020-12__title,
+.json-schema-2020-12-expand-deep-button,
+.json-schema-2020-12__attribute {
+  color: var(--chacc-teal) !important;
+}
+
+.json-schema-2020-12-accordion__icon svg path {
+  fill: var(--chacc-teal) !important;
+}
+
+.dialog-ux {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+/* Model boxes */
+.swagger-ui .model-box {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui .model-title {
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .model .model-box {
+  color: var(--chacc-text) !important;
+}
+
+/* Tables */
+.swagger-ui table thead tr th,
+.swagger-ui table thead tr td {
+  background: rgba(0, 210, 211, 0.08) !important;
+  color: var(--chacc-teal) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui table tbody tr td {
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+/* Scheme container */
+.swagger-ui .scheme-container {
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+/* Buttons */
+.swagger-ui .btn {
+  background: transparent !important;
+  border: 1px solid var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.swagger-ui .btn:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .btn.cancel {
+  border-color: var(--chacc-danger) !important;
+  color: var(--chacc-danger) !important;
+  background: transparent !important;
+}
+
+.swagger-ui .btn.cancel:hover {
+  background: var(--chacc-danger) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .execute-btn {
+  border-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+  background: transparent !important;
+}
+
+.swagger-ui .execute-btn:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .authorize__btn {
+  border-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+  background: transparent !important;
+}
+
+.swagger-ui .authorize__btn:hover {
+  background: var(--chacc-teal) !important;
+  color: #ffffff !important;
+}
+
+/* Response section */
+.swagger-ui .response-col_description {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .response-control-media-type__title {
+  color: var(--chacc-teal) !important;
+}
+
+.swagger-ui .response-col_links .operation-link {
+  color: var(--chacc-teal) !important;
+}
+
+/* Tabs */
+.swagger-ui .tab li {
+  color: var(--chacc-text) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui .tab li.active {
+  background: rgba(0, 210, 211, 0.08) !important;
+  border-color: var(--chacc-teal) !important;
+  color: var(--chacc-teal) !important;
+}
+
+/* Code blocks */
+.swagger-ui .opblock-body pre {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: var(--chacc-text) !important;
+  border-color: var(--chacc-border) !important;
+}
+
+.swagger-ui .markdown p,
+.swagger-ui .markdown code,
+.swagger-ui .markdown pre {
+  color: var(--chacc-text) !important;
+}
+
+/* Inputs and selects */
+.swagger-ui input[type="text"],
+.swagger-ui input[type="password"],
+.swagger-ui input[type="email"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui input[type="file"] {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  color: var(--chacc-text) !important;
+  padding: 0.5rem !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  min-height: 40px !important;
+}
+
+.swagger-ui input[type="file"]::file-selector-button,
+.swagger-ui input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui input[type="file"]::file-selector-button:hover,
+.swagger-ui input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.swagger-ui .file-upload,
+.swagger-ui .file-uploader,
+.swagger-ui .opblock-body .file-upload,
+.swagger-ui .opblock-body .file-uploader {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+  margin-top: 0.5rem !important;
+}
+
+.swagger-ui .body-param__text {
+  color: var(--chacc-teal) !important;
+  background: var(--chacc-card) !important;
+  border-color: var(--chacc-border) !important;
+  min-height: 120px !important;
+  font-family: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace !important;
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
+}
+
+/* Model content */
+.swagger-ui .model-box .model-box__model {
+  color: var(--chacc-text) !important;
+}
+
+.swagger-ui .model .model-toggle {
+  filter: invert(1);
+}
+
+.swagger-ui .parameters-col_description p,
+.swagger-ui .parameters-col_description .model {
+  color: var(--chacc-text) !important;
+}
+
+/* Loader */
+.swagger-ui .loading-container {
+  background: var(--chacc-navy) !important;
+}
+
+.swagger-ui .loading-container .throbber .rotator,
+.swagger-ui .loading-container .throbber:before,
+.swagger-ui .loading-container .throbber:after {
+  background: var(--chacc-teal) !important;
+}
+
+/* Auth modal dialog */
+.modal-ux {
+  background: rgba(26, 36, 43, 0.85) !important;
+  backdrop-filter: blur(4px);
+}
+
+.modal-dialog-ux {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+  position: relative !important;
+  z-index: 10001 !important;
+}
+
+.modal-ux-inner {
+  background: transparent !important;
+  color: var(--chacc-text) !important;
+}
+
+.modal-ux-header {
+  background: var(--chacc-navy) !important;
+  border-bottom: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-teal) !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.modal-ux-header h3 {
+  color: var(--chacc-teal) !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+.modal-ux-header .close-modal {
+  color: var(--chacc-text) !important;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.modal-ux-header .close-modal:hover {
+  opacity: 1;
+  color: var(--chacc-teal) !important;
+}
+
+.modal-ux-header .close-modal svg {
+  fill: currentColor;
+}
+
+.modal-ux-content {
+  background: transparent !important;
+  color: var(--chacc-text) !important;
+  padding: 1.5rem !important;
+}
+
+.auth-container h4 {
+  color: var(--chacc-teal) !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+}
+
+.auth-container h4 code {
+  background: rgba(0, 210, 211, 0.12) !important;
+  color: var(--chacc-teal) !important;
+  padding: 0.2rem 0.5rem !important;
+  border-radius: 4px !important;
+  font-family: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace !important;
+  font-size: 0.9em !important;
+}
+
+.auth-container .wrapper {
+  margin-bottom: 1rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.4rem !important;
+}
+
+.auth-container .wrapper label {
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+.auth-container section {
+  margin-top: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+.auth-container input[type="text"],
+.auth-container input[type="password"],
+.auth-container input[type="email"],
+.auth-container input[type="file"],
+.auth-container select {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--chacc-border) !important;
+  border-radius: 6px !important;
+  color: var(--chacc-text) !important;
+  padding: 0.6rem 0.9rem !important;
+  width: 100% !important;
+  font-size: 0.95rem !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 1 !important;
+  pointer-events: auto !important;
+}
+
+.auth-container input[type="file"] {
+  padding: 0.4rem 0.6rem !important;
+  cursor: pointer !important;
+}
+
+.auth-container input[type="file"]::file-selector-button,
+.auth-container input[type="file"]::-webkit-file-upload-button {
+  background: var(--chacc-card) !important;
+  border: 1px solid var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+  border-radius: 4px !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-right: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+}
+
+.auth-container input[type="file"]::file-selector-button:hover,
+.auth-container input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.auth-container input:focus,
+.auth-container select:focus {
+  outline: none !important;
+  border-color: var(--chacc-teal) !important;
+  box-shadow: 0 0 0 3px rgba(0, 210, 211, 0.15) !important;
+}
+
+.auth-container input::placeholder {
+  color: rgba(242, 245, 248, 0.4) !important;
+}
+
+.auth-btn-wrapper {
+  display: flex !important;
+  gap: 0.75rem !important;
+  margin-top: 1.25rem !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn {
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.25rem !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.auth.authorize {
+  background: var(--chacc-teal) !important;
+  border-color: var(--chacc-teal) !important;
+  color: #1A242B !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.auth.authorize:hover {
+  background: #00e6e6 !important;
+  border-color: #00e6e6 !important;
+  color: #1A242B !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.btn-done {
+  background: transparent !important;
+  border-color: var(--chacc-border) !important;
+  color: var(--chacc-text) !important;
+}
+
+.auth-btn-wrapper .btn.modal-btn.btn-done:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--chacc-text) !important;
+  color: #ffffff !important;
+}

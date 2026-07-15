@@ -72,7 +72,6 @@ async def load_single_module(
 
     chacc_logger.info(f"Module path confirmed: {module_path}")
 
-    # Discover models first (needed so they exist in metadata before import)
     try:
         discover_and_import_models(module_path, module_name, backbone_context.logger)
         chacc_logger.info(f"Auto-discovered models for module '{module_name}'")
@@ -110,20 +109,11 @@ async def load_single_module(
 
     try:
         module = importlib.import_module(full_module_name)
-        chacc_logger.info(f"Successfully imported module '{module_name}' via importlib")
+        chacc_logger.info(f"Successfully imported module '{module_name}'")
     except ImportError as e:
         chacc_logger.error(f"Import error in module '{module_name}': {e}")
-        chacc_logger.error(
-            "This often happens with relative imports. Ensure module uses proper import syntax."
-        )
         chacc_logger.error(f"Module path: {module_path}")
         chacc_logger.error(f"Full module name: {full_module_name}")
-        return False
-
-    if full_module_name in sys.modules:
-        module = sys.modules[full_module_name]
-    else:
-        chacc_logger.error(f"Module '{full_module_name}' not found in sys.modules after import")
         return False
 
     setup_func = getattr(module, func_name, None)

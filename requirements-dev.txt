@@ -4,6 +4,10 @@ pytest
 pytest-asyncio
 httpx
 requests
-black
 ruff
 mypy
+
+# For Docs
+mkdocs
+pymdown-extensions
+mkdocs-material

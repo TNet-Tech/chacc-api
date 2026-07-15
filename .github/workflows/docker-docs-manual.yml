@@ -1,0 +1,53 @@
+name: Manual Docs Build
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+    inputs:
+      docs_tag:
+        description: 'Custom docs Docker tag to use (optional, e.g., v1.0.0)'
+        required: false
+        default: ''
+
+jobs:
+  docker-docs-manual:
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'push' && contains(github.event.head_commit.message, 'build docs'))
+      || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Determine Docker tags
+        id: tag
+        run: |
+          TAG="${{ secrets.DOCKER_USERNAME }}/chacc-docs"
+          if [ -n "${{ inputs.docs_tag }}" ]; then
+            echo "tags=${TAG}:${{ inputs.docs_tag }},${TAG}:latest" >> $GITHUB_OUTPUT
+          else
+            echo "tags=${TAG}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chacc-docs
+          file: ./chacc-docs/Dockerfile
+          push: true
+          tags: ${{ steps.tag.outputs.tags }}
+          platforms: linux/amd64,linux/arm64

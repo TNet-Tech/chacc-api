@@ -7,6 +7,7 @@ in SQLAlchemy metadata used by the migration system.
 
 import ast
 import os
+import importlib
 import importlib.util
 import sys
 import logging

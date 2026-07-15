@@ -124,9 +124,9 @@ def get_module_info():
 
             from fastapi import APIRouter
 
-            assert isinstance(
-                module_info["router"], APIRouter
-            ), "Router should be an APIRouter instance"
+            assert isinstance(module_info["router"], APIRouter), (
+                "Router should be an APIRouter instance"
+            )
 
             print("✓ All relative imports within module work correctly!")
             print("✓ Module loading with relative imports is fixed!")

@@ -31,8 +31,8 @@ jobs:
 
       - name: Run linters
         run: |
-          uv pip install --system black ruff mypy
-          black --check .
+          uv pip install --system ruff mypy
+          ruff format --check .
           ruff check .
           mypy src chacc_api chacc_cli --ignore-missing-imports || true
 

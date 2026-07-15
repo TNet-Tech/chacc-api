@@ -108,7 +108,7 @@ uv pip install --system -e .[dev]
 ```
 
 Both commands install the `chacc` CLI, the backbone itself, and the development
-dependencies (Black, Ruff, MyPy, pytest).
+dependencies (Ruff, MyPy, pytest).
 
 ### 5. Configure environment variables
 
@@ -154,7 +154,7 @@ CORS_ALLOW_HEADERS=*
 chacc --help
 
 # Run the linters (should report no issues on a fresh checkout)
-black --check .
+ruff format --check .
 ruff check .
 
 # Run the test suite
@@ -227,7 +227,7 @@ chacc-api/
 │
 ├── pyproject.toml             # Project metadata, dependencies, tool configs
 ├── requirements.txt           # Backbone dependencies
-├── requirements-dev.txt       # Dev overlay: pytest, black, ruff, ...
+├── requirements-dev.txt       # Dev overlay: pytest, ruff, ...
 ├── MANIFEST.in
 │
 ├── .github/workflows/
@@ -512,7 +512,7 @@ CI runs three tools and will fail if any of them report issues. Fix them
 
 ```bash
 # Auto-format source files
-black .
+ruff format .
 
 # Fix auto-fixable lint issues
 ruff check --fix .
@@ -531,7 +531,6 @@ mypy src chacc_api chacc_cli --ignore-missing-imports
 
 | Tool       | Config location                              | Line length |
 |------------|----------------------------------------------|-------------|
-| Black      | `pyproject.toml` → `[tool.black]`           | 100         |
 | Ruff       | `pyproject.toml` → `[tool.ruff]`            | 100         |
 | MyPy       | `pyproject.toml` → `[tool.mypy]`            | —           |
 
@@ -541,7 +540,7 @@ mypy src chacc_api chacc_cli --ignore-missing-imports
 
 Every **user-facing** change must have a changelog entry.
 
-1. Open `CHANGELOG.md`.
+1. Open `chacc-docs/docs/changelog.md`.
 2. Add your entry under a new version heading, one of:
 
    - **`## [Unreleased]`** — for the next planned version.
@@ -573,7 +572,7 @@ git fetch upstream
 git merge upstream/develop
 
 # Run all checks locally
-black --check .
+ruff format --check .
 ruff check .
 mypy src chacc_api chacc_cli --ignore-missing-imports || true
 pytest tests/ -v --tb=short
@@ -624,7 +623,7 @@ git push origin feat/module-bulk-enable
 
 ### Python
 
-- **Line length:** 100 characters (both Black and Ruff are configured for this).
+- **Line length:** 100 characters (Ruff is configured for this).
 - **Docstrings:** Google-style docstrings on every public function / class.
 - **Type hints:** Required for all public signatures. Use `Optional[X]` instead
   of bare `None` or `Union[X, None]`.

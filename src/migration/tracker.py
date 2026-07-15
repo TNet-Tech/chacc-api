@@ -36,23 +36,28 @@ class MigrationTracker:
         self._table_ensured = True
         with self.engine.connect() as conn:
             if self._is_postgres:
-                result = conn.execute(text(f"""
+                result = conn.execute(
+                    text(f"""
                     SELECT EXISTS (
                         SELECT FROM information_schema.tables 
                         WHERE table_name = '{TRACKER_TABLE}'
                     )
-                """))
+                """)
+                )
                 table_exists = result.scalar()
             else:
-                result = conn.execute(text(f"""
+                result = conn.execute(
+                    text(f"""
                     SELECT name FROM sqlite_master 
                     WHERE type='table' AND name='{TRACKER_TABLE}'
-                """))
+                """)
+                )
                 table_exists = result.fetchone() is not None
 
             if not table_exists:
                 if self._is_postgres:
-                    conn.execute(text(f"""
+                    conn.execute(
+                        text(f"""
                         CREATE TABLE {TRACKER_TABLE} (
                             id SERIAL PRIMARY KEY,
                             version_num VARCHAR(256) NOT NULL UNIQUE,
@@ -61,9 +66,11 @@ class MigrationTracker:
                             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             rollback_available INTEGER DEFAULT 0
                         )
-                    """))
+                    """)
+                    )
                 else:
-                    conn.execute(text(f"""
+                    conn.execute(
+                        text(f"""
                         CREATE TABLE {TRACKER_TABLE} (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             version_num VARCHAR(256) NOT NULL UNIQUE,
@@ -72,7 +79,8 @@ class MigrationTracker:
                             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             rollback_available INTEGER DEFAULT 0
                         )
-                    """))
+                    """)
+                    )
                 conn.commit()
                 chacc_logger.info(f"Created migration tracking table: {TRACKER_TABLE}")
             else:
@@ -124,7 +132,7 @@ class MigrationTracker:
         """
         with self.engine.connect() as conn:
             result = conn.execute(
-                text(f"SELECT checksum FROM {TRACKER_TABLE} " f"WHERE checksum IS NOT NULL")
+                text(f"SELECT checksum FROM {TRACKER_TABLE} WHERE checksum IS NOT NULL")
             )
             return {row[0] for row in result.fetchall()}
 
@@ -299,11 +307,13 @@ class MigrationTracker:
             Dict with migration details or None
         """
         with self.engine.connect() as conn:
-            result = conn.execute(text(f"""
+            result = conn.execute(
+                text(f"""
                 SELECT version_num, description, applied_at
                 FROM {TRACKER_TABLE}
                 ORDER BY id DESC LIMIT 1
-            """))
+            """)
+            )
             row = result.fetchone()
             if row:
                 return {"version": row[0], "description": row[1], "applied_at": row[2]}

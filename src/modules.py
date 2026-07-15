@@ -17,6 +17,7 @@ import shutil
 import json
 import zipfile
 from fastapi import Depends, status, UploadFile, File, HTTPException, APIRouter, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -37,9 +38,12 @@ chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 modules_router = APIRouter(tags=["Core"])
+security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user_optional(request: Request) -> Optional[object]:
+async def get_current_user_optional(
+    request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Optional[object]:
     """
     Optional authentication dependency.
 
@@ -61,8 +65,6 @@ async def get_current_user_optional(request: Request) -> Optional[object]:
         chacc_logger.info("NO AUTHENTICATION MODULE, ALLOW ACCESS TO CORE ROUTES")
         return None
 
-    from fastapi.security import HTTPAuthorizationCredentials
-
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         raise HTTPException(
@@ -80,7 +82,15 @@ async def get_current_user_optional(request: Request) -> Optional[object]:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         credentials_obj = HTTPAuthorizationCredentials(scheme="Bearer", credentials=credentials)
-        return await get_current_user(credentials_obj)
+        current_user = await get_current_user(credentials_obj)
+
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return current_user
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

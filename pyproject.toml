@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chacc-api"
-version = "1.0.0-b4.post2"
+version = "1.0.0-b4.post3"
 description = "ChaCC API - A modular FastAPI application for extensible APIs"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["api", "fastapi", "modular", "plugin", "chacc"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 3 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
@@ -47,7 +47,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black",
     "ruff",
     "mypy",
 ]
@@ -78,11 +77,7 @@ exclude = ["tests*", "deployment*"]
 
 [tool.setuptools.package-data]
 chacc_cli = ["templates/*.template"]
-chacc_api = [".env.sample"]
-
-[tool.black]
-line-length = 100
-target-version = ["py310"]
+chacc_api = [".env.sample", "assets/*", "server/static/css/*.css", "server/static/js/*.js", "server/static/img/*", "server/templates/*.html"]
 
 [tool.ruff]
 line-length = 100

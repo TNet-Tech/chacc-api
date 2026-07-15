@@ -86,7 +86,7 @@ class ChaCCBaseModel:
     def __tablename__(cls) -> str:
         return cls.__name__.lower() + "s"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     uuid = Column(GUID, default=uuid7, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, nullable=False)
