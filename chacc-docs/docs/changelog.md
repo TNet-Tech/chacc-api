@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-b4.3
+
+
+**Update now:**
+```bash
+pip install --upgrade chacc-api
+```
 
 ### Changed
 
@@ -26,6 +32,8 @@
 - **Module loading duplicate class registration** – Fixed "Multiple classes found for path" SQLAlchemy errors when loading modules by refactoring the discovery and setup phases to use a consistent import mechanism. Both phases now use the same module objects from `sys.modules`, eliminating duplicate SQLAlchemy declarative registry entries.
 
 - **AutoIncrement Indexed ID** – Fixed auto-increment behavior for indexed primary keys from `ChaCCBaseModel`.
+
+> **AutoIncrement Indexed ID** is a breaking change. Ensure to backup your database before upgrading.
 
 
 ---
@@ -70,11 +78,6 @@
 - **`.env` behavior**: The `.env.sample` file is copied from the package to your working directory if missing. This is intentional and unchanged from previous versions.
 
 ---
-
-**Update now:**
-```bash
-pip install --upgrade chacc-api
-```
 
 ## 1.0.0-b4.1
 
