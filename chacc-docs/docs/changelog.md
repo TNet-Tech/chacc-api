@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0-b4.3
+## 1.0.0-b4.5
 
 
 **Update now:**
