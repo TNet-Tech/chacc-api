@@ -89,4 +89,7 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/chacc-api/
       name: ChaCC API on PyPI
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/jonas1015/chacc-api
+      name: ChaCC API on Docker Hub
   copyright: Copyright &copy; 2026 ChaCC API
