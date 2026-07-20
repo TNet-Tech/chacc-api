@@ -150,7 +150,7 @@ As a ChaCC module, the file manager is installed for 2 scenarios:
 
 - Clone the repository:
 ```bash
-git clone https://github.com/jonas1015/chacc_file_manager
+git clone https://github.com/tnet-tech/chacc_file_manager
 ```
 
 - Move it into `plugins/` if in chacc development mode (this will be it).

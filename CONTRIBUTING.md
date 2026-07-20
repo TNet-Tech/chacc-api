@@ -53,7 +53,7 @@ and tagged during releases.
 
 ### 1. Fork the repository
 
-1. Visit [https://github.com/jonas1015/chacc-api](https://github.com/jonas1015/chacc-api).
+1. Visit [https://github.com/tnet-tech/chacc-api](https://github.com/tnet-tech/chacc-api).
 2. Click the **Fork** button (top-right corner).
 3. Clone your fork locally:
 
@@ -67,7 +67,7 @@ and tagged during releases.
 This lets you pull the latest changes from the original repository:
 
 ```bash
-git remote add upstream https://github.com/jonas1015/chacc-api.git
+git remote add upstream https://github.com/tnet-tech/chacc-api.git
 ```
 
 Keep your fork up to date with:
@@ -589,7 +589,7 @@ git push origin feat/module-bulk-enable
 
 ### Creating the PR
 
-1. Open **https://github.com/jonas1015/chacc-api/compare/develop…\<your-branch\>**
+1. Open **https://github.com/tnet-tech/chacc-api/compare/develop…\<your-branch\>**
 2. Confirm the **base branch** is `develop`.
 3. Fill in the PR template:
    - **What does this change?** A clear, concise description of the problem solved
@@ -614,7 +614,7 @@ git push origin feat/module-bulk-enable
 ### Size guidelines
 
 - Keep PRs focused. If your change touches more than ~3 files, consider splitting.
-- Large refactors are welcome — open a [Discussion](https://github.com/jonas1015/chacc-api/discussions)
+- Large refactors are welcome — open a [Discussion](https://github.com/tnet-tech/chacc-api/discussions)
   first so the community can weigh in before you invest time.
 
 ---
@@ -654,9 +654,9 @@ We are happy to help! Choose the right channel:
 
 | You want to…                                               | Go to…                                             |
 |------------------------------------------------------------|----------------------------------------------------|
-| Report a bug / unexpected behaviour                        | [Issues → Bug Report](https://github.com/jonas1015/chacc-api/issues/new/choose) |
-| Suggest a new feature                                      | [Issues → Feature Request](https://github.com/jonas1015/chacc-api/issues/new/choose) |
-| Ask a question or brainstorm an approach                   | [Discussions](https://github.com/jonas1015/chacc-api/discussions) |
+| Report a bug / unexpected behaviour                        | [Issues → Bug Report](https://github.com/tnet-tech/chacc-api/issues/new/choose) |
+| Suggest a new feature                                      | [Issues → Feature Request](https://github.com/tnet-tech/chacc-api/issues/new/choose) |
+| Ask a question or brainstorm an approach                   | [Discussions](https://github.com/tnet-tech/chacc-api/discussions) |
 | Chat in real time                                          | Reach out to [**Jonas**](https://github.com/jonas1015) directly                    |
 
 When opening an issue, use the templates provided. The more context you give

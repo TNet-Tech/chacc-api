@@ -57,8 +57,8 @@ chacc = "chacc_cli.__main__:main"
 [project.urls]
 Homepage = "https://github.com/chacc-io/chacc-api"
 Documentation = "https://chacc-api.readthedocs.io"
-Repository = "https://github.com/jonas1015/chacc-api"
-Issues = "https://github.com/jonas1015/chacc-api/issues"
+Repository = "https://github.com/tnet-tech/chacc-api"
+Issues = "https://github.com/tnet-tech/chacc-api/issues"
 
 [tool.setuptools]
 include-package-data = true
