@@ -126,6 +126,11 @@ class MigrationRunner:
         dropped_count = 0
 
         for op in diff:
+            if isinstance(op, list):
+                for nested_op in op:
+                    safe_diff.extend(self._filter_safe_operations([nested_op]))
+                continue
+
             if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
                 op_type = "sync_enum_values"
             elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
@@ -367,61 +372,68 @@ class MigrationRunner:
         migrations = []
 
         for op in diff:
-            if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
-                op_type = "sync_enum_values"
-                aff_cols = getattr(op, "affected_columns", [])
-                details = (
-                    op_type,
-                    getattr(op, "schema", None),
-                    getattr(op, "name", ""),
-                    getattr(op, "new_values", []),
-                    aff_cols,
-                    getattr(op, "enum_values_to_rename", []),
-                )
-            elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
-                op_type = "create_enum"
-                details = (
-                    op_type,
-                    getattr(op, "name", ""),
-                    getattr(op, "schema", None),
-                    getattr(op, "enum_values", []),
-                )
-            elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
-                op_type = "drop_enum"
-                details = (
-                    op_type,
-                    getattr(op, "name", ""),
-                    getattr(op, "schema", None),
-                    getattr(op, "enum_values", []),
-                )
-            else:
-                op_type = op[0]
-                details = op
-
-            table_name = self._extract_table_name(op_type, op)
-            schema = self._extract_schema_name(op_type, op)
-
-            if (
-                table_name == "unknown"
-                and op_type in self._dependency_resolver.TABLE_REQUIRED_OPERATIONS
-            ):
-                raise ValueError(f"Cannot determine table for {op_type} operation: {op}")
-
-            version = self._generate_version(op_type, table_name)
-            checksum = self._generate_checksum([details])
-
-            migrations.append(
-                {
-                    "version": version,
-                    "operation": op_type,
-                    "table": table_name,
-                    "schema": schema,
-                    "details": details,
-                    "checksum": checksum,
-                }
-            )
+            if isinstance(op, list):
+                for nested_op in op:
+                    migrations.extend(self._process_diff_op(nested_op))
+                continue
+            migrations.extend(self._process_diff_op(op))
 
         return self._build_dependency_graph(migrations)
+
+    def _process_diff_op(self, op: Any) -> List[Dict]:
+        if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
+            op_type = "sync_enum_values"
+            aff_cols = getattr(op, "affected_columns", [])
+            details = (
+                op_type,
+                getattr(op, "schema", None),
+                getattr(op, "name", ""),
+                getattr(op, "new_values", []),
+                aff_cols,
+                getattr(op, "enum_values_to_rename", []),
+            )
+        elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
+            op_type = "create_enum"
+            details = (
+                op_type,
+                getattr(op, "name", ""),
+                getattr(op, "schema", None),
+                getattr(op, "enum_values", []),
+            )
+        elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
+            op_type = "drop_enum"
+            details = (
+                op_type,
+                getattr(op, "name", ""),
+                getattr(op, "schema", None),
+                getattr(op, "enum_values", []),
+            )
+        else:
+            op_type = op[0]
+            details = op
+
+        table_name = self._extract_table_name(op_type, op)
+        schema = self._extract_schema_name(op_type, op)
+
+        if (
+            table_name == "unknown"
+            and op_type in self._dependency_resolver.TABLE_REQUIRED_OPERATIONS
+        ):
+            raise ValueError(f"Cannot determine table for {op_type} operation: {op}")
+
+        version = self._generate_version(op_type, table_name)
+        checksum = self._generate_checksum([details])
+
+        return [
+            {
+                "version": version,
+                "operation": op_type,
+                "table": table_name,
+                "schema": schema,
+                "details": details,
+                "checksum": checksum,
+            }
+        ]
 
     async def preview(self, model_metadata: MetaData = None) -> Dict[str, Any]:
         """
@@ -469,6 +481,23 @@ class MigrationRunner:
 
             filtered_diff = []
             for op in diff or []:
+                if isinstance(op, list):
+                    for nested_op in op:
+                        nested_op_type = (
+                            nested_op[0] if isinstance(nested_op, tuple) else getattr(nested_op, "op_name", None)
+                        )
+                        if nested_op_type in ("drop_table", "remove_table"):
+                            table = (
+                                nested_op[1] if isinstance(nested_op, tuple) else getattr(nested_op, "table", None)
+                            )
+                            if hasattr(table, "name") and table.name == TRACKER_TABLE:
+                                chacc_logger.debug(
+                                    f"Skipping {nested_op_type} for {TRACKER_TABLE} (not in model metadata)"
+                                )
+                                continue
+                        filtered_diff.append(nested_op)
+                    continue
+
                 op_type = op[0] if isinstance(op, tuple) else getattr(op, "op_name", None)
                 if op_type in ("drop_table", "remove_table"):
                     table = op[1] if isinstance(op, tuple) else getattr(op, "table", None)

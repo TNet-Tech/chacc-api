@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+
+**What's coming next:**
+These fixes are being polished for the next release.
+
+### Fixed
+
+- **Tricky column type changes on PostgreSQL** – Changing a column from text to JSON (or JSONB) used to fail with a confusing error. ChaCC now handles the conversion automatically, so you can update column types without manual SQL tweaks.
+- **Module loading crashes** – Fixed a crash that happened when some plugins loaded their models in certain orders. The startup process is now more forgiving and handles edge cases gracefully.
+- **Migration diff parsing** – Improved how ChaCC reads migration plans from Alembic, eliminating rare crashes during database updates.
+
+---
+
 ## 1.0.0-b4.5
 
 

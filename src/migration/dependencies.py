@@ -66,9 +66,7 @@ class MigrationDependencyResolver:
             return getattr(table, "schema", None) if table is not None else None
 
         if op_type in ("modify_type", "modify_nullable", "modify_default", "drop_column"):
-            column = details[2] if len(details) > 2 else None
-            table = getattr(column, "table", None)
-            return getattr(table, "schema", None) if table is not None else None
+            return details[1] if len(details) > 1 else None
 
         if op_type == "drop_table" and len(details) > 1:
             return getattr(details[1], "schema", None)
