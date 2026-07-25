@@ -217,8 +217,9 @@ select {
 
 .expand-operation,
 .authorization__btn svg.unlocked path,
+.authorization__btn svg.locked,
 .opblock-control-arrow svg.arrow path {
-  fill: var(--chacc-text) !important;
+  fill: var(--chacc-teal) !important;
 }
 
 .execute.opblock-control__btn {
