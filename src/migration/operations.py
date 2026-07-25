@@ -244,6 +244,17 @@ class MigrationOperationExecutor:
                     except (ProgrammingError, OperationalError):
                         pass
 
+                    enum_name = getattr(new_type, "name", None)
+                    if enum_name is None and hasattr(new_type, "enum_class"):
+                        enum_name = new_type.enum_class.__name__.lower()
+                    if enum_name:
+                        if existing_type is None or isinstance(existing_type, SAEnum):
+                            sql = f'ALTER TABLE "{qualified_table_name}" ALTER COLUMN "{column_name}" TYPE {enum_name} USING "{column_name}"::text::{enum_name}'
+                        else:
+                            sql = f'ALTER TABLE "{qualified_table_name}" ALTER COLUMN "{column_name}" TYPE {enum_name} USING "{column_name}"::{enum_name}'
+                        op.execute(sql)
+                        return
+
                 type_str = str(new_type).upper()
                 if "JSON" in type_str and existing_type is not None:
                     existing_str = str(existing_type).upper()
