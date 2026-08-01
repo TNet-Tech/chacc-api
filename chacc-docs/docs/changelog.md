@@ -8,7 +8,8 @@ These fixes are being polished for the next release.
 
 ### Fixed
 
-- **Docker build and startup** – The Docker image failed to build because the project files weren't being copied into the container before installing the package. Also, a missing documentation module caused the app to crash on startup, and a permission issue prevented the dependency resolver from writing its cache. All three problems are now fixed.
+- **Docker build and startup** – Failure to migrate database during startup in production mode
+- **Docker permissions** - Permission issue prevented the dependency resolver from writing its cache.
 - **PostgreSQL enum conversions** – Fixed a crash when changing a column from one enum type to another PostgreSQL enum type. ChaCC now casts through `text` as an intermediate step, so enum-to-enum migrations succeed without manual SQL.
 - **Module loading crashes** – Fixed a crash that happened when some plugins loaded their models in certain orders. The startup process is now more forgiving and handles edge cases gracefully.
 - **Migration diff parsing** – Improved how ChaCC reads migration plans from Alembic, eliminating rare crashes during database updates.
