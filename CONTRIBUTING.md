@@ -354,12 +354,13 @@ migration pipeline. No manual table-creation code is required.
 ```python
 from chacc_api.database import ChaCCBaseModel, register_model
 
+
 @register_model
 class Todo(ChaCCBaseModel):
     __tablename__ = "todos"
 
-    title   = Column(String, nullable=False)
-    done    = Column(Boolean, default=False, nullable=False)
+    title = Column(String, nullable=False)
+    done = Column(Boolean, default=False, nullable=False)
 ```
 
 #### `BackboneContext`
@@ -379,6 +380,7 @@ backbone_context.logger
 
 # Database session factory (usable as FastAPI Depends)
 from fastapi import Depends
+
 db: Session = Depends(backbone_context.get_db)
 
 # Register a named service for other modules to consume
