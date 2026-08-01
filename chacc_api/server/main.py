@@ -10,6 +10,7 @@ from starlette.staticfiles import FileResponse
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from slowapi.errors import RateLimitExceeded
+from src.migration.runner import run_migration
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.modules import modules_router
 from src.health import health_router
@@ -82,6 +83,8 @@ async def onStartupLifespan(app: FastAPI):
         chacc_logger.warning(f"Failed to initialize Redis service: {e}. Continuing without Redis.")
 
     app.state.backbone_context = backbone_context
+
+    await run_migration()
 
     chacc_logger.info("Loading modules...")
 

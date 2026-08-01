@@ -259,7 +259,11 @@ class MigrationOperationExecutor:
                 if "JSON" in type_str and existing_type is not None:
                     existing_str = str(existing_type).upper()
                     using_type = "JSONB" if "JSONB" in type_str else "JSON"
-                    if "STRING" in existing_str or "TEXT" in existing_str or "VARCHAR" in existing_str:
+                    if (
+                        "STRING" in existing_str
+                        or "TEXT" in existing_str
+                        or "VARCHAR" in existing_str
+                    ):
                         sql = f'ALTER TABLE "{qualified_table_name}" ALTER COLUMN "{column_name}" TYPE {using_type} USING "{column_name}"::{using_type.lower()}'
                         op.execute(sql)
                         return

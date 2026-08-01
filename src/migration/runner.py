@@ -484,11 +484,15 @@ class MigrationRunner:
                 if isinstance(op, list):
                     for nested_op in op:
                         nested_op_type = (
-                            nested_op[0] if isinstance(nested_op, tuple) else getattr(nested_op, "op_name", None)
+                            nested_op[0]
+                            if isinstance(nested_op, tuple)
+                            else getattr(nested_op, "op_name", None)
                         )
                         if nested_op_type in ("drop_table", "remove_table"):
                             table = (
-                                nested_op[1] if isinstance(nested_op, tuple) else getattr(nested_op, "table", None)
+                                nested_op[1]
+                                if isinstance(nested_op, tuple)
+                                else getattr(nested_op, "table", None)
                             )
                             if hasattr(table, "name") and table.name == TRACKER_TABLE:
                                 chacc_logger.debug(

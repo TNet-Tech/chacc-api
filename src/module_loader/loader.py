@@ -274,9 +274,12 @@ async def load_modules(
         except Exception as e:
             chacc_logger.error(f"initialize_database_models failed: {e}", exc_info=True)
 
-        from src.migration.runner import run_migration
+        try:
+            from src.migration.runner import run_migration
 
-        await run_migration()
+            await run_migration()
+        except Exception as e:
+            chacc_logger.error(f"Migration after model discovery failed: {e}", exc_info=True)
 
         for record in updated_records:
             try:
