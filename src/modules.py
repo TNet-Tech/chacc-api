@@ -12,24 +12,25 @@ The actual module loading logic is in src/module_loader.py.
 """
 
 import io
+import json
 import os
 import shutil
-import json
 import zipfile
-from fastapi import Depends, status, UploadFile, File, HTTPException, APIRouter, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from typing import Optional
 
-from src.logger import configure_logging, get_default_log_level
-from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, BASE_DIR
-from src.database import get_db, ModuleRecord
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
 from src.chacc_dependency_manager import (
     invalidate_module_cache,
+)
+from src.chacc_dependency_manager import (
     resolve_chacc_dependencies as re_resolve_dependencies,
 )
-
+from src.constants import BASE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.database import ModuleRecord, get_db
+from src.logger import configure_logging, get_default_log_level
 from src.module_loader.archive import (
     get_chacc_filepath,
 )
@@ -42,8 +43,8 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user_optional(
-    request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> Optional[object]:
+    request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
+) -> object | None:
     """
     Optional authentication dependency.
 
@@ -103,7 +104,7 @@ async def get_current_user_optional(
 async def install_chacc_module_endpoint_no_slash(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """Same as POST /modules/ but without trailing slash."""
     return await install_chacc_module_endpoint(file, db, current_user)
@@ -113,7 +114,7 @@ async def install_chacc_module_endpoint_no_slash(
 async def install_chacc_module_endpoint(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """
     Installs a new ChaCC API module from an .chacc package.
@@ -195,10 +196,10 @@ async def install_chacc_module_endpoint(
                 f"Dependencies resolved. Please restart the API server to apply changes."
             },
         )
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
-        chacc_logger.error(f"Error during module installation: {e}", exc_info=True)
+        chacc_logger.exception("Error during module installation")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Installation failed: {e}"
         )
@@ -207,7 +208,7 @@ async def install_chacc_module_endpoint(
 @modules_router.get("/modules")
 async def get_modules_endpoint_no_slash(
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """Same as GET /modules/ but without trailing slash."""
     return await get_modules_endpoint(db, current_user)
@@ -216,7 +217,7 @@ async def get_modules_endpoint_no_slash(
 @modules_router.get("/modules/")
 async def get_modules_endpoint(
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """
     Retrieves a list of all installed modules and their current status from the database.
@@ -242,7 +243,7 @@ async def get_modules_endpoint(
 async def enable_module_endpoint(
     module_name: str,
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """
     Marks a module as enabled in the database.
@@ -266,11 +267,13 @@ async def enable_module_endpoint(
 
     actual_module_name = module_name
     try:
-        with zipfile.ZipFile(chacc_filepath, "r") as zip_ref:
-            with zip_ref.open("module_meta.json") as meta_file:
-                meta_data = json.load(meta_file)
-                actual_module_name = meta_data.get("name", module_name)
-    except Exception as e:
+        with (
+            zipfile.ZipFile(chacc_filepath, "r") as zip_ref,
+            zip_ref.open("module_meta.json") as meta_file,
+        ):
+            meta_data = json.load(meta_file)
+            actual_module_name = meta_data.get("name", module_name)
+    except (zipfile.BadZipFile, json.JSONDecodeError, OSError) as e:
         chacc_logger.warning(f"Could not read module_meta.json from {chacc_filepath}: {e}")
 
     module_requirements = {}
@@ -282,7 +285,7 @@ async def enable_module_endpoint(
                     module_requirements[actual_module_name] = req_content
             except KeyError:
                 pass
-    except Exception as e:
+    except (zipfile.BadZipFile, OSError) as e:
         chacc_logger.error(f"Could not read requirements from {module_name}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -304,7 +307,7 @@ async def enable_module_endpoint(
             dm = ChaCCDependencyManager(logger=chacc_logger)
             await dm.resolve_dependencies()
             chacc_logger.info("Dependencies resolved successfully.")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             chacc_logger.error(f"Dependency resolution failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -342,7 +345,7 @@ async def enable_module_endpoint(
 async def disable_module_endpoint(
     module_name: str,
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """
     Marks a module as disabled in the database. Requires server restart to take effect.
@@ -384,7 +387,7 @@ async def disable_module_endpoint(
 async def uninstall_module_endpoint(
     module_name: str,
     db: Session = Depends(get_db),
-    current_user: Optional[object] = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_optional),
 ):
     """
     Uninstalls a module by removing its code from disk and its record from the database.
