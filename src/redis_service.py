@@ -3,7 +3,6 @@ Redis service for ChaCC backbone.
 Provides Redis client to modules via context.
 """
 
-
 from redis.asyncio import Redis
 
 from src.constants import REDIS_DB, REDIS_ENABLED, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
@@ -68,7 +67,7 @@ class RedisService:
                 await self._redis.ping()
                 self._connection_error = None
                 chacc_logger.info(f"Redis connected: {self._host}:{self._port}/{self._db}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._connection_error = str(e)
                 chacc_logger.debug(f"Redis not available: {e}")
                 if self._redis:
@@ -83,7 +82,7 @@ class RedisService:
             try:
                 await self._redis.close()
                 chacc_logger.info("Redis connection closed.")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 chacc_logger.warning(f"Error closing Redis connection: {e}")
             finally:
                 self._redis = None

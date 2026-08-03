@@ -30,7 +30,7 @@ def start_server(_logger=None):
         import uvicorn
 
         uvicorn.run("main:app", host=host, port=port, reload=False)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _log.error(f"❌ Error starting server: {e}")
         sys.exit(1)
 

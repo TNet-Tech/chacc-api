@@ -2,11 +2,12 @@
 
 import hashlib
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, ClassVar
 
 from sqlalchemy import inspect as sqlalchemy_inspect
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.logger import configure_logging, get_default_log_level
 
@@ -14,7 +15,7 @@ chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
 class MigrationDependencyResolver:
-    TABLE_REQUIRED_OPERATIONS = {
+    TABLE_REQUIRED_OPERATIONS: ClassVar[set[str]] = {
         "add_column",
         "add_index",
         "add_constraint",
@@ -92,17 +93,20 @@ class MigrationDependencyResolver:
             if len(details) >= 3:
                 return self.safe_name(details[1])
 
-        if op_type in (
-            "modify_type",
-            "modify_nullable",
-            "modify_default",
-            "drop_column",
-            "drop_index",
-            "drop_constraint",
-            "drop_foreign_key",
+        if (
+            op_type
+            in (
+                "modify_type",
+                "modify_nullable",
+                "modify_default",
+                "drop_column",
+                "drop_index",
+                "drop_constraint",
+                "drop_foreign_key",
+            )
+            and len(details) > 1
         ):
-            if len(details) > 1:
-                return self.safe_name(details[1])
+            return self.safe_name(details[1])
 
         if op_type == "drop_table" and len(details) > 1:
             return self.safe_name(details[1])
@@ -178,7 +182,7 @@ class MigrationDependencyResolver:
                     return result.scalar() is not None
 
             return table_name in sqlalchemy_inspect(self.engine).get_table_names()
-        except Exception as e:
+        except (SQLAlchemyError, OSError) as e:
             self.logger.warning(f"Could not inspect table {table_name}: {e}")
             return False
 
@@ -293,7 +297,7 @@ class MigrationDependencyResolver:
     def get_existing_tables(self) -> set[str]:
         try:
             return set(sqlalchemy_inspect(self.engine).get_table_names())
-        except Exception as e:
+        except (SQLAlchemyError, OSError) as e:
             self.logger.warning(f"Could not inspect existing tables: {e}")
             return set()
 
@@ -309,14 +313,15 @@ class MigrationDependencyResolver:
             table_identity = self.table_identity(migration.get("schema"), migration["table"])
             table_name = migration["table"]
 
-            if op_type in self.TABLE_REQUIRED_OPERATIONS:
-                if table_identity not in pending_tables and not self.table_exists(
-                    migration.get("schema"), table_name
-                ):
-                    raise ValueError(
-                        f"Cannot apply {op_type} for {table_identity}: "
-                        "table does not exist and no pending add_table migration creates it"
-                    )
+            if (
+                op_type in self.TABLE_REQUIRED_OPERATIONS
+                and table_identity not in pending_tables
+                and not self.table_exists(migration.get("schema"), table_name)
+            ):
+                raise ValueError(
+                    f"Cannot apply {op_type} for {table_identity}: "
+                    "table does not exist and no pending add_table migration creates it"
+                )
 
             if op_type == "create_foreign_key":
                 for referenced_table in self.get_referenced_tables_from_details(

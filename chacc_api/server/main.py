@@ -43,7 +43,7 @@ def copy_sample_env():
                 chacc_logger.info("Created .env.sample from .env.sample for reference")
             else:
                 chacc_logger.warning("Could not find .env.sample in package")
-        except Exception as e:
+        except (OSError, KeyError) as e:
             chacc_logger.warning(f"Failed to copy .env.sample: {e}")
 
 
@@ -80,7 +80,7 @@ async def onStartupLifespan(app: FastAPI):
             )
         else:
             chacc_logger.info("Redis is disabled. Continuing without Redis.")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         chacc_logger.warning(f"Failed to initialize Redis service: {e}. Continuing without Redis.")
 
     app.state.backbone_context = backbone_context
@@ -116,7 +116,7 @@ async def onStartupLifespan(app: FastAPI):
             chacc_logger.info("Redis connection closed gracefully.")
         else:
             chacc_logger.debug("Redis service not available or not connected. Skipping cleanup.")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         chacc_logger.warning(f"Error during Redis shutdown: {e}")
 
     chacc_logger.info("Application shutting down.")

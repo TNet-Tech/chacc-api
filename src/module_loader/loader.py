@@ -41,8 +41,8 @@ async def load_single_module(
     module_metadata: dict,
     app: FastAPI,
     backbone_context: BackboneContext,
-    base_path_prefix: str = None,
-    tags: list = None,
+    base_path_prefix: str | None = None,
+    tags: list | None = None,
     discover_only: bool = False,
 ) -> bool:
     """Load a single module into the application.
@@ -76,7 +76,7 @@ async def load_single_module(
     try:
         discover_and_import_models(module_path, module_name, backbone_context.logger)
         chacc_logger.info(f"Auto-discovered models for module '{module_name}'")
-    except Exception as e:
+    except (ImportError, RuntimeError) as e:
         chacc_logger.warning(f"Failed to discover models for module {module_name}: {e}")
 
     if discover_only:
@@ -163,8 +163,8 @@ async def load_single_module(
 async def load_modules(
     app: FastAPI,
     backbone_context: BackboneContext,
-    only_modules: list = None,
-    exclude_modules: list = None,
+    only_modules: list | None = None,
+    exclude_modules: list | None = None,
 ):
     """Main entry point for loading modules.
 
@@ -210,7 +210,7 @@ async def load_modules(
 
                 dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
                 await dm.resolve_dependencies(enabled_requirements)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 chacc_logger.error(f"Dependency resolution failed: {e}")
                 chacc_logger.error("Aborting module loading to prevent inconsistent state.")
                 raise RuntimeError(f"Dependency resolution failed: {e}")
@@ -264,23 +264,21 @@ async def load_modules(
                 )
                 if not discovery_success:
                     chacc_logger.warning(f"Model discovery failed for module '{record.name}'")
-            except Exception as e:
-                chacc_logger.error(
-                    f"Error discovering models for module '{record.name}': {e}", exc_info=True
-                )
+            except Exception:
+                chacc_logger.exception("Error discovering models for module '%s'", record.name)
 
         try:
             initialize_database_models(backbone_context)
             chacc_logger.info("initialize_database_models completed.")
-        except Exception as e:
-            chacc_logger.error(f"initialize_database_models failed: {e}", exc_info=True)
+        except Exception:
+            chacc_logger.exception("initialize_database_models failed")
 
         try:
             from src.migration.runner import run_migration
 
             await run_migration()
-        except Exception as e:
-            chacc_logger.error(f"Migration after model discovery failed: {e}", exc_info=True)
+        except Exception:
+            chacc_logger.exception("Migration after model discovery failed")
 
         for record in updated_records:
             try:
@@ -306,15 +304,15 @@ async def load_modules(
                     try:
                         record.is_enabled = False
                         db.commit()
-                    except Exception:
-                        pass
-            except Exception as e:
-                chacc_logger.error(f"Error loading module '{record.name}': {e}", exc_info=True)
+                    except Exception as e:  # noqa: BLE001
+                        chacc_logger.warning(f"Failed to disable module '{record.name}': {e}")
+            except Exception:
+                chacc_logger.exception("Error loading module '%s'", record.name)
                 try:
                     record.is_enabled = False
                     db.commit()
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    chacc_logger.warning(f"Failed to disable module '{record.name}': {e}")
 
         try:
             if apply_deferred_schema_changes(backbone_context):
@@ -323,10 +321,10 @@ async def load_modules(
 
                 await run_migration()
                 chacc_logger.info("Deferred migration completed.")
-        except Exception as e:
-            chacc_logger.error(f"Deferred schema migration failed: {e}", exc_info=True)
-    except Exception as e:
-        chacc_logger.error(f"Unexpected error during module loading: {e}", exc_info=True)
+        except Exception:
+            chacc_logger.exception("Deferred schema migration failed")
+    except Exception:
+        chacc_logger.exception("Unexpected error during module loading")
 
     finally:
         db.close()

@@ -7,7 +7,7 @@ Provides backup and restore functionality for database migrations.
 import os
 import shutil
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.constants import (
     DATABASE_ENGINE,
@@ -45,7 +45,7 @@ class DatabaseBackup:
 
     def _generate_backup_name(self) -> str:
         """Generate timestamped backup filename."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         db_info = self._get_database_info()
 
         if db_info["is_sqlite"]:
@@ -89,7 +89,7 @@ class DatabaseBackup:
             chacc_logger.info(f"Backup created successfully: {backup_path}")
             return backup_path
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             chacc_logger.error(f"Backup failed: {e}")
             raise RuntimeError(f"Database backup failed: {e}")
 
@@ -141,7 +141,7 @@ class DatabaseBackup:
         ]
 
         def run_pg_dump():
-            return subprocess.run(cmd, env=env, capture_output=True, text=True)
+            return subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
 
         result = await loop.run_in_executor(None, run_pg_dump)
 
@@ -179,7 +179,7 @@ class DatabaseBackup:
             chacc_logger.info("Database restored successfully")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             chacc_logger.error(f"Restore failed: {e}")
             raise RuntimeError(f"Database restore failed: {e}")
 
@@ -225,7 +225,7 @@ class DatabaseBackup:
                 f"DROP DATABASE IF EXISTS {db_name}",
             ]
 
-            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
 
             if result.returncode != 0:
                 return ("drop_warning", result.stderr.strip())
@@ -244,7 +244,7 @@ class DatabaseBackup:
                 f"CREATE DATABASE {db_name}",
             ]
 
-            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 return ("create_error", result.stderr)
 
@@ -262,7 +262,7 @@ class DatabaseBackup:
                 backup_path,
             ]
 
-            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 return ("restore_error", result.stderr)
 
@@ -300,7 +300,7 @@ class DatabaseBackup:
                         "name": filename,
                         "path": filepath,
                         "size": stat.st_size,
-                        "created": datetime.fromtimestamp(stat.st_mtime),
+                        "created": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
                     }
                 )
 
@@ -323,7 +323,7 @@ class DatabaseBackup:
             try:
                 os.remove(backup["path"])
                 chacc_logger.info(f"Removed old backup: {backup['name']}")
-            except Exception as e:
+            except OSError as e:
                 chacc_logger.warning(f"Failed to remove {backup['name']}: {e}")
 
 

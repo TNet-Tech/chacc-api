@@ -5,7 +5,7 @@ Validates required environment variables and configuration for production deploy
 """
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from src.constants import (
     DATABASE_ENGINE,
@@ -28,7 +28,6 @@ class ValidationError(Exception):
     """Raised when environment validation fails."""
 
 
-
 class EnvironmentValidator:
     """
     Validates environment configuration for ChaCC API.
@@ -37,7 +36,7 @@ class EnvironmentValidator:
     are required and will cause startup failure if misconfigured.
     """
 
-    INSECURE_SECRET_PATTERNS = [
+    INSECURE_SECRET_PATTERNS: ClassVar[list[str]] = [
         r"^dev-",
         r"^test-",
         r"^your-",

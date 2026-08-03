@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from src.constants import DATABASE_ENGINE
 from src.logger import configure_logging, get_default_log_level
@@ -95,7 +96,7 @@ class MigrationTracker:
                         chacc_logger.info(
                             f"Altered {TRACKER_TABLE}: increased version_num size to VARCHAR(256)"
                         )
-                    except Exception as e:
+                    except (ProgrammingError, OperationalError) as e:
                         chacc_logger.debug(f"Column version_num already of sufficient size: {e}")
                     try:
                         conn.execute(
@@ -107,7 +108,7 @@ class MigrationTracker:
                         chacc_logger.info(
                             f"Altered {TRACKER_TABLE}: converted rollback_available to INTEGER"
                         )
-                    except Exception as e2:
+                    except (ProgrammingError, OperationalError) as e2:
                         chacc_logger.debug(
                             f"Column rollback_available already INTEGER or conversion failed: {e2}"
                         )

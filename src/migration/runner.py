@@ -55,10 +55,10 @@ class MigrationRunner:
 
     def __init__(
         self,
-        engine: Engine = None,
-        mode: str = None,
-        create_backup_before: bool = None,
-        backup_dir: str = None,
+        engine: Engine | None = None,
+        mode: str | None = None,
+        create_backup_before: bool | None = None,
+        backup_dir: str | None = None,
     ):
         self.engine = engine or default_engine
         self.mode = mode or MIGRATION_MODE
@@ -553,7 +553,7 @@ class MigrationRunner:
             try:
                 backup_path = await self.backup.create_backup()
                 chacc_logger.info(f"Backup created: {backup_path}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 if self.mode == MigrationMode.AUTO:
                     chacc_logger.warning(f"Backup failed, continuing anyway: {e}")
                 else:
@@ -569,7 +569,7 @@ class MigrationRunner:
                 "backup": backup_path,
             }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             chacc_logger.error(f"Migration failed: {e}")
 
             if backup_path and os.path.exists(backup_path):
@@ -577,7 +577,7 @@ class MigrationRunner:
                 try:
                     await self.backup.restore(backup_path)
                     chacc_logger.info("Database restored from backup")
-                except Exception as restore_error:
+                except Exception as restore_error:  # noqa: BLE001
                     chacc_logger.critical(
                         f"CRITICAL: Migration failed AND restore failed: {restore_error}"
                     )
@@ -626,7 +626,7 @@ class MigrationRunner:
         chacc_logger.info(f"Migration completed: {len(self._applied_migrations)} changes applied")
 
     async def _apply_single_migration(
-        self, version: str, details: tuple, op_type: str, checksum: str = None
+        self, version: str, details: tuple, op_type: str, checksum: str | None = None
     ):
         """Apply a single migration in its own transaction."""
         loop = asyncio.get_event_loop()
@@ -643,7 +643,10 @@ class MigrationRunner:
 
 
 def create_migration_runner(
-    engine=None, mode: str = None, create_backup_before: bool = None, backup_dir: str = None
+    engine: Engine | None = None,
+    mode: str | None = None,
+    create_backup_before: bool | None = None,
+    backup_dir: str | None = None,
 ) -> MigrationRunner:
     """Factory function to create a MigrationRunner."""
     return MigrationRunner(
@@ -651,7 +654,9 @@ def create_migration_runner(
     )
 
 
-async def run_migration(mode: str = None, create_backup: bool = None) -> dict[str, Any]:
+async def run_migration(
+    mode: str | None = None, create_backup: bool | None = None
+) -> dict[str, Any]:
     """
     Run migrations with sensible defaults.
 

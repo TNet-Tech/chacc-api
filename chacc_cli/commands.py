@@ -48,7 +48,7 @@ def validate_module_name(module_name: str) -> str:
     return cleaned
 
 
-def load_template(template_name: str, replacements: dict = None) -> str:
+def load_template(template_name: str, replacements: dict | None = None) -> str:
     """
     Load a template file and optionally replace placeholders.
 
@@ -244,7 +244,7 @@ modules_installed/
             cli_logger.info("Initialized git repository.")
         except FileNotFoundError:
             cli_logger.warning("git not found. Skipping git initialization.")
-        except Exception as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             cli_logger.warning(f"Could not initialize git: {e}")
 
         cli_logger.info(f"Successfully created module '{clean_module_name}'.")
@@ -252,13 +252,13 @@ modules_installed/
             f"Next steps: cd {module_root_dir} && python {clean_module_name}_src/run_tests.py setup && python {clean_module_name}_src/run_tests.py test"
         )
 
-    except Exception as e:
-        cli_logger.error(f"Failed to create a module '{clean_module_name}': {e}", exc_info=True)
+    except Exception:
+        cli_logger.exception(f"Failed to create a module '{clean_module_name}'")
         if os.path.exists(module_root_dir):
             shutil.rmtree(module_root_dir)
 
 
-def build_module_chacc(module_source_dir: str, output_filename: str = None):
+def build_module_chacc(module_source_dir: str, output_filename: str | None = None):
     """
     Builds an .chacc package from a module source directory.
     """
@@ -308,8 +308,8 @@ def build_module_chacc(module_source_dir: str, output_filename: str = None):
                     zipf.write(filepath, arcname)
         cli_logger.info(f"Successfully created {output_filename}")
 
-    except Exception as e:
-        cli_logger.error(f"Error creating .chacc package: {e}", exc_info=True)
+    except Exception:
+        cli_logger.exception("Error creating .chacc package")
     finally:
         if os.path.exists(temp_zip_content_dir):
             shutil.rmtree(temp_zip_content_dir)
@@ -336,7 +336,7 @@ def deploy_module(chacc_file_path: str):
             )
             return
 
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         cli_logger.error(f"Error reading deployment configuration: {e}")
         return
 
@@ -368,7 +368,7 @@ def deploy_module(chacc_file_path: str):
                     cli_logger.error(
                         f"Error details: {error_data.get('detail', 'No details available')}"
                     )
-                except Exception:
+                except (ValueError, AttributeError):
                     cli_logger.error(f"Response: {response.text}")
 
     except requests.exceptions.Timeout:
@@ -376,5 +376,5 @@ def deploy_module(chacc_file_path: str):
     except requests.exceptions.ConnectionError:
         cli_logger.error(f"🔴 Could not connect to {deploy_url}")
         cli_logger.info("💡 Check that your ChaCC API server is running and accessible")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         cli_logger.error(f"🔴 Deployment error: {e}")

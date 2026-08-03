@@ -23,17 +23,14 @@ from src.database import (
 from src.redis_service import RedisService
 
 __all__ = [
-    # Core
     "BackboneContext",
-    # Database
     "ChaCCBaseModel",
-    "get_db",
     "ModuleRecord",
-    "initialize_database_models",
-    "apply_deferred_schema_changes",
-    "metadata_obj",
-    "engine",
-    "register_model",
-    # Services
     "RedisService",
+    "apply_deferred_schema_changes",
+    "engine",
+    "get_db",
+    "initialize_database_models",
+    "metadata_obj",
+    "register_model",
 ]

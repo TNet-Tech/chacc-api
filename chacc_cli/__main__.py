@@ -159,7 +159,7 @@ def main():
                 cmd = [sys.executable, str(server_path)]
 
             try:
-                subprocess.run(cmd, env=env, cwd=os.getcwd())
+                subprocess.run(cmd, env=env, cwd=os.getcwd(), check=False)
             except KeyboardInterrupt:
                 print("\nShutting down ChaCC server...")
             sys.exit(0)

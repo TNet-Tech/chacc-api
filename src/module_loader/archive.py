@@ -10,6 +10,8 @@ import os
 import shutil
 import zipfile
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from src.constants import BASE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
 from src.database import ModuleRecord
 from src.logger import configure_logging, get_default_log_level
@@ -17,7 +19,7 @@ from src.logger import configure_logging, get_default_log_level
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
 
-def get_chacc_filepath(module_name: str, chacc_to_module_name: dict = None) -> str | None:
+def get_chacc_filepath(module_name: str, chacc_to_module_name: dict | None = None) -> str | None:
     """Find the .chacc file path for a given module name.
 
     Args:
@@ -77,7 +79,7 @@ def extract_module_names_from_chacc_files(installed_chacc_files: list[str]) -> d
                         f"No module_meta.json found in {chacc_filename}, using filename as module name"
                     )
                     chacc_to_module_name[chacc_filename] = chacc_filename.replace(".chacc", "")
-        except Exception as e:
+        except (zipfile.BadZipFile, json.JSONDecodeError, OSError, KeyError) as e:
             chacc_logger.warning(f"Could not read module_meta from {chacc_filename}: {e}")
             chacc_to_module_name[chacc_filename] = chacc_filename.replace(".chacc", "")
 
@@ -122,7 +124,7 @@ async def collect_module_requirements() -> dict[str, str]:
                     chacc_logger.warning(
                         f"No requirements were specified for module {chacc_filename}"
                     )
-        except Exception as e:
+        except (zipfile.BadZipFile, OSError, KeyError) as e:
             chacc_logger.warning(f"Could not read requirements from {chacc_filename}: {e}")
 
     return modules_requirements
@@ -194,7 +196,7 @@ def process_module_archives(
                     )
                     db.add(new_record)
                     chacc_logger.info(f"New module '{module_name}' found. Created new DB record.")
-                except Exception as e:
+                except (SQLAlchemyError, OSError) as e:
                     chacc_logger.error(
                         f"Failed to create database record for module '{module_name}': {e}"
                     )

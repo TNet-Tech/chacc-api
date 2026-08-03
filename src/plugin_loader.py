@@ -51,7 +51,7 @@ class ModuleState:
                     try:
                         with open(file_path, "rb") as f:
                             hasher.update(f.read())
-                    except Exception:
+                    except (OSError, KeyError):
                         pass
 
         return hasher.hexdigest()
@@ -130,8 +130,7 @@ def discover_modules_from_directory(directory: str) -> dict[str, dict]:
             }
 
             chacc_logger.debug(f"Discovered module: {module_name}")
-
-        except Exception as e:
+        except (OSError, KeyError) as e:
             chacc_logger.warning(f"Failed to read module_meta.json for {entry}: {e}")
 
     return modules
@@ -177,15 +176,15 @@ async def resolve_dependencies(modules: dict[str, dict], enabled_modules: list[s
             dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
             await dm.resolve_dependencies(enabled_requirements)
             chacc_logger.info("Module dependencies resolved")
-        except Exception as e:
+        except (ImportError, RuntimeError) as e:
             chacc_logger.warning(f"Dependency resolution failed: {e}")
 
 
 async def load_dev_modules(
     app: FastAPI,
     backbone_context,
-    only_modules: list[str] = None,
-    exclude_modules: list[str] = None,
+    only_modules: list[str] | None = None,
+    exclude_modules: list[str] | None = None,
 ):
     """
     Load plugins from the plugins directory.
@@ -257,18 +256,16 @@ async def _load_modules(
                 discover_only=True,
             )
             chacc_logger.info(f"Model discovery complete for module '{module_name}'")
-        except Exception as e:
-            chacc_logger.error(
-                f"Error discovering models for module '{module_name}': {e}", exc_info=True
-            )
+        except Exception:
+            chacc_logger.exception(f"Error discovering models for module '{module_name}'")
 
     try:
         from src.database import initialize_database_models
 
         initialize_database_models(backbone_context)
         chacc_logger.info("initialize_database_models completed.")
-    except Exception as e:
-        chacc_logger.error(f"initialize_database_models failed: {e}", exc_info=True)
+    except Exception:
+        chacc_logger.exception("initialize_database_models failed")
 
     try:
         from src.migration.runner import run_migration
@@ -276,8 +273,8 @@ async def _load_modules(
         chacc_logger.info("Running database migrations after model discovery...")
         await run_migration()
         chacc_logger.info("Database migrations completed.")
-    except Exception as e:
-        chacc_logger.error(f"Migration failed: {e}", exc_info=True)
+    except Exception:
+        chacc_logger.exception("Migration failed")
 
     for module_name in modules_to_load:
         module_info = modules[module_name]
@@ -299,8 +296,8 @@ async def _load_modules(
             else:
                 chacc_logger.error(f"Module '{module_name}' failed to load")
 
-        except Exception as e:
-            chacc_logger.error(f"Error loading module '{module_name}': {e}", exc_info=True)
+        except Exception:
+            chacc_logger.exception(f"Error loading module '{module_name}'")
 
     try:
         if apply_deferred_schema_changes(backbone_context):
@@ -309,7 +306,7 @@ async def _load_modules(
 
             await run_migration()
             chacc_logger.info("Deferred migration completed.")
-    except Exception as e:
-        chacc_logger.error(f"Deferred schema migration failed: {e}", exc_info=True)
+    except Exception:
+        chacc_logger.exception("Deferred schema migration failed")
 
     chacc_logger.info(f"Module loading from {source} completed")

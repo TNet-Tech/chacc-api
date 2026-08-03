@@ -25,7 +25,7 @@ def get_default_log_level() -> str:
     return LogLevels.WARNING.value
 
 
-def configure_logging(log_level: str = None) -> logging.Logger:
+def configure_logging(log_level: str | None = None) -> logging.Logger:
     """
     Configures the root logger with colored output for only the log level.
     Returns a logger instance for the backbone.

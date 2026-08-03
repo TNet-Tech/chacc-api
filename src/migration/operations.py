@@ -33,8 +33,8 @@ class MigrationOperationExecutor:
         version: str,
         details: tuple,
         op_type: str,
-        checksum: str = None,
-        applied_migrations: list[dict] = None,
+        checksum: str | None = None,
+        applied_migrations: list[dict] | None = None,
     ):
         checksum = checksum or self.dependency_resolver.generate_checksum([details])
 
@@ -121,12 +121,12 @@ class MigrationOperationExecutor:
             return f"{op_type} on {table_name}"
         return op_type
 
-    def qualified_table_name(self, table_name: str, schema: str = None) -> str:
+    def qualified_table_name(self, table_name: str, schema: str | None = None) -> str:
         if schema:
             return f"{schema}.{table_name}"
         return table_name
 
-    def create_enum_type(self, column_type: SAEnum, bind, schema: str = None):
+    def create_enum_type(self, column_type: SAEnum, bind, schema: str | None = None):
         previous_schema = getattr(column_type, "schema", None)
         if schema and previous_schema is None:
             column_type.schema = schema
@@ -210,7 +210,7 @@ class MigrationOperationExecutor:
             name, schema, enum_values = details[1], details[2], details[3]
             try:
                 op.execute(f"DROP TYPE {name}")
-            except Exception as e:
+            except (ProgrammingError, OperationalError) as e:
                 self.logger.warning(f"Could not drop enum type {name}: {e}")
 
         elif op_type == "drop_column":
@@ -410,7 +410,7 @@ class MigrationOperationExecutor:
                                 columns,
                                 schema=getattr(constraint.table, "schema", None),
                             )
-                    except Exception as e:
+                    except (ProgrammingError, OperationalError) as e:
                         self.logger.warning(f"Failed to create constraint {constraint.name}: {e}")
 
         else:

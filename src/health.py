@@ -9,6 +9,7 @@ Provides health and readiness checks for container orchestration:
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.constants import DEVELOPMENT_MODE
@@ -56,7 +57,7 @@ async def readiness_check(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
         checks["database"] = "ok"
-    except Exception as e:
+    except SQLAlchemyError as e:
         chacc_logger.error(f"Database health check failed: {e}")
         checks["database"] = "error"
 

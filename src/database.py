@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     JSON,
@@ -96,7 +96,7 @@ class ChaCCBaseModel:
 @event.listens_for(ChaCCBaseModel, "before_insert", propagate=True)
 @event.listens_for(ChaCCBaseModel, "before_update", propagate=True)
 def _set_timestamps(mapper, connection, target):
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     if not getattr(target, "created_at", None):
         target.created_at = now
     target.updated_at = now

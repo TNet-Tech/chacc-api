@@ -47,7 +47,7 @@ async def run_module_tests(module_name: str, module_path: str, test_entry_point:
         await test_func()
         chacc_logger.info(f"Tests for module '{module_name}' passed successfully.")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         chacc_logger.warning(f"Tests for module '{module_name}' failed: {e!s}")
         import traceback
 
