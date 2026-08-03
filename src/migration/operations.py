@@ -1,14 +1,12 @@
 """Migration operation execution."""
 
 from datetime import datetime, timezone
-from typing import List
-
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError, ProgrammingError
-from sqlalchemy.types import Enum as SAEnum
 
 from alembic.operations import Operations
 from alembic.runtime.migration import MigrationContext
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.types import Enum as SAEnum
 
 from src.logger import configure_logging, get_default_log_level
 from src.migration.dependencies import MigrationDependencyResolver
@@ -36,7 +34,7 @@ class MigrationOperationExecutor:
         details: tuple,
         op_type: str,
         checksum: str = None,
-        applied_migrations: List[dict] = None,
+        applied_migrations: list[dict] = None,
     ):
         checksum = checksum or self.dependency_resolver.generate_checksum([details])
 

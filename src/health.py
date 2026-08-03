@@ -7,13 +7,13 @@ Provides health and readiness checks for container orchestration:
 """
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
+from src.constants import DEVELOPMENT_MODE
 from src.database import get_db
 from src.logger import configure_logging, get_default_log_level
-from src.constants import DEVELOPMENT_MODE
-from sqlalchemy import text
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 

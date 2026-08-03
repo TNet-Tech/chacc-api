@@ -1,9 +1,10 @@
 import logging
 import os
 from enum import Enum
+
 import colorlog
 
-from src.constants import LOGGER_NAME, LOG_FORMAT_DEFAULT, LOG_FORMAT_DEBUG
+from src.constants import LOG_FORMAT_DEBUG, LOG_FORMAT_DEFAULT, LOGGER_NAME
 
 
 class LogLevels(str, Enum):

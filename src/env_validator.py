@@ -5,21 +5,21 @@ Validates required environment variables and configuration for production deploy
 """
 
 import re
-from typing import List, Dict, Any
+from typing import Any
 
-from src.logger import configure_logging, get_default_log_level
 from src.constants import (
-    DEVELOPMENT_MODE,
     DATABASE_ENGINE,
     DATABASE_HOST,
-    DATABASE_USER,
-    DATABASE_PASSWORD,
     DATABASE_NAME,
-    SECRET_KEY,
-    ENABLE_PLUGIN_HOT_RELOAD,
+    DATABASE_PASSWORD,
+    DATABASE_USER,
+    DEVELOPMENT_MODE,
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
+    ENABLE_PLUGIN_HOT_RELOAD,
     PLUGIN_AUTO_DISCOVERY,
+    SECRET_KEY,
 )
+from src.logger import configure_logging, get_default_log_level
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -27,7 +27,6 @@ chacc_logger = configure_logging(log_level=get_default_log_level())
 class ValidationError(Exception):
     """Raised when environment validation fails."""
 
-    pass
 
 
 class EnvironmentValidator:
@@ -49,8 +48,8 @@ class EnvironmentValidator:
     ]
 
     def __init__(self):
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
 
     def _add_error(self, message: str):
         """Add a validation error."""
@@ -154,7 +153,7 @@ class EnvironmentValidator:
 
         return True
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         """
         Run all validations.
 
@@ -195,7 +194,7 @@ class EnvironmentValidator:
         }
 
 
-def validate_environment() -> Dict[str, Any]:
+def validate_environment() -> dict[str, Any]:
     """
     Convenience function to validate environment configuration.
 

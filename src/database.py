@@ -5,18 +5,18 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Column,
-    Integer,
-    String,
-    create_engine,
     DateTime,
     ForeignKey,
-    func,
+    Integer,
     MetaData,
+    String,
+    create_engine,
     event,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.types import TypeDecorator
 
 from .constants import DATABASE_ENGINE, DATABASE_URL
@@ -148,9 +148,9 @@ def initialize_database_models(backbone_context):
             created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
             updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
             deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-            setattr(model_cls, "created_by_id", created_by_col)
-            setattr(model_cls, "updated_by_id", updated_by_col)
-            setattr(model_cls, "deleted_by_id", deleted_by_col)
+            model_cls.created_by_id = created_by_col
+            model_cls.updated_by_id = updated_by_col
+            model_cls.deleted_by_id = deleted_by_col
             table = model_cls.__table__
             table.append_column(created_by_col)
             table.append_column(updated_by_col)
@@ -183,9 +183,9 @@ def apply_deferred_schema_changes(backbone_context):
             created_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
             updated_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
             deleted_by_col = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-            setattr(model_cls, "created_by_id", created_by_col)
-            setattr(model_cls, "updated_by_id", updated_by_col)
-            setattr(model_cls, "deleted_by_id", deleted_by_col)
+            model_cls.created_by_id = created_by_col
+            model_cls.updated_by_id = updated_by_col
+            model_cls.deleted_by_id = deleted_by_col
             table = model_cls.__table__
             table.append_column(created_by_col)
             table.append_column(updated_by_col)

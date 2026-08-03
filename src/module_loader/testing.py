@@ -4,9 +4,10 @@ Executes module-provided test suites by dynamically importing and
 invoking the configured test entry point.
 """
 
+import importlib.util
 import os
 import sys
-import importlib.util
+
 from src.logger import configure_logging, get_default_log_level
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
@@ -47,7 +48,7 @@ async def run_module_tests(module_name: str, module_path: str, test_entry_point:
         chacc_logger.info(f"Tests for module '{module_name}' passed successfully.")
 
     except Exception as e:
-        chacc_logger.warning(f"Tests for module '{module_name}' failed: {str(e)}")
+        chacc_logger.warning(f"Tests for module '{module_name}' failed: {e!s}")
         import traceback
 
         chacc_logger.warning(f"Test failure details: {traceback.format_exc()}")

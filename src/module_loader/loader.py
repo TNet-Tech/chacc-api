@@ -5,30 +5,31 @@ validating and resolving Python dependencies, extracting archives,
 synchronising the database, and mounting enabled modules into the FastAPI application.
 """
 
-import os
-import sys
-import json
 import importlib
 import inspect
-from fastapi import FastAPI, APIRouter
+import json
+import os
+import sys
 
-from src.logger import get_default_log_level, configure_logging
-from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, DEPENDENCY_CACHE_DIR
+from fastapi import APIRouter, FastAPI
+
+from src.constants import DEPENDENCY_CACHE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.core_services import BackboneContext
 from src.database import (
+    ModuleRecord,
     apply_deferred_schema_changes,
     get_db,
-    ModuleRecord,
     initialize_database_models,
 )
-from src.core_services import BackboneContext
+from src.logger import configure_logging, get_default_log_level
 
-from .discovery import discover_and_import_models
 from .archive import (
-    extract_module_names_from_chacc_files,
     collect_module_requirements,
+    extract_module_names_from_chacc_files,
     process_module_archives,
     unzip_modules,
 )
+from .discovery import discover_and_import_models
 from .metadata import sync_database_with_filesystem
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
@@ -326,7 +327,6 @@ async def load_modules(
             chacc_logger.error(f"Deferred schema migration failed: {e}", exc_info=True)
     except Exception as e:
         chacc_logger.error(f"Unexpected error during module loading: {e}", exc_info=True)
-        pass
 
     finally:
         db.close()

@@ -6,24 +6,24 @@ Supports both:
 - Production mode: Load from .modules_loaded with optional hot reload
 """
 
-import os
 import json
-from typing import Dict, List
+import os
+
 from fastapi import FastAPI
 
-from src.logger import configure_logging, get_default_log_level
 from src.constants import (
     BASE_DIR,
-    PLUGINS_DIR,
-    MODULES_LOADED_DIR,
     DEPENDENCY_CACHE_DIR,
     DEVELOPMENT_MODE,
-    ENABLE_PLUGIN_HOT_RELOAD,
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
+    ENABLE_PLUGIN_HOT_RELOAD,
+    MODULES_LOADED_DIR,
     PLUGIN_AUTO_DISCOVERY,
+    PLUGINS_DIR,
 )
-from src.module_loader.loader import load_single_module
 from src.database import apply_deferred_schema_changes
+from src.logger import configure_logging, get_default_log_level
+from src.module_loader.loader import load_single_module
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -34,7 +34,7 @@ class ModuleState:
     """
 
     def __init__(self):
-        self.file_hashes: Dict[str, str] = {}
+        self.file_hashes: dict[str, str] = {}
 
     def get_file_hash(self, module_path: str) -> str:
         """Calculate a hash of all Python files in a module directory."""
@@ -81,7 +81,7 @@ class ModuleState:
 _module_state = ModuleState()
 
 
-def discover_modules_from_directory(directory: str) -> Dict[str, Dict]:
+def discover_modules_from_directory(directory: str) -> dict[str, dict]:
     """
     Discover all modules in a directory.
 
@@ -137,17 +137,17 @@ def discover_modules_from_directory(directory: str) -> Dict[str, Dict]:
     return modules
 
 
-def discover_plugins() -> Dict[str, Dict]:
+def discover_plugins() -> dict[str, dict]:
     """Discover plugins from plugins directory."""
     return discover_modules_from_directory(PLUGINS_DIR)
 
 
-def discover_installed_modules() -> Dict[str, Dict]:
+def discover_installed_modules() -> dict[str, dict]:
     """Discover installed modules from .modules_loaded directory."""
     return discover_modules_from_directory(MODULES_LOADED_DIR)
 
 
-async def resolve_dependencies(modules: Dict[str, Dict], enabled_modules: List[str]):
+async def resolve_dependencies(modules: dict[str, dict], enabled_modules: list[str]):
     """Resolve dependencies for enabled modules."""
     if not ENABLE_PLUGIN_DEPENDENCY_RESOLUTION:
         return
@@ -184,8 +184,8 @@ async def resolve_dependencies(modules: Dict[str, Dict], enabled_modules: List[s
 async def load_dev_modules(
     app: FastAPI,
     backbone_context,
-    only_modules: List[str] = None,
-    exclude_modules: List[str] = None,
+    only_modules: list[str] = None,
+    exclude_modules: list[str] = None,
 ):
     """
     Load plugins from the plugins directory.
@@ -217,9 +217,9 @@ async def load_dev_modules(
 async def _load_modules(
     app: FastAPI,
     backbone_context,
-    modules: Dict[str, Dict],
-    only_modules: List[str],
-    exclude_modules: List[str],
+    modules: dict[str, dict],
+    only_modules: list[str],
+    exclude_modules: list[str],
     source: str,
 ):
     """Internal function to load modules."""

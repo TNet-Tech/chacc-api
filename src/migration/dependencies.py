@@ -1,9 +1,11 @@
 """Migration dependency ordering and validation."""
 
 import hashlib
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from collections.abc import Iterable
+from typing import Any
 
-from sqlalchemy import inspect as sqlalchemy_inspect, text
+from sqlalchemy import inspect as sqlalchemy_inspect
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.logger import configure_logging, get_default_log_level
@@ -32,7 +34,7 @@ class MigrationDependencyResolver:
         self.engine = engine
         self.logger = logger or chacc_logger
 
-    def generate_checksum(self, diff: List[Any]) -> str:
+    def generate_checksum(self, diff: list[Any]) -> str:
         content = str(sorted([str(d) for d in diff]))
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
@@ -40,12 +42,12 @@ class MigrationDependencyResolver:
         name = getattr(value, "name", None)
         return name or str(value)
 
-    def table_identity(self, schema: Optional[str], table_name: str) -> str:
+    def table_identity(self, schema: str | None, table_name: str) -> str:
         if schema:
             return f"{schema}.{table_name}"
         return table_name
 
-    def get_schema_from_details(self, op_type: str, details: tuple) -> Optional[str]:
+    def get_schema_from_details(self, op_type: str, details: tuple) -> str | None:
         if op_type == "add_table" and len(details) > 1:
             return getattr(details[1], "schema", None)
 
@@ -107,8 +109,8 @@ class MigrationDependencyResolver:
 
         return "unknown"
 
-    def get_column_names_from_details(self, op_type: str, details: tuple) -> Set[str]:
-        def column_names(columns: Optional[Iterable[Any]]) -> Set[str]:
+    def get_column_names_from_details(self, op_type: str, details: tuple) -> set[str]:
+        def column_names(columns: Iterable[Any] | None) -> set[str]:
             names = set()
             for column in columns or []:
                 name = getattr(column, "name", None)
@@ -138,25 +140,25 @@ class MigrationDependencyResolver:
 
         return set()
 
-    def get_enum_name_from_type(self, column_type: Any) -> Optional[str]:
+    def get_enum_name_from_type(self, column_type: Any) -> str | None:
         enum_type = getattr(column_type, "impl", column_type)
         return getattr(enum_type, "name", None) or getattr(column_type, "name", None)
 
-    def get_enum_name_from_details(self, details: tuple) -> Optional[str]:
+    def get_enum_name_from_details(self, details: tuple) -> str | None:
         if len(details) > 1:
             return self.safe_name(details[1])
         return None
 
     def get_referenced_table_details_from_details(
         self, op_type: str, details: tuple
-    ) -> Set[Tuple[Optional[str], str]]:
+    ) -> set[tuple[str | None, str]]:
         if op_type == "create_foreign_key" and len(details) > 1:
             referred_table = getattr(details[1], "referred_table", None)
             if referred_table is not None:
                 return {(getattr(referred_table, "schema", None), self.safe_name(referred_table))}
         return set()
 
-    def get_referenced_tables_from_details(self, op_type: str, details: tuple) -> Set[str]:
+    def get_referenced_tables_from_details(self, op_type: str, details: tuple) -> set[str]:
         return {
             self.table_identity(schema, table_name)
             for schema, table_name in self.get_referenced_table_details_from_details(
@@ -164,7 +166,7 @@ class MigrationDependencyResolver:
             )
         }
 
-    def table_exists(self, schema: Optional[str], table_name: str) -> bool:
+    def table_exists(self, schema: str | None, table_name: str) -> bool:
         try:
             if self.engine.dialect.name == "postgresql":
                 qualified_name = f"{schema}.{table_name}" if schema else table_name
@@ -182,17 +184,17 @@ class MigrationDependencyResolver:
 
     def topological_sort(
         self,
-        migrations: List[Dict],
-        dependencies: Dict[str, Set[str]],
-        dependents: Dict[str, Set[str]],
-    ) -> List[Dict]:
+        migrations: list[dict],
+        dependencies: dict[str, set[str]],
+        dependents: dict[str, set[str]],
+    ) -> list[dict]:
         order = {migration["version"]: index for index, migration in enumerate(migrations)}
         by_version = {migration["version"]: migration for migration in migrations}
         ready = sorted(
             [version for version, deps in dependencies.items() if not deps],
             key=lambda version: order[version],
         )
-        sorted_versions: List[str] = []
+        sorted_versions: list[str] = []
 
         while ready:
             version = ready.pop(0)
@@ -218,17 +220,17 @@ class MigrationDependencyResolver:
 
         return [by_version[version] for version in sorted_versions]
 
-    def build_dependency_graph(self, migrations: List[Dict]) -> List[Dict]:
+    def build_dependency_graph(self, migrations: list[dict]) -> list[dict]:
         if not migrations:
             return []
 
-        dependencies: Dict[str, Set[str]] = {
+        dependencies: dict[str, set[str]] = {
             migration["version"]: set() for migration in migrations
         }
-        dependents: Dict[str, Set[str]] = {migration["version"]: set() for migration in migrations}
-        table_creators: Dict[str, Dict] = {}
-        column_creators: Dict[Tuple[str, str], Dict] = {}
-        enum_creators: Dict[str, Dict] = {}
+        dependents: dict[str, set[str]] = {migration["version"]: set() for migration in migrations}
+        table_creators: dict[str, dict] = {}
+        column_creators: dict[tuple[str, str], dict] = {}
+        enum_creators: dict[str, dict] = {}
 
         def add_dependency(node: str, dependency: str) -> None:
             if node == dependency:
@@ -288,14 +290,14 @@ class MigrationDependencyResolver:
 
         return self.topological_sort(migrations, dependencies, dependents)
 
-    def get_existing_tables(self) -> Set[str]:
+    def get_existing_tables(self) -> set[str]:
         try:
             return set(sqlalchemy_inspect(self.engine).get_table_names())
         except Exception as e:
             self.logger.warning(f"Could not inspect existing tables: {e}")
             return set()
 
-    def validate_migration_dependencies(self, migrations: List[Dict]) -> None:
+    def validate_migration_dependencies(self, migrations: list[dict]) -> None:
         pending_tables = {
             self.table_identity(migration.get("schema"), migration["table"])
             for migration in migrations

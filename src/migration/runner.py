@@ -8,21 +8,21 @@ import asyncio
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from alembic.autogenerate import compare_metadata
+from alembic.runtime.migration import MigrationContext
 from sqlalchemy import MetaData
 from sqlalchemy.engine import Engine
 
-from alembic.runtime.migration import MigrationContext
-from alembic.autogenerate import compare_metadata
-
+from src.constants import DATABASE_ENGINE, MIGRATION_BACKUP_DIR, MIGRATION_MODE
+from src.database import engine as default_engine
+from src.database import metadata_obj
 from src.logger import configure_logging, get_default_log_level
-from src.constants import MIGRATION_MODE, MIGRATION_BACKUP_DIR, DATABASE_ENGINE
-from src.database import engine as default_engine, metadata_obj
 from src.migration.backup import create_backup
 from src.migration.dependencies import MigrationDependencyResolver
 from src.migration.operations import MigrationOperationExecutor
-from src.migration.tracker import create_tracker, TRACKER_TABLE
+from src.migration.tracker import TRACKER_TABLE, create_tracker
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -82,8 +82,8 @@ class MigrationRunner:
         self._tracker = None
         self._backup = None
 
-        self._pending_migrations: List[Dict] = []
-        self._applied_migrations: List[Dict] = []
+        self._pending_migrations: list[dict] = []
+        self._applied_migrations: list[dict] = []
 
     @property
     def tracker(self):
@@ -105,10 +105,10 @@ class MigrationRunner:
         MigrationRunner._version_counter += 1
         return f"{timestamp}_{MigrationRunner._version_counter}_{operation_type}_{table_name}"
 
-    def _generate_checksum(self, diff: List[Any]) -> str:
+    def _generate_checksum(self, diff: list[Any]) -> str:
         return self._dependency_resolver.generate_checksum(diff)
 
-    def _filter_safe_operations(self, diff: List[Any]) -> List[Any]:
+    def _filter_safe_operations(self, diff: list[Any]) -> list[Any]:
         safe_operations = [
             "add_table",
             "add_column",
@@ -194,7 +194,7 @@ class MigrationRunner:
 
         return "unknown"
 
-    def _extract_schema_name(self, op_type: str, op: Any) -> Optional[str]:
+    def _extract_schema_name(self, op_type: str, op: Any) -> str | None:
         if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
             return getattr(op, "schema", None)
 
@@ -236,17 +236,17 @@ class MigrationRunner:
 
         return None
 
-    def _build_dependency_graph(self, migrations: List[Dict]) -> List[Dict]:
+    def _build_dependency_graph(self, migrations: list[dict]) -> list[dict]:
         return self._dependency_resolver.build_dependency_graph(migrations)
 
-    def _validate_migration_dependencies(self, migrations: List[Dict]) -> None:
+    def _validate_migration_dependencies(self, migrations: list[dict]) -> None:
         self._dependency_resolver.validate_migration_dependencies(migrations)
 
-    def _table_identity(self, migration: Dict) -> str:
+    def _table_identity(self, migration: dict) -> str:
         return self._dependency_resolver.table_identity(migration.get("schema"), migration["table"])
 
     def _has_pending_dependent_for_table(
-        self, migration: Dict, migrations: List[Dict], applied_versions: set
+        self, migration: dict, migrations: list[dict], applied_versions: set
     ) -> bool:
         table_identity = self._table_identity(migration)
         dependent_operations = {
@@ -291,7 +291,7 @@ class MigrationRunner:
 
         return None
 
-    def _ensure_missing_table_creators(self, migrations: List[Dict]) -> List[Dict]:
+    def _ensure_missing_table_creators(self, migrations: list[dict]) -> list[dict]:
         pending_tables = {
             self._table_identity(m) for m in migrations if m["operation"] == "add_table"
         }
@@ -345,8 +345,8 @@ class MigrationRunner:
 
     def _should_apply_migration(
         self,
-        migration: Dict,
-        migrations: List[Dict],
+        migration: dict,
+        migrations: list[dict],
         applied_versions: set,
         applied_checksums: set,
     ) -> bool:
@@ -368,7 +368,7 @@ class MigrationRunner:
 
         return True
 
-    def _diff_to_migrations(self, diff: List[Any]) -> List[Dict]:
+    def _diff_to_migrations(self, diff: list[Any]) -> list[dict]:
         migrations = []
 
         for op in diff:
@@ -380,7 +380,7 @@ class MigrationRunner:
 
         return self._build_dependency_graph(migrations)
 
-    def _process_diff_op(self, op: Any) -> List[Dict]:
+    def _process_diff_op(self, op: Any) -> list[dict]:
         if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
             op_type = "sync_enum_values"
             aff_cols = getattr(op, "affected_columns", [])
@@ -435,7 +435,7 @@ class MigrationRunner:
             }
         ]
 
-    async def preview(self, model_metadata: MetaData = None) -> Dict[str, Any]:
+    async def preview(self, model_metadata: MetaData = None) -> dict[str, Any]:
         """
         Preview what migrations would be applied without making changes.
 
@@ -469,7 +469,7 @@ class MigrationRunner:
             "checksum": self._generate_checksum(diff),
         }
 
-    def _get_diff(self, metadata: MetaData) -> List[tuple]:
+    def _get_diff(self, metadata: MetaData) -> list[tuple]:
         """Get database schema diff."""
         with self.engine.connect() as conn:
             context = MigrationContext.configure(conn)
@@ -514,7 +514,7 @@ class MigrationRunner:
 
             return filtered_diff
 
-    async def run(self, model_metadata: MetaData = None) -> Dict[str, Any]:
+    async def run(self, model_metadata: MetaData = None) -> dict[str, Any]:
         """
         Run pending migrations.
 
@@ -588,7 +588,7 @@ class MigrationRunner:
 
             raise RuntimeError(f"Migration failed: {e}")
 
-    async def _apply_migrations(self, migrations: List[Dict], metadata: MetaData):
+    async def _apply_migrations(self, migrations: list[dict], metadata: MetaData):
         """Apply migrations to database."""
         loop = asyncio.get_event_loop()
         applied_versions = await loop.run_in_executor(None, self.tracker.get_applied)
@@ -651,7 +651,7 @@ def create_migration_runner(
     )
 
 
-async def run_migration(mode: str = None, create_backup: bool = None) -> Dict[str, Any]:
+async def run_migration(mode: str = None, create_backup: bool = None) -> dict[str, Any]:
     """
     Run migrations with sensible defaults.
 

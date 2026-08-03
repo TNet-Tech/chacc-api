@@ -3,9 +3,9 @@ ChaCC CLI - Command Line Interface for ChaCC API module management.
 """
 
 import argparse
+import os
 import subprocess
 import sys
-import os
 
 
 def main():
@@ -118,7 +118,7 @@ def main():
 
     args = parser.parse_args()
 
-    from .commands import create_module_scaffold, build_module_chacc, deploy_module
+    from .commands import build_module_chacc, create_module_scaffold, deploy_module
 
     if args.command == "create":
         create_module_scaffold(args.module_name, args.output_dir, args.force)

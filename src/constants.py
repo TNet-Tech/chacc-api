@@ -1,4 +1,5 @@
 import os
+
 from decouple import config
 
 BASE_DIR = os.getcwd()

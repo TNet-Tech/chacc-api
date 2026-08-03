@@ -1,32 +1,33 @@
 import os
-from pathlib import Path
 from importlib.resources import files
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.staticfiles import FileResponse
-from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
-from chacc_api.server.docs.redoc import get_themed_redoc_html
 from slowapi.errors import RateLimitExceeded
-from src.migration.runner import run_migration
-from src.rate_limiter import limiter, rate_limit_exceeded_handler
-from src.modules import modules_router
-from src.health import health_router
-from src.database import get_db
-from src.logger import configure_logging, get_default_log_level
-from src.core_services import BackboneContext
+from starlette.staticfiles import FileResponse
+
+from chacc_api.server.docs.redoc import get_themed_redoc_html
+from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
 from src.constants import (
+    CORS_ALLOW_CREDENTIALS,
+    CORS_ALLOW_HEADERS,
+    CORS_ALLOW_METHODS,
+    CORS_ALLOWED_ORIGINS,
     DEVELOPMENT_MODE,
     MODULES_LOADED_DIR,
     PLUGINS_DIR,
-    CORS_ALLOWED_ORIGINS,
-    CORS_ALLOW_CREDENTIALS,
-    CORS_ALLOW_METHODS,
-    CORS_ALLOW_HEADERS,
 )
-from src.env_validator import validate_environment, ValidationError
+from src.core_services import BackboneContext
+from src.database import get_db
+from src.env_validator import ValidationError, validate_environment
+from src.health import health_router
+from src.logger import configure_logging, get_default_log_level
+from src.migration.runner import run_migration
+from src.modules import modules_router
+from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.redis_service import RedisService
 
 

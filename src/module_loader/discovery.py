@@ -6,12 +6,12 @@ in SQLAlchemy metadata used by the migration system.
 """
 
 import ast
-import os
+import graphlib
 import importlib
 import importlib.util
-import sys
 import logging
-import graphlib
+import os
+import sys
 from collections import defaultdict
 
 

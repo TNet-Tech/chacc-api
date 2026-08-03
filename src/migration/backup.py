@@ -8,18 +8,17 @@ import os
 import shutil
 import subprocess
 from datetime import datetime
-from typing import Optional
+
 from src.constants import (
     DATABASE_ENGINE,
     DATABASE_HOST,
     DATABASE_NAME,
-    DATABASE_USER,
     DATABASE_PASSWORD,
     DATABASE_PORT,
+    DATABASE_USER,
     MIGRATION_BACKUP_DIR,
     SQLITE_DB_PATH,
 )
-
 from src.logger import configure_logging, get_default_log_level
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
@@ -33,7 +32,7 @@ class DatabaseBackup:
     Supports both SQLite and PostgreSQL databases.
     """
 
-    def __init__(self, backup_dir: Optional[str] = None):
+    def __init__(self, backup_dir: str | None = None):
         self.backup_dir = backup_dir or DEFAULT_BACKUP_DIR
         os.makedirs(self.backup_dir, exist_ok=True)
 
@@ -328,6 +327,6 @@ class DatabaseBackup:
                 chacc_logger.warning(f"Failed to remove {backup['name']}: {e}")
 
 
-def create_backup(backup_dir: Optional[str] = None) -> DatabaseBackup:
+def create_backup(backup_dir: str | None = None) -> DatabaseBackup:
     """Factory function to create a DatabaseBackup instance."""
     return DatabaseBackup(backup_dir)

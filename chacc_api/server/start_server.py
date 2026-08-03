@@ -6,6 +6,7 @@ Must NOT be run in production with development-mode settings.
 
 import os
 import sys
+
 from chacc_api.utils import configure_logging
 
 os.environ["CHACC_DEV_MODE"] = "false"

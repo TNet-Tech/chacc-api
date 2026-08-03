@@ -5,12 +5,12 @@ module_meta.json, locating archive files, collecting requirements,
 determining which archives need reprocessing, and extracting archives.
 """
 
-import os
-import zipfile
 import json
+import os
 import shutil
-from typing import Dict, List, Tuple
-from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR, BASE_DIR
+import zipfile
+
+from src.constants import BASE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
 from src.database import ModuleRecord
 from src.logger import configure_logging, get_default_log_level
 
@@ -44,7 +44,7 @@ def get_chacc_filepath(module_name: str, chacc_to_module_name: dict = None) -> s
     return None
 
 
-def extract_module_names_from_chacc_files(installed_chacc_files: List[str]) -> Dict[str, str]:
+def extract_module_names_from_chacc_files(installed_chacc_files: list[str]) -> dict[str, str]:
     """Extract module names from module_meta.json inside .chacc files.
 
     Args:
@@ -84,7 +84,7 @@ def extract_module_names_from_chacc_files(installed_chacc_files: List[str]) -> D
     return chacc_to_module_name
 
 
-async def collect_module_requirements() -> Dict[str, str]:
+async def collect_module_requirements() -> dict[str, str]:
     """Collect requirements from all .chacc files BEFORE unzipping.
 
     Returns:
@@ -129,11 +129,11 @@ async def collect_module_requirements() -> Dict[str, str]:
 
 
 def process_module_archives(
-    installed_chacc_files: List[str],
-    chacc_to_module_name: Dict[str, str],
-    existing_records: Dict[str, ModuleRecord],
+    installed_chacc_files: list[str],
+    chacc_to_module_name: dict[str, str],
+    existing_records: dict[str, ModuleRecord],
     db,
-) -> List[Tuple[str, str, float, bool]]:
+) -> list[tuple[str, str, float, bool]]:
     """Determine which .chacc files need re-extraction.
 
     Args:
@@ -203,8 +203,8 @@ def process_module_archives(
 
 
 def unzip_modules(
-    modules_to_process: List[Tuple[str, str, float, bool]],
-    existing_records: Dict[str, ModuleRecord],
+    modules_to_process: list[tuple[str, str, float, bool]],
+    existing_records: dict[str, ModuleRecord],
     db,
 ):
     """Extract archives and create or update DB records.
