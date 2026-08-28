@@ -17,9 +17,10 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.types import TypeDecorator
 
-from .constants import DATABASE_ENGINE, DATABASE_URL
+from .constants import ASYNC_DATABASE_URL, DATABASE_ENGINE, DATABASE_URL
 from .logger import configure_logging, get_default_log_level
 
 try:
@@ -61,10 +62,17 @@ class GUID(TypeDecorator):
 
 if "postgres" in DATABASE_ENGINE:
     engine = create_engine(DATABASE_URL)
+    async_engine = create_async_engine(ASYNC_DATABASE_URL)
 else:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    async_engine = create_async_engine(ASYNC_DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = async_sessionmaker(
+    async_engine,
+    class_ = AsyncSession,
+    expire_on_commit=False
+)
 
 convention = {
     "ix": "ix_%(column_0_label)s",
@@ -210,3 +218,14 @@ async def get_db():
         raise
     finally:
         db.close()
+
+
+async def get_async_db():
+    session = AsyncSessionLocal()
+    try:
+        yield session
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()

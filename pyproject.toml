@@ -28,7 +28,7 @@ dependencies = [
     "uvicorn",
     "sqlalchemy",
     "alembic",
-    "psycopg2-binary",
+    "psycopg",
     "slowapi",
     "python-decouple",
     "pyjwt",
@@ -43,6 +43,8 @@ dependencies = [
     "pytest-asyncio",
     "httpx",
     "uuid-utils",
+    "asyncpg",
+    "aiosqlite"
 ]
 
 [project.optional-dependencies]

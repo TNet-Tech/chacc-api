@@ -11,9 +11,10 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants import DEVELOPMENT_MODE
-from src.database import get_db
+from src.database import get_db, get_async_db
 from src.logger import configure_logging, get_default_log_level
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
@@ -45,7 +46,7 @@ async def health_check():
 
 
 @health_router.get("/health/ready", response_model=HealthResponse)
-async def readiness_check(db: Session = Depends(get_db)):
+async def readiness_check(db: AsyncSession = Depends(get_async_db)):
     """
     Readiness check with database connectivity.
 
@@ -55,7 +56,7 @@ async def readiness_check(db: Session = Depends(get_db)):
     checks = {"api": "ok", "database": "unknown"}
 
     try:
-        db.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1"))
         checks["database"] = "ok"
     except SQLAlchemyError as e:
         chacc_logger.error(f"Database health check failed: {e}")

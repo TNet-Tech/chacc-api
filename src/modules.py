@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.chacc_dependency_manager import (
     invalidate_module_cache,
@@ -29,7 +30,7 @@ from src.chacc_dependency_manager import (
     resolve_chacc_dependencies as re_resolve_dependencies,
 )
 from src.constants import BASE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
-from src.database import ModuleRecord, get_db
+from src.database import ModuleRecord, get_db, get_async_db
 from src.logger import configure_logging, get_default_log_level
 from src.module_loader.archive import (
     get_chacc_filepath,
@@ -100,20 +101,11 @@ async def get_current_user_optional(
         )
 
 
-@modules_router.post("/modules", dependencies=[])
-async def install_chacc_module_endpoint_no_slash(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: object | None = Depends(get_current_user_optional),
-):
-    """Same as POST /modules/ but without trailing slash."""
-    return await install_chacc_module_endpoint(file, db, current_user)
-
-
 @modules_router.post("/modules/", dependencies=[])
+@modules_router.post("/modules", dependencies=[])
 async def install_chacc_module_endpoint(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: object | None = Depends(get_current_user_optional),
 ):
     """

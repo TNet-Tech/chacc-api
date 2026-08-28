@@ -13,11 +13,12 @@ class BackboneContext:
     Modules will receive an instance of this class during setup.
     """
 
-    def __init__(self, app: FastAPI, limiter: Limiter, logger: logging.Logger, db_session_factory):
+    def __init__(self, app: FastAPI, limiter: Limiter, logger: logging.Logger, db_session_factory, async_db_session_factory):
         self._app = app
         self._limiter = limiter
         self._logger = logger
         self._db_session_factory = db_session_factory
+        self._async_db_session_factory = async_db_session_factory
         self._services: dict[str, Callable[..., Any]] = {}
 
     @property
@@ -42,6 +43,13 @@ class BackboneContext:
         Modules will use this as: db: Session = Depends(context.get_db)
         """
         return self._db_session_factory
+
+    @property
+    def get_db_async(self):
+        """
+        
+        """
+        return self._async_db_session_factory
 
     def register_service(self, name: str, service: Callable[..., Any]):
         """
