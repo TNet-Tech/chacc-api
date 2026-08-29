@@ -43,7 +43,6 @@ dependencies = [
     "pytest-asyncio",
     "httpx",
     "uuid-utils",
-    "asyncpg",
     "aiosqlite"
 ]
 

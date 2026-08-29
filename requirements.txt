@@ -4,7 +4,6 @@ sqlalchemy[asyncio]
 alembic
 alembic-postgresql-enum
 psycopg
-asyncpg
 aiosqlite
 uuid-utils
 slowapi

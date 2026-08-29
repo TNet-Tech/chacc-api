@@ -222,10 +222,17 @@ async def get_db():
 
 async def get_async_db():
     session = AsyncSessionLocal()
+    
     try:
         yield session
     except Exception:
-        await session.rollback()
+        try:
+            await session.rollback()
+        except:
+            pass
         raise
     finally:
-        await session.close()
+        try:
+            await session.close()
+        except Exception as e:
+            print(f"CLOSE FAILED: {e}")
