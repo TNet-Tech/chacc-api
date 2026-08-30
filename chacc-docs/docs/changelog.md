@@ -1,13 +1,26 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-b4.6
 
 
-**What's coming next:**
-These fixes are being polished for the next release.
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api:1.0.0-b4.post6
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-b4.6
+```
+
+### Added
+
+- **Async database sessions** – Modules can now talk to the database asynchronously using `get_async_db()`, which provides an `AsyncSession`. This lets routes run database queries without blocking the rest of the server. Scaffolding templates (`chacc create`) now include this dependency in the generated `context_factory.py` and use it in generated routes via `Depends(get_async_db)`.
 
 ### Fixed
 
+- **Generated `get_db` lifecycle** – The scaffolded `get_db` dependency now uses the same lifecycle pattern as `get_async_db` (`anext` → `yield` → `finally: await gen.aclose()`), ensuring the underlying database session is always closed after the dependency completes instead of being leaked.
 - **Docker build and startup** – Failure to migrate database during startup in production mode
 - **Docker permissions** - Permission issue prevented the dependency resolver from writing its cache.
 - **PostgreSQL enum conversions** – Fixed a crash when changing a column from one enum type to another PostgreSQL enum type. ChaCC now casts through `text` as an intermediate step, so enum-to-enum migrations succeed without manual SQL.
@@ -20,8 +33,14 @@ These fixes are being polished for the next release.
 
 
 **Update now:**
+> PyPi Package:
 ```bash
-pip install --upgrade chacc-api
+pip install --upgrade chacc-api:1.0.0-b4.post5
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-b4.5
 ```
 
 ### Changed
@@ -55,6 +74,17 @@ pip install --upgrade chacc-api
 ---
 
 ## 1.0.0-b4.2
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api:1.0.0-b4.post2
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-b4.2
+```
 
 **Beta4.2 fixes a critical startup crash, resolves the audit-schema chicken-and-egg problem, and cleans up model discovery. We have brought you better landing page. If you've had issues with module loading or SQLite table detection, this release is for you.**
 
@@ -97,6 +127,17 @@ pip install --upgrade chacc-api
 
 ## 1.0.0-b4.1
 
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api:1.0.0-b4.post1
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-b4.1
+```
+
 ### Added
 
 - PostgreSQL enum migration support through `alembic-postgresql-enum`, including handling for `create_enum`, `sync_enum_values`, and `drop_enum` operations.
@@ -134,6 +175,17 @@ pip install --upgrade chacc-api
 - README file has been updated to focus on ChaCC brief intro and link the entire guidance to [chacc.dev](https://chacc.dev)
 
 ## 1.0.0-b4
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api:1.0.0-b4
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-b4
+```
 
 ### Added
 

@@ -91,12 +91,35 @@ class Item(ChaCCBaseModel):
 
 ## Routes
 
-Use the database dependency from the module context or directly from ChaCC API.
+Use a database dependency to work with the database in your routes. ChaCC
+provides both a synchronous and an asynchronous session. For new modules,
+prefer the **async** session (`AsyncSession`) because it does not block the
+server while it waits for the database to respond.
+
+Get the dependency from your module's `context_factory.py`, which the
+`chacc create` command generates for you:
+
+```python
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from .context_factory import get_async_db
+
+router = APIRouter()
+
+
+@router.get("/items")
+async def list_items(db: AsyncSession = Depends(get_async_db)):
+    # `db` is an async SQLAlchemy session.
+    # Example: result = await db.execute(select(Item))
+    return {"items": []}
+```
+
+If you need a traditional synchronous session, use `get_db` instead:
 
 ```python
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from chacc_api import get_db
+from .context_factory import get_db
 
 router = APIRouter()
 
