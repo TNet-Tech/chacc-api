@@ -124,6 +124,15 @@ p,
   color: var(--chacc-teal) !important;
 }
 
+.parameters-container tr.parameters td.parameters-col_name div.parameter__type,
+div.parameter__deprecated,
+div.parameter__in,
+div.parameter__empty_value_toggle,
+div.parameter__name,
+div.parameter__type span.prop-format{
+  color: var(--chacc-teal) !important;
+}
+
 .parameters-container .parameters-col_name .parameter__name.required span,::after{
   color: rgb(255, 50, 50) !important;
 }
@@ -468,7 +477,8 @@ select {
 }
 
 .swagger-ui .parameters-col_description p,
-.swagger-ui .parameters-col_description .model {
+.swagger-ui .parameters-col_description .model,
+.swagger-ui .parameters-col_description .parameter__empty_value_toggle.disabled {
   color: var(--chacc-text) !important;
 }
 
