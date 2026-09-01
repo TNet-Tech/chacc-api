@@ -17,6 +17,7 @@ docker pull jonas1015/chacc-api:1.0.0-b4.6
 ### Added
 
 - **Async database sessions** – Modules can now talk to the database asynchronously using `get_async_db()`, which provides an `AsyncSession`. This lets routes run database queries without blocking the rest of the server. Scaffolding templates (`chacc create`) now include this dependency in the generated `context_factory.py` and use it in generated routes via `Depends(get_async_db)`.
+- **Chacc Outbound module** – New official module for sending emails, SMS, and other messages with automatic retries, status tracking, and a pluggable adapter system (SMTP and console adapters included). See the [Chacc Outbound docs](official-modules/outbound.md) for setup, REST API, and how to write custom adapters.
 
 ### Fixed
 

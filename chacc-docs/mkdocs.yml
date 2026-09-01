@@ -23,6 +23,7 @@ nav:
         - Summary: official-modules/index.md
         - Chacc Authentication: official-modules/authentication.md
         - Chacc File Manager: official-modules/file-manager.md
+        - Chacc Outbound: official-modules/outbound.md
   - USEFUL INFORMATION:
     - Troubleshooting: troubleshooting.md
     - Changelog: changelog.md

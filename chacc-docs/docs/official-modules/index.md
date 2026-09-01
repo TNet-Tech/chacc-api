@@ -8,3 +8,4 @@ Official modules maintained by the ChaCC API team. These modules are still under
 |---|---|
 | [Chacc Authentication](authentication.md) | User authentication, JWT, and RBAC |
 | [Chacc File Manager](file-manager.md) | Secure, UUID-addressed file management with adapter-based storage |
+| [Chacc Outbound](outbound.md) | Outbound messaging (email, SMS, custom channels) with retries, status tracking, and an admin API |
