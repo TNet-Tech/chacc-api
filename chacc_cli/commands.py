@@ -315,6 +315,154 @@ def build_module_chacc(module_source_dir: str, output_filename: str | None = Non
             shutil.rmtree(temp_zip_content_dir)
 
 
+def build_install_parser(subparsers):
+    """
+    Build the ``chacc install`` subparser.
+
+    Defined here (rather than inline in ``__main__.py``) so it can be unit-tested.
+    """
+    install_parser = subparsers.add_parser(
+        "install",
+        help="Install a ChaCC module from a Git URL or local path.",
+        description=(
+            "Install a ChaCC module from a Git repository (public or private) "
+            "or a local directory. In dev, the source is copied into the plugins "
+            "directory (preserving the module's .git so you can develop and push "
+            "from inside the plugin). In prod, a .chacc archive is built and placed "
+            "in the modules install directory."
+        ),
+    )
+    install_parser.add_argument(
+        "source",
+        help="Path, URL, or short form (owner/repo).",
+    )
+    install_parser.add_argument(
+        "--ref",
+        help="Git ref: branch, tag, or commit. Alternative to source@ref syntax.",
+    )
+    install_parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Install into the plugins directory (development). Default: production (.chacc archive).",
+    )
+    install_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing module with the same name.",
+    )
+    install_parser.add_argument(
+        "--depth",
+        type=int,
+        default=1,
+        help="Git clone depth. Use 0 or --full for full history. Default: 1.",
+    )
+    install_parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Use a full git clone (equivalent to --depth 0).",
+    )
+    install_parser.add_argument(
+        "--token-env",
+        help="Override the env var name used for token lookup (e.g. MY_CI_TOKEN).",
+    )
+    install_parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-step progress output. Only the final result is printed.",
+    )
+    return install_parser
+
+
+def install_module(
+    source: str,
+    ref: str | None = None,
+    dev: bool = False,
+    force: bool = False,
+    depth: int = 1,
+    full: bool = False,
+    token_env: str | None = None,
+    quiet: bool = False,
+):
+    """
+    Install a ChaCC module from a local path or Git repository.
+
+    See :mod:`chacc_cli.installer` for the per-step implementation.
+    """
+    from chacc_cli.installer import paths as paths_mod
+    from chacc_cli.installer import progress as progress_mod
+    from chacc_cli.installer import source as source_mod
+    from chacc_cli.installer import validate as validate_mod
+
+    progress_mod.set_quiet(quiet)
+
+    if full:
+        depth = 0
+
+    with progress_mod.step("Loading destinations"):
+        destinations = paths_mod.load_destinations()
+
+    # --dev flag is the single switch. No --dev means production.
+    effective_mode = "dev" if dev else "prod"
+    progress_mod.info(f"Mode: {effective_mode} ({'--dev flag' if dev else 'default'})")
+
+    with progress_mod.step("Resolving source", detail=source):
+        resolved = source_mod.resolve(source, ref, depth)
+
+    try:
+        with progress_mod.step("Validating module", detail=resolved.path):
+            meta = validate_mod.load_and_validate(resolved.path)
+
+        progress_mod.info(f"Module name: {meta.name}")
+        destination, is_archive = destinations.resolve(effective_mode, meta.name)
+        progress_mod.info(f"Destination: {destination}")
+
+        with progress_mod.step("Preparing destination"):
+            paths_mod.ensure_clean_destination(destination, is_archive, force)
+
+        if effective_mode == "dev":
+            with progress_mod.step("Copying files into plugins directory"):
+                paths_mod.copytree_dev(resolved.path, destination)
+        else:
+            with progress_mod.step("Staging source for build"):
+                staging = paths_mod.stage_for_archive(resolved.path)
+            try:
+                with progress_mod.step("Stripping .git from build staging"):
+                    paths_mod.strip_git(staging)
+                with progress_mod.step("Building .chacc archive"):
+                    previous_cwd = os.getcwd()
+                    os.chdir(staging)
+                    try:
+                        build_module_chacc(staging)
+                    finally:
+                        os.chdir(previous_cwd)
+                built_archive = os.path.join(staging, f"{meta.name}.chacc")
+                if not os.path.isfile(built_archive):
+                    raise RuntimeError(
+                        f"archive '{built_archive}' was not produced by the build step."
+                    )
+                with progress_mod.step("Placing archive atomically", detail=destination):
+                    paths_mod.atomic_replace(built_archive, destination)
+            finally:
+                shutil.rmtree(staging, ignore_errors=True)
+
+        progress_mod.final(
+            f"Module '{meta.name}' installed. Restart the ChaCC server to activate it."
+        )
+        if meta.has_requirements:
+            progress_mod.warn_always(
+                f"Module '{meta.name}' ships requirements.txt. "
+                "Dependencies will be installed on server startup; ensure your "
+                "environment allows runtime pip installs and has internet access. "
+                "If the module changes models, migrations will run automatically on restart."
+            )
+        return True
+    finally:
+        try:
+            source_mod.cleanup(resolved)
+        except NameError:
+            pass
+
+
 def deploy_module(chacc_file_path: str):
     """
     Deploys an .chacc module to a remote ChaCC API instance.

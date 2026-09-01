@@ -53,6 +53,10 @@ def main():
         help="Optional: The name of the output .chacc file. Defaults to '<module_name>.chacc'.",
     )
 
+    from .commands import build_install_parser
+
+    build_install_parser(subparsers)
+
     deploy_parser = subparsers.add_parser(
         "deploy", help="Deploy an .chacc module to a remote ChaCC API instance."
     )
@@ -118,10 +122,38 @@ def main():
 
     args = parser.parse_args()
 
-    from .commands import build_module_chacc, create_module_scaffold, deploy_module
+    from .commands import (
+        build_install_parser,
+        build_module_chacc,
+        create_module_scaffold,
+        deploy_module,
+        install_module,
+    )
 
     if args.command == "create":
         create_module_scaffold(args.module_name, args.output_dir, args.force)
+    elif args.command == "install":
+        from chacc_cli.installer.paths import PathError
+        from chacc_cli.installer.source import SourceError
+        from chacc_cli.installer.validate import ValidationError
+
+        try:
+            install_module(
+                source=args.source,
+                ref=args.ref,
+                dev=args.dev,
+                force=args.force,
+                depth=args.depth,
+                full=args.full,
+                token_env=args.token_env,
+                quiet=args.quiet,
+            )
+        except (SourceError, ValidationError, PathError) as exc:
+            # The progress stepper has already printed [FAIL] with the message.
+            print(f"\nInstall failed: {exc}")
+            sys.exit(1)
+        else:
+            sys.exit(0)
     elif args.command == "build":
         build_module_chacc(args.module_source_dir, args.output_filename)
     elif args.command == "deploy":

@@ -356,16 +356,16 @@ SendResult(status="failed", message_id=messaging_uuid, error_message="Invalid ph
 
 ```python
 class BaseOutboundAdapter(ABC):
-    name: str = "base"               # Adapter identifier, e.g. "twilio"
-    channel: str = "unknown"         # Channel this adapter handles, e.g. "sms"
+    name: str = "base"  # Adapter identifier, e.g. "twilio"
+    channel: str = "unknown"  # Channel this adapter handles, e.g. "sms"
     description: Optional[str] = None  # Human-readable description shown in /adapters
 
     @abstractmethod
     async def send(
         self,
-        messaging_uuid: str,           # Unique message ID for tracing
-        recipient_id: str,             # Your internal user/order ID
-        recipient_contact: str,        # Destination (email, phone, etc.)
+        messaging_uuid: str,  # Unique message ID for tracing
+        recipient_id: str,  # Your internal user/order ID
+        recipient_contact: str,  # Destination (email, phone, etc.)
         metadata: Optional[dict] = None,
         subject: Optional[str] = None,
         body: Optional[str] = None,
