@@ -15,9 +15,9 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.types import TypeDecorator
 
 from .constants import ASYNC_DATABASE_URL, DATABASE_ENGINE, DATABASE_URL
@@ -65,14 +65,12 @@ if "postgres" in DATABASE_ENGINE:
     async_engine = create_async_engine(ASYNC_DATABASE_URL)
 else:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    async_engine = create_async_engine(ASYNC_DATABASE_URL, connect_args={"check_same_thread": False})
+    async_engine = create_async_engine(
+        ASYNC_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-AsyncSessionLocal = async_sessionmaker(
-    async_engine,
-    class_ = AsyncSession,
-    expire_on_commit=False
-)
+AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 convention = {
     "ix": "ix_%(column_0_label)s",
@@ -222,17 +220,17 @@ async def get_db():
 
 async def get_async_db():
     session = AsyncSessionLocal()
-    
+
     try:
         yield session
     except Exception:
         try:
             await session.rollback()
-        except:
-            pass
+        except Exception:  # noqa: BLE001
+            chacc_logger.warning("Database Session rollback failed!")
         raise
     finally:
         try:
             await session.close()
-        except Exception as e:
-            print(f"CLOSE FAILED: {e}")
+        except Exception as e:  # noqa: BLE001
+            chacc_logger.warning(f"CLOSE FAILED: {e}")

@@ -13,7 +13,14 @@ class BackboneContext:
     Modules will receive an instance of this class during setup.
     """
 
-    def __init__(self, app: FastAPI, limiter: Limiter, logger: logging.Logger, db_session_factory, async_db_session_factory):
+    def __init__(
+        self,
+        app: FastAPI,
+        limiter: Limiter,
+        logger: logging.Logger,
+        db_session_factory,
+        async_db_session_factory,
+    ):
         self._app = app
         self._limiter = limiter
         self._logger = logger
@@ -47,7 +54,8 @@ class BackboneContext:
     @property
     def get_db_async(self):
         """
-        
+        Provides the FastAPI dependency function to get a asynchronous database session.
+        Modules will use this as: db: AsyncSession = Depends(context.get_async_db)
         """
         return self._async_db_session_factory
 

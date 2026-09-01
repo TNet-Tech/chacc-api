@@ -21,7 +21,7 @@ from src.constants import (
     PLUGINS_DIR,
 )
 from src.core_services import BackboneContext
-from src.database import get_db, get_async_db
+from src.database import get_async_db, get_db
 from src.env_validator import ValidationError, validate_environment
 from src.health import health_router
 from src.logger import configure_logging, get_default_log_level
@@ -66,7 +66,11 @@ async def onStartupLifespan(app: FastAPI):
         raise RuntimeError(f"Cannot start application: {e}")
 
     backbone_context = BackboneContext(
-        app=app, limiter=app.state.limiter, logger=chacc_logger, db_session_factory=get_db, async_db_session_factory=get_async_db
+        app=app,
+        limiter=app.state.limiter,
+        logger=chacc_logger,
+        db_session_factory=get_db,
+        async_db_session_factory=get_async_db,
     )
 
     try:
