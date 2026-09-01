@@ -13,15 +13,19 @@
 
 You don't need to know SMTP, Twilio, or any provider details. Just call `send()` and the module figures out the rest.
 
-## Installation
+## Install
 
-Place this folder inside your ChaCC plugins directory:
+Source: [`TNet-Tech/chacc_outbound`](https://github.com/TNet-Tech/chacc_outbound).
 
-```text
-plugins/chacc_outbound/
+```bash
+# Dev: copy into plugins/chacc_outbound (keeps .git)
+chacc install TNet-Tech/chacc_outbound --dev
+
+# Prod: build chacc_outbound.chacc into .modules_installed/
+chacc install TNet-Tech/chacc_outbound
 ```
 
-Dependencies are managed by `chacc-api`.
+Restart the ChaCC server after install. See the [CLI install guide](../cli.md#install-a-module) for source-form details, credentials, and ref handling.
 
 ## Settings
 
