@@ -1,17 +1,17 @@
 # Changelog
 
-## 1.0.0-b4.6
+## 1.0.0-b5
 
 
 **Update now:**
 > PyPi Package:
 ```bash
-pip install --upgrade chacc-api:1.0.0-b4.post6
+pip install --upgrade chacc-api:1.0.0-b5
 ```
 
 > Docker
 ```bash
-docker pull jonas1015/chacc-api:1.0.0-b4.6
+docker pull jonas1015/chacc-api:1.0.0-b5
 ```
 
 ### Added

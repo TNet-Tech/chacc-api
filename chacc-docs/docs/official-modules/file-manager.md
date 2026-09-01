@@ -2,6 +2,20 @@
 
 > An official ChaCC API module providing secure, UUID-addressed file management with adapter-based storage.
 
+## Install
+
+Source: [`TNet-Tech/chacc_file_manager`](https://github.com/TNet-Tech/chacc_file_manager).
+
+```bash
+# Dev: copy into plugins/chacc_file_manager (keeps .git)
+chacc install TNet-Tech/chacc_file_manager --dev
+
+# Prod: build chacc_file_manager.chacc into .modules_installed/
+chacc install TNet-Tech/chacc_file_manager
+```
+
+Restart the ChaCC server after install. See the [CLI install guide](../cli.md#install-a-module) for source-form details, credentials, and ref handling.
+
 ## Overview
 
 The adapter-based file management for ChaCC API. Files are addressed by UUID, stored through pluggable adapters, and tracked in the database with deduplication, validation hooks, and configurable streaming behavior.

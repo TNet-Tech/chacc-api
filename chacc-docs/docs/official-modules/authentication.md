@@ -2,6 +2,20 @@
 
 > The official authentication module for ChaCC API. Provides user management, JWT authentication, and role-based access control (RBAC).
 
+## Install
+
+Source: [`TNet-Tech/chacc_authentication`](https://github.com/TNet-Tech/chacc_authentication).
+
+```bash
+# Dev: copy into plugins/chacc_authentication (keeps .git)
+chacc install TNet-Tech/chacc_authentication --dev
+
+# Prod: build chacc_authentication.chacc into .modules_installed/
+chacc install TNet-Tech/chacc_authentication
+```
+
+Restart the ChaCC server after install. See the [CLI install guide](../cli.md#install-a-module) for source-form details, credentials, and ref handling.
+
 ---
 
 ## Overview
