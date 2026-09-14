@@ -133,7 +133,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     lifespan=onStartupLifespan,
-    root_path="/api"
+    root_path="/api",
 )
 patch_binary_file_schema(app)
 
