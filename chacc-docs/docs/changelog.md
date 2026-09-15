@@ -6,7 +6,7 @@
 **Update now:**
 > PyPi Package:
 ```bash
-pip install --upgrade chacc-api==1.0.0-b5post1
+pip install --upgrade chacc-api==1.0.0-b5.post1
 ```
 
 > Docker
