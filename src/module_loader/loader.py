@@ -13,7 +13,12 @@ import sys
 
 from fastapi import APIRouter, FastAPI
 
-from src.constants import DEPENDENCY_CACHE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.constants import (
+    API_PREFIX,
+    DEPENDENCY_CACHE_DIR,
+    MODULES_INSTALLED_DIR,
+    MODULES_LOADED_DIR,
+)
 from src.core_services import BackboneContext
 from src.database import (
     ModuleRecord,
@@ -132,16 +137,20 @@ async def load_single_module(
         plugin_router = setup_func(backbone_context)
 
     if plugin_router and isinstance(plugin_router, APIRouter):
-        prefix = base_path_prefix or module_metadata.get("base_path_prefix", f"/{module_name}")
+        base_prefix = base_path_prefix or module_metadata.get(
+            "base_path_prefix", f"/{module_name}"
+        )
+        if not base_prefix.startswith(API_PREFIX):
+            base_prefix = f"{API_PREFIX}{base_prefix}"
         module_tags = tags or module_metadata.get(
             "tags", [module_metadata.get("display_name", module_name)]
         )
         if not isinstance(module_tags, list):
             module_tags = [module_tags]
 
-        app.include_router(plugin_router, prefix=prefix, tags=module_tags)
+        app.include_router(plugin_router, prefix=base_prefix, tags=module_tags)
 
-        chacc_logger.info(f"Module '{module_name}' loaded and enabled with prefix: {prefix}")
+        chacc_logger.info(f"Module '{module_name}' loaded and enabled with prefix: {base_prefix}")
         chacc_logger.info(f"Module '{module_name}' documentation tags: {module_tags}")
 
         if hasattr(plugin_router, "routes"):

@@ -2,8 +2,8 @@
 ChaCC Health Check Endpoint.
 
 Provides health and readiness checks for container orchestration:
-- /health - Basic liveness check
-- /health/ready - Readiness check (includes database)
+- /api/health - Basic liveness check
+- /api/health/ready - Readiness check (includes database)
 """
 
 from fastapi import APIRouter, Depends
@@ -77,7 +77,7 @@ async def liveness_check():
     Liveness check - simplified version.
 
     Returns 200 if the process is running.
-    No dependency checks (those are in /health/ready).
+    No dependency checks (those are in /api/health/ready).
     """
     return HealthResponse(
         status="alive",

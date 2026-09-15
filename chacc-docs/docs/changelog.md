@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **psycopg3 binary backend** – PostgreSQL connections now use `psycopg[binary]`, which bundles the required `libpq` library inside the Python package. This removes the need for system-level `libpq` installation or compilation, so the server starts cleanly on minimal images like `python:3.12-slim` and in fresh virtual environments without a PostgreSQL client installed.
+
+---
+
 ## 1.0.0-beta5.1
 
 
@@ -190,6 +198,11 @@ docker pull jonas1015/chacc-api:1.0.0-b4.1
 - Alembic log noise by forcing the `alembic` logger to `WARNING`.
 - Default logging behavior so normal server runs are quieter while `CHACC_VERBOSE` and `CHACC_DEBUG` still enable detailed logs.
 - Repeated logger imports by centralizing default log level detection in `get_default_log_level()`.
+- SQLite database path handling so `SQLITE_DATABASE_PATH` and `SQLITE_DATABASE_NAME` configuration takes effect.
+
+### Removed
+
+- Removed redundant `LogLevels.INFO` logger setup across server, database, migration, module loader, Redis, health, and eneated logger imports by centralizing default log level detection in `get_default_log_level()`.
 - SQLite database path handling so `SQLITE_DATABASE_PATH` and `SQLITE_DATABASE_NAME` configuration takes effect.
 
 ### Removed

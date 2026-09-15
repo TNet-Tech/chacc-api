@@ -28,7 +28,7 @@ dependencies = [
     "uvicorn",
     "sqlalchemy",
     "alembic",
-    "psycopg",
+    "psycopg[binary]",
     "slowapi",
     "python-decouple",
     "pyjwt",

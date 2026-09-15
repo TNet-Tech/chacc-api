@@ -492,7 +492,7 @@ def deploy_module(chacc_file_path: str):
                 headers["Authorization"] = f"Bearer {deploy_api_key}"
 
             response = requests.post(
-                f"{deploy_url}/modules/", files=files, headers=headers, timeout=deploy_timeout
+                f"{deploy_url}/api/modules/", files=files, headers=headers, timeout=deploy_timeout
             )
 
             if response.status_code == 200:

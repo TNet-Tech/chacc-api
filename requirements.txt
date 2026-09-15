@@ -3,7 +3,7 @@ uvicorn
 sqlalchemy[asyncio]
 alembic
 alembic-postgresql-enum
-psycopg
+psycopg[binary]
 aiosqlite
 uuid-utils
 slowapi
