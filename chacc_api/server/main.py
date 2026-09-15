@@ -1,3 +1,4 @@
+from builtins import Exception
 import os
 from importlib.resources import files
 from pathlib import Path
