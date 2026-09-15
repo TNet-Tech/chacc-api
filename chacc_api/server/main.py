@@ -1,5 +1,5 @@
-from builtins import Exception
 import os
+from builtins import Exception
 from importlib.resources import files
 from pathlib import Path
 

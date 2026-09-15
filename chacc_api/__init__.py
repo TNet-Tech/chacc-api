@@ -9,19 +9,6 @@ Usage:
     from chacc_api.database import get_db
 """
 
-from src.core_services import BackboneContext
-from src.database import (
-    ChaCCBaseModel,
-    ModuleRecord,
-    apply_deferred_schema_changes,
-    engine,
-    get_db,
-    initialize_database_models,
-    metadata_obj,
-    register_model,
-)
-from src.redis_service import RedisService
-
 __all__ = [
     "BackboneContext",
     "ChaCCBaseModel",
@@ -34,3 +21,38 @@ __all__ = [
     "metadata_obj",
     "register_model",
 ]
+
+
+_DATABASE_EXPORTS = {
+    "ChaCCBaseModel",
+    "ModuleRecord",
+    "apply_deferred_schema_changes",
+    "engine",
+    "get_db",
+    "initialize_database_models",
+    "metadata_obj",
+    "register_model",
+}
+
+
+def __getattr__(name: str):
+    """
+    Lazily load exports to keep ``import chacc_api`` lightweight.
+
+    Database-backed exports are only imported when explicitly accessed, so
+    CLI tools and other lightweight consumers can import this package without
+    creating a database engine or requiring database drivers.
+    """
+    if name == "BackboneContext":
+        from src.core_services import BackboneContext
+
+        return BackboneContext
+    if name == "RedisService":
+        from src.redis_service import RedisService
+
+        return RedisService
+    if name in _DATABASE_EXPORTS:
+        from src import database
+
+        return getattr(database, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
