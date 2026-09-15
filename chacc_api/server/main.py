@@ -1,4 +1,5 @@
 import os
+from builtins import Exception
 from importlib.resources import files
 from pathlib import Path
 
@@ -133,6 +134,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     lifespan=onStartupLifespan,
+    root_path="/api",
 )
 patch_binary_file_schema(app)
 

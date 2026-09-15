@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.0.0-beta5.1
+
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api==1.0.0-b5.post1
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-beta5.1
+```
+
+### Fixed
+
+- **psycopg3 migration** – ChaCC now uses the modern `psycopg` (psycopg 3) driver for both synchronous and asynchronous PostgreSQL connections. The CLI and server no longer require the legacy `psycopg2` package, so database connections work cleanly on Python 3.12 and newer.
+- **CLI no longer loads the database** – The `chacc` command-line tool is now fully independent from the server package. Running `chacc --help`, `chacc create`, `chacc build`, or `chacc install` no longer initializes a database engine or requires database drivers, making the CLI faster and safer to use anywhere.
+- **Lazy package loading** – Importing `chacc_api` is now lightweight. Database-backed components like `ChaCCBaseModel`, `ModuleRecord`, and the database engine are only loaded when you actually use them, so lightweight tools and scripts can import the package without side effects.
+- **Colored CLI output** – Install progress, warnings, and results now use text colors (green for success, red for failure, yellow for warnings) to make terminal output easier to read. Colors automatically turn off in CI logs and pipes.
+
+---
+
 ## 1.0.0-b5
 
 

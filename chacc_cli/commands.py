@@ -12,7 +12,7 @@ from asyncio import subprocess
 import requests
 from decouple import config
 
-from chacc_api.utils import configure_logging
+from src.logger import configure_logging
 
 cli_logger = configure_logging()
 
