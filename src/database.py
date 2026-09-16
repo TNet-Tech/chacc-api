@@ -64,7 +64,9 @@ if "postgres" in DATABASE_ENGINE:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
     async_engine = create_async_engine(ASYNC_DATABASE_URL, pool_pre_ping=True)
 else:
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False}, pool_pre_ping=True)
+    engine = create_engine(
+        DATABASE_URL, connect_args={"check_same_thread": False}, pool_pre_ping=True
+    )
     async_engine = create_async_engine(
         ASYNC_DATABASE_URL, connect_args={"check_same_thread": False}, pool_pre_ping=True
     )
