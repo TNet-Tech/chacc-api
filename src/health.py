@@ -29,6 +29,24 @@ class HealthResponse(BaseModel):
     checks: dict
 
 
+class VersionResponse(BaseModel):
+    """Version endpoint response model."""
+
+    version: str
+    name: str
+    python_version: str
+
+
+def _get_version() -> str:
+    """Read the installed package version from metadata, falling back to a static string."""
+    try:
+        from importlib.metadata import version
+
+        return version("chacc-api")
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
 @health_router.get("/health", response_model=HealthResponse)
 async def health_check():
     """
@@ -83,4 +101,21 @@ async def liveness_check():
         status="alive",
         mode="development" if DEVELOPMENT_MODE else "production",
         checks={"process": "running"},
+    )
+
+
+@health_router.get("/version", response_model=VersionResponse)
+async def version_check():
+    """
+    Service version endpoint.
+
+    Returns the installed package version, name, and Python version.
+    UI components fetch this instead of hardcoding the version string.
+    """
+    import sys
+
+    return VersionResponse(
+        version=_get_version(),
+        name="ChaCC API",
+        python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
     )
