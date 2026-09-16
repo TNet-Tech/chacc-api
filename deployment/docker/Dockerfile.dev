@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r chacc && useradd -r -g chacc chacc
+RUN groupadd -r chacc && useradd -r -g chacc -d /app chacc
 
 RUN mkdir -p /app/plugins /app/.modules_loaded
 

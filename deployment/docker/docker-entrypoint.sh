@@ -14,6 +14,10 @@ for dir in \
     mkdir -p "$dir"
 done
 
+# Safety net: ensure the default home directory is writable too.
+# Some tools (e.g. pip/pip-tools) resolve ~ from /etc/passwd, not $HOME.
+mkdir -p /home/chacc && chown -R chacc:chacc /home/chacc
+
 # Chown everything under /app to the chacc user.
 # Any new volume mounted under /app is automatically picked up — no script edits needed.
 chown -R chacc:chacc /app

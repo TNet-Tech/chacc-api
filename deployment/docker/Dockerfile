@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r chacc && useradd -r -g chacc chacc
+RUN groupadd -r chacc && useradd -r -g chacc -d /app chacc
 
 RUN mkdir -p /app/plugins /app/.modules_loaded /app/.modules_installed /app/.modules_upload /app/.chacc_cache /app/backups
 
