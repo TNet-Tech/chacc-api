@@ -4,6 +4,11 @@ WORKDIR /app
 
 RUN groupadd -r chacc && useradd -r -g chacc chacc
 
+# Install gosu for privilege dropping in the entrypoint
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p /app/plugins /app/.modules_loaded /app/.modules_installed /app/.modules_upload /app/.chacc_cache /app/backups \
     && chown -R chacc:chacc /app/plugins /app/.modules_loaded /app/.modules_installed /app/.modules_upload /app/.chacc_cache /app/backups
 
@@ -11,7 +16,10 @@ COPY . /app/
 
 RUN pip install --no-cache-dir .
 
-USER chacc
+COPY deployment/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

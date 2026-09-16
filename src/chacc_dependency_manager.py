@@ -9,7 +9,7 @@ import os
 
 from chacc import DependencyManager
 
-from src.constants import BASE_DIR
+from src.constants import BASE_DIR, DEPENDENCY_CACHE_DIR
 
 
 class ChaCCDependencyManager:
@@ -78,5 +78,5 @@ async def resolve_chacc_dependencies(logger=None):
     await adm.resolve_dependencies()
 
 
-invalidate_module_cache = DependencyManager().invalidate_module_cache
-invalidate_dependency_cache = DependencyManager().invalidate_cache
+invalidate_module_cache = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR).invalidate_module_cache
+invalidate_dependency_cache = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR).invalidate_cache

@@ -4,19 +4,21 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r chacc && useradd -r -g chacc chacc
 
-RUN mkdir -p /app/plugins /app/.modules_loaded
+RUN mkdir -p /app/plugins /app/.modules_loaded /app/.modules_installed /app/.modules_upload /app/.chacc_cache /app/backups
 
 COPY . /app/
 
 RUN pip install --no-cache-dir chacc-api
 
-RUN chown -R chacc:chacc /app
+COPY deployment/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-USER chacc
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
