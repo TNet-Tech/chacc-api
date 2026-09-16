@@ -217,9 +217,7 @@ async def load_modules(
 
         db.commit()
 
-        enabled_modules = [
-            r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()
-        ]
+        enabled_modules = [r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()]
 
         enabled_requirements = {}
         for mod_name, reqs in modules_requirements.items():

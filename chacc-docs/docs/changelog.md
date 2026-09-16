@@ -13,6 +13,7 @@
 - **Docker permission denied** – `DependencyManager()` calls in `src/chacc_dependency_manager.py` now pass `DEPENDENCY_CACHE_DIR` instead of falling back to the default `.dependency_cache`, which was never created in the image.
 - **Docker build failure** – `.dockerignore` now re-includes `deployment/docker/docker-entrypoint.sh` after the `deployment/` exclusion, so the entrypoint script is available in the build context.
 - **Piptools home directory error** – the `chacc` user is now created with `-d /app`, and the entrypoint chowns `/home/chacc` as a safety net. Previously, `pip-tools` resolved `~` from `/etc/passwd` to `/home/chacc` and failed with `Permission denied`.
+- **New modules loaded without dependency resolution** – `load_modules()` in `src/module_loader/loader.py` now processes archives and commits DB records **before** resolving dependencies, then re-queries the database for the enabled set. Previously, dependency resolution ran before `process_module_archives()` created DB records for newly-discovered modules, so a module deployed via `POST /api/modules/` would start without its dependencies installed. Resolution is now gated behind `ENABLE_PLUGIN_DEPENDENCY_RESOLUTION` for both production and dev paths, and the misleading production-stability warning in `src/env_validator.py` has been removed.
 
 ---
 
