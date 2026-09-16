@@ -14,7 +14,6 @@ from src.constants import (
     DATABASE_PASSWORD,
     DATABASE_USER,
     DEVELOPMENT_MODE,
-    ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
     ENABLE_PLUGIN_HOT_RELOAD,
     PLUGIN_AUTO_DISCOVERY,
     SECRET_KEY,
@@ -136,11 +135,6 @@ class EnvironmentValidator:
 
             if PLUGIN_AUTO_DISCOVERY:
                 self._add_warning("PLUGIN_AUTO_DISCOVERY is enabled - disable in production")
-
-            if ENABLE_PLUGIN_DEPENDENCY_RESOLUTION:
-                self._add_warning(
-                    "ENABLE_PLUGIN_DEPENDENCY_RESOLUTION is enabled - disable in production for stability"
-                )
         else:
             if ENABLE_PLUGIN_HOT_RELOAD:
                 self._add_error("ENABLE_PLUGIN_HOT_RELOAD must be disabled in production")

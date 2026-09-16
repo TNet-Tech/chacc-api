@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- **Version endpoint** – `GET /api/version` now exposes the installed package version, name, and Python version. The welcome page and status badge fetch this dynamically instead of hardcoding the version string, so the UI always reflects the running build.
+- **Docker entrypoint script** – `deployment/docker/docker-entrypoint.sh` auto-creates and chowns all data directories (`/app/.modules_installed`, `/app/.modules_loaded`, `/app/.modules_upload`, `/app/.chacc_cache`, `/app/backups`, `/app/plugins`) at container start, then drops privileges to the `chacc` user via `gosu`. Any new volume mounted under `/app` is automatically handled — no script edits or rebuilds needed.
+
 ### Fixed
 
 - **psycopg3 binary backend** – PostgreSQL connections now use `psycopg[binary]`, which bundles the required `libpq` library inside the Python package. This removes the need for system-level `libpq` installation or compilation, so the server starts cleanly on minimal images like `python:3.12-slim` and in fresh virtual environments without a PostgreSQL client installed.
+- **Docker permission denied** – `DependencyManager()` calls in `src/chacc_dependency_manager.py` now pass `DEPENDENCY_CACHE_DIR` instead of falling back to the default `.dependency_cache`, which was never created in the image.
+- **Docker build failure** – `.dockerignore` now re-includes `deployment/docker/docker-entrypoint.sh` after the `deployment/` exclusion, so the entrypoint script is available in the build context.
+- **Piptools home directory error** – the `chacc` user is now created with `-d /app`, and the entrypoint chowns `/home/chacc` as a safety net. Previously, `pip-tools` resolved `~` from `/etc/passwd` to `/home/chacc` and failed with `Permission denied`.
 
 ---
 
