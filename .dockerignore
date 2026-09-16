@@ -65,6 +65,9 @@ tests/
 # Deployment
 deployment/
 
+# Exception: always include the entrypoint script
+!deployment/docker/docker-entrypoint.sh
+
 # Documentation
 docs/
 chacc-docs/

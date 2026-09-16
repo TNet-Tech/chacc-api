@@ -62,3 +62,6 @@ modules_installed/
 
 # Test modules
 tests/
+
+# Exception: always include the entrypoint script
+!deployment/docker/docker-entrypoint.sh
