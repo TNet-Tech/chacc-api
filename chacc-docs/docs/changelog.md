@@ -202,11 +202,6 @@ docker pull jonas1015/chacc-api:1.0.0-b4.1
 
 ### Removed
 
-- Removed redundant `LogLevels.INFO` logger setup across server, database, migration, module loader, Redis, health, and eneated logger imports by centralizing default log level detection in `get_default_log_level()`.
-- SQLite database path handling so `SQLITE_DATABASE_PATH` and `SQLITE_DATABASE_NAME` configuration takes effect.
-
-### Removed
-
 - Removed redundant `LogLevels.INFO` logger setup across server, database, migration, module loader, Redis, health, and environment validation modules.
 - Removed stale Docker `8080` exposed port and health check references.
 - Removed local-build instructions from the production Docker Compose file.

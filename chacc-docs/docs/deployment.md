@@ -36,7 +36,7 @@ The compose stack includes:
 Health check calls:
 
 ```bash
-curl http://localhost:8085/health
+curl http://localhost:8085/api/health
 ```
 
 Example environment:
@@ -81,14 +81,14 @@ journalctl -u chacc-api -f
 
 | Endpoint | Use |
 | --- | --- |
-| `/health` | Basic service health. |
-| `/health/ready` | Readiness including database connectivity. |
-| `/health/live` | Lightweight process liveness. |
+| `/api/health` | Basic service health. |
+| `/api/health/ready` | Readiness including database connectivity. |
+| `/api/health/live` | Lightweight process liveness. |
 
 Container health checks can call:
 
 ```bash
-python -c "import urllib.request; urllib.request.urlopen('http://localhost:8085/health')"
+python -c "import urllib.request; urllib.request.urlopen('http://localhost:8085/api/health')"
 ```
 
 ## Production environment

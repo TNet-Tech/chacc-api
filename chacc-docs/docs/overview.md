@@ -119,11 +119,11 @@ flowchart LR
 | Endpoint | Method | Purpose |
 | --- | --- | --- |
 | `/` | `GET` | Welcome message for the backbone. |
-| `/health` | `GET` | Basic liveness check. |
-| `/health/ready` | `GET` | Readiness check including database connectivity. |
-| `/health/live` | `GET` | Lightweight process liveness check. |
-| `/modules` | `POST` | Upload and install a `.chacc` module package. |
-| `/modules` | `GET` | List installed module records. |
-| `/modules/{module_name}/enable` | `POST` | Mark a module enabled. Requires restart. |
-| `/modules/{module_name}/disable` | `POST` | Mark a module disabled. Requires restart. |
-| `/modules/{module_name}/uninstall` | `DELETE` | Remove module archive, extracted code, and DB record. Requires restart. |
+| `/api/health` | `GET` | Basic liveness check. |
+| `/api/health/ready` | `GET` | Readiness check including database connectivity. |
+| `/api/health/live` | `GET` | Lightweight process liveness check. |
+| `/api/modules` | `POST` | Upload and install a `.chacc` module package. |
+| `/api/modules` | `GET` | List installed module records. |
+| `/api/modules/{module_name}/enable` | `POST` | Mark a module enabled. Requires restart. |
+| `/api/modules/{module_name}/disable` | `POST` | Mark a module disabled. Requires restart. |
+| `/api/modules/{module_name}/uninstall` | `DELETE` | Remove module archive, extracted code, and DB record. Requires restart. |
