@@ -22,6 +22,7 @@ services:
     volumes:
       - chacc_modules:/app/.modules_installed
       - chacc_plugins:/app/plugins
+      - chacc_cache:/app/.chacc_cache
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8085/api/health')"]
@@ -59,6 +60,8 @@ volumes:
   chacc_modules:
     driver: local
   chacc_plugins:
+    driver: local
+  chacc_cache:
     driver: local
 
 networks:

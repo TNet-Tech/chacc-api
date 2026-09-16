@@ -231,6 +231,9 @@ async def load_modules(
 
                 dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
                 await dm.resolve_dependencies(enabled_requirements)
+
+                importlib.invalidate_caches()
+                chacc_logger.info("Python import cache refreshed after dependency resolution.")
             except Exception as e:  # noqa: BLE001
                 chacc_logger.error(f"Dependency resolution failed: {e}")
                 chacc_logger.error("Aborting module loading to prevent inconsistent state.")
