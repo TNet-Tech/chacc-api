@@ -28,7 +28,7 @@ def main() -> int:
         modules_requirements = asyncio.run(collect_module_requirements())
 
         if not modules_requirements:
-            logger.info("No module requirements found, skipping setup.")
+            logger.warning("No module requirements found, skipping setup.")
             return 0
 
         dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=logger)
