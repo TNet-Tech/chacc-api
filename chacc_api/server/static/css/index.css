@@ -207,5 +207,32 @@ h1 span {
     .subtitle { font-size: 1rem; }
     .cards { grid-template-columns: 1fr; gap: 1.5rem; }
     .card { padding: 1.5rem; }
-    .logo { width: 60px; }
+}
+
+.resolution-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: rgba(0, 210, 211, 0.08);
+    border: 1px solid rgba(0, 210, 211, 0.25);
+    border-radius: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 1.5rem;
+    color: var(--chacc-teal);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.resolution-banner .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 210, 211, 0.3);
+    border-top-color: var(--chacc-teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }

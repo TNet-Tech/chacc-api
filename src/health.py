@@ -6,19 +6,35 @@ Provides health and readiness checks for container orchestration:
 - /api/health/ready - Readiness check (includes database)
 """
 
+import json
+import os
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.constants import DEVELOPMENT_MODE
+from src.constants import BASE_DIR, DEVELOPMENT_MODE
 from src.database import get_async_db
 from src.logger import configure_logging, get_default_log_level
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
 health_router = APIRouter(tags=["Health"])
+
+RESOLUTION_STATUS_FILE = os.path.join(BASE_DIR, ".dependency_resolution_status")
+
+
+def _read_resolution_status() -> dict:
+    """Read the dependency resolution status file written by the entrypoint."""
+    try:
+        if os.path.exists(RESOLUTION_STATUS_FILE):
+            with open(RESOLUTION_STATUS_FILE, "r") as f:
+                return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"state": "done", "message": ""}
 
 
 class HealthResponse(BaseModel):
@@ -55,10 +71,21 @@ async def health_check():
     Returns 200 when the service is running.
     Used by Kubernetes for pod lifecycle management.
     """
+    resolution = _read_resolution_status()
+    resolution_state = resolution.get("state", "done")
+    checks = {"api": "ok", "dependency_resolution": resolution_state}
+
+    if resolution_state in ("running", "pending"):
+        status = "starting"
+    elif resolution_state == "failed":
+        status = "unhealthy"
+    else:
+        status = "healthy"
+
     return HealthResponse(
-        status="healthy",
+        status=status,
         mode="development" if DEVELOPMENT_MODE else "production",
-        checks={"api": "ok"},
+        checks=checks,
     )
 
 
