@@ -9,6 +9,7 @@
 
 ### Fixed
 
+- **Dependency resolution health check integration removed** – The status file mechanism (`src/module_loader/resolve_deps.py`) that communicated resolution progress to the `/api/health` endpoint has been removed. By the time resolution runs, the server is not yet accepting requests, so the health check integration served no purpose. The `/api/health` endpoint no longer tracks dependency resolution state. The frontend polling animation (`index.js`), banner element (`index.html`), and spinner styles (`index.css`) have also been removed.
 - **psycopg3 binary backend** – PostgreSQL connections now use `psycopg[binary]`, which bundles the required `libpq` library inside the Python package. This removes the need for system-level `libpq` installation or compilation, so the server starts cleanly on minimal images like `python:3.12-slim` and in fresh virtual environments without a PostgreSQL client installed.
 - **Docker permission denied** – `DependencyManager()` calls in `src/chacc_dependency_manager.py` now pass `DEPENDENCY_CACHE_DIR` instead of falling back to the default `.dependency_cache`, which was never created in the image.
 - **Docker build failure** – `.dockerignore` now re-includes `deployment/docker/docker-entrypoint.sh` after the `deployment/` exclusion, so the entrypoint script is available in the build context.
