@@ -20,9 +20,7 @@ from src.module_loader.archive import collect_module_requirements
 
 def main() -> int:
     logger = configure_logging(log_level=get_default_log_level())
-    logger.warning(
-        "Do not close, we're setting up your backend server"
-    )
+    logger.warning("Do not close, we're setting up your backend server")
 
     try:
         from chacc import DependencyManager
