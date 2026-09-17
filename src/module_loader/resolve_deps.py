@@ -70,9 +70,7 @@ async def _resolve_dependencies_async(logger: Any) -> bool:
 
 def main() -> int:
     logger = configure_logging(log_level=get_default_log_level())
-    logger.warning(
-        "Do not close, we're setting up your backend server"
-    )
+    logger.warning("Do not close, we're setting up your backend server")
 
     try:
         success = _run_with_spinner(asyncio.run, _resolve_dependencies_async(logger))
