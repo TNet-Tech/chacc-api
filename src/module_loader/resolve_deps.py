@@ -6,73 +6,73 @@ so pip install has write access to site-packages.
 Collects requirements from .chacc files directly (not from the database),
 so it works on first startup when DB records don't exist yet.
 
-Writes a status file so the health endpoint can report progress to the UI.
-
 Usage:
     python -m src.module_loader.resolve_deps
 """
 
 import asyncio
-import json
-import logging
-import os
 import sys
-import tempfile
+import threading
+from collections.abc import Callable
+from typing import Any
 
-from src.constants import BASE_DIR, DEPENDENCY_CACHE_DIR
+from src.constants import DEPENDENCY_CACHE_DIR
 from src.logger import configure_logging, get_default_log_level
 from src.module_loader.archive import collect_module_requirements
 
-STATUS_FILE = os.path.join(BASE_DIR, ".dependency_resolution_status")
+_SPINNER_FRAMES = ["|", "/", "-", "\\"]
+_SPINNER_INTERVAL = 0.1
 
-logger = logging.getLogger(__name__)
+
+def _spinner_loop(stop_event: threading.Event) -> None:
+    i = 0
+    while not stop_event.is_set():
+        sys.stdout.write(f"\r{_SPINNER_FRAMES[i]} ")
+        sys.stdout.flush()
+        stop_event.wait(_SPINNER_INTERVAL)
+        i = (i + 1) % len(_SPINNER_FRAMES)
 
 
-def _write_status(state: str, message: str = "") -> None:
-    """Write the resolution status file for the health endpoint to read."""
+def _run_with_spinner(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    if not sys.stdout.isatty():
+        return func(*args, **kwargs)
+
+    stop_event = threading.Event()
+    thread = threading.Thread(target=_spinner_loop, args=(stop_event,), daemon=True)
+    thread.start()
     try:
-        dir_name = os.path.dirname(STATUS_FILE)
-        fd, tmp_path = tempfile.mkstemp(dir=dir_name, prefix=".dep_status_")
-        try:
-            with os.fdopen(fd, "w") as f:
-                json.dump({"state": state, "message": message}, f)
-            os.replace(tmp_path, STATUS_FILE)
-        except Exception:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-            raise
-    except OSError as e:
-        logger.warning(f"Failed to write dependency resolution status file: {e}")
+        return func(*args, **kwargs)
+    finally:
+        stop_event.set()
+        thread.join()
+        sys.stdout.write("\r   \r")
+        sys.stdout.flush()
+
+
+async def _resolve_dependencies_async(logger: Any) -> bool:
+    """Async wrapper for dependency resolution logic."""
+    modules_requirements = await collect_module_requirements()
+    if not modules_requirements:
+        logger.info("No module requirements found, skipping resolution.")
+        return True
+
+    from chacc import DependencyManager
+
+    dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=logger)
+    await dm.resolve_dependencies(modules_requirements)
+    logger.info("Dependency resolution completed successfully.")
+    return True
 
 
 def main() -> int:
-    logger_instance = configure_logging(log_level=get_default_log_level())
-    logger_instance.warning("Running dependency resolution as root...")
-
-    _write_status("pending", "Initializing dependency resolution...")
+    logger = configure_logging(log_level=get_default_log_level())
+    logger.info("Please wait, we're cleaning up and setting up your backend server...")
 
     try:
-        from chacc import DependencyManager
-
-        _write_status("running", "Resolving module dependencies...")
-
-        modules_requirements = asyncio.run(collect_module_requirements())
-
-        if not modules_requirements:
-            logger_instance.info("No module requirements found, skipping resolution.")
-            _write_status("done", "No module requirements found, skipped")
-            return 0
-
-        dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=logger_instance)
-        asyncio.run(dm.resolve_dependencies(modules_requirements))
-        logger_instance.info("Dependency resolution completed successfully.")
-        _write_status("done", "Resolution completed successfully")
+        _run_with_spinner(asyncio.run, _resolve_dependencies_async(logger))
         return 0
-    except Exception as e:  # noqa: BLE001
-        logger_instance.error(f"Dependency resolution failed: {e}")
-        _write_status("failed", str(e))
+    except Exception:
+        logger.exception("Dependency resolution failed")
         return 1
 
 
