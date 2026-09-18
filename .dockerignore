@@ -65,9 +65,8 @@ tests/
 # Deployment
 deployment/
 
-# Exception: always include the entrypoint and healthcheck scripts
+# Exception: always include the entrypoint script
 !deployment/docker/docker-entrypoint.sh
-!deployment/docker/healthcheck.sh
 
 # Documentation
 docs/
