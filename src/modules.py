@@ -188,6 +188,12 @@ async def install_chacc_module_endpoint(
                 loaded_module_dir,
                 (os.path.getmtime(target_chacc_path), os.path.getmtime(target_chacc_path)),
             )
+        # Remove any stale *_chacc_temp directories that may have leaked into the archive
+        for item in os.listdir(loaded_module_dir):
+            if item.endswith("_chacc_temp"):
+                temp_path = os.path.join(loaded_module_dir, item)
+                shutil.rmtree(temp_path, ignore_errors=True)
+                chacc_logger.info(f"Removed stale {item} directory from {loaded_module_dir}")
         chacc_logger.info(f"Successfully unzipped module '{module_name}' to '{loaded_module_dir}'.")
 
         invalidate_module_cache(module_name)
@@ -324,6 +330,12 @@ async def enable_module_endpoint(
         os.utime(
             loaded_module_dir, (os.path.getmtime(chacc_filepath), os.path.getmtime(chacc_filepath))
         )
+    # Remove any stale *_chacc_temp directories that may have leaked into the archive
+    for item in os.listdir(loaded_module_dir):
+        if item.endswith("_chacc_temp"):
+            temp_path = os.path.join(loaded_module_dir, item)
+            shutil.rmtree(temp_path, ignore_errors=True)
+            chacc_logger.info(f"Removed stale {item} directory from {loaded_module_dir}")
 
     module_record.is_enabled = True
     db.commit()

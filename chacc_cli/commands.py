@@ -287,13 +287,19 @@ def build_module_chacc(module_source_dir: str, output_filename: str | None = Non
     elif not output_filename.endswith(".chacc"):
         output_filename += ".chacc"
 
-    temp_zip_content_dir = os.path.join(module_source_dir, f"{module_name}_chacc_temp")
+    temp_zip_content_dir = os.path.join(f"{module_name}_chacc_temp")
     if os.path.exists(temp_zip_content_dir):
         shutil.rmtree(temp_zip_content_dir)
     os.makedirs(temp_zip_content_dir)
 
+    stale_temp = os.path.join(module_source_dir, f"{module_name}_chacc_temp")
+    if os.path.exists(stale_temp):
+        shutil.rmtree(stale_temp)
+
     try:
         for item in os.listdir(module_source_dir):
+            if f"{module_name}_chacc_temp" == item:
+                continue
             s = os.path.join(module_source_dir, item)
             d = os.path.join(temp_zip_content_dir, item)
             if os.path.isdir(s):

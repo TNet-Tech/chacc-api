@@ -21,7 +21,7 @@ mkdir -p /home/chacc && chown -R chacc:chacc /home/chacc
 # Resolve module dependencies as root BEFORE chowning to chacc.
 # pip install needs write access to site-packages, which the chacc user doesn't have.
 # Running this first means cache files are created as root and then chowned below.
-python -m src.module_loader.resolve_deps || true
+python -m src.module_loader.resolve_deps
 
 # Chown everything under /app to the chacc user.
 # Any new volume mounted under /app is automatically picked up — no script edits needed.

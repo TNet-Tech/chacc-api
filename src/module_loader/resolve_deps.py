@@ -11,7 +11,9 @@ Usage:
 """
 
 import asyncio
+import subprocess
 import sys
+import time
 
 from src.constants import DEPENDENCY_CACHE_DIR
 from src.logger import configure_logging, get_default_log_level
@@ -32,8 +34,24 @@ def main() -> int:
             return 0
 
         dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=logger)
-        asyncio.run(dm.resolve_dependencies(modules_requirements))
-        logger.info("Intial setup completed successfully.")
+
+        # Retry up to 3 times on failure. The chacc dependency manager
+        # catches TimeoutExpired internally and re-raises as
+        # CalledProcessError, so we catch that here.
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                asyncio.run(dm.resolve_dependencies(modules_requirements))
+                logger.info("Intial setup completed successfully.")
+                return 0
+            except subprocess.CalledProcessError:
+                if attempt < max_retries:
+                    logger.warning(
+                        f"Dependency resolution failed (attempt {attempt}/{max_retries}). Retrying..."
+                    )
+                    time.sleep(5)
+                else:
+                    raise
         return 0
     except Exception as e:  # noqa: BLE001
         logger.error(f"Dependency resolution failed: {e}")
