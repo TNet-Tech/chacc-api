@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Docker health check script** – `deployment/docker/healthcheck.sh` replaces the inline Python urllib health check in the Dockerfiles and docker-compose. The script performs a fast TCP pre-check via bash's built-in `/dev/tcp`, then verifies the app is actually healthy by hitting `http://host:port/api/health` with curl. This detects broken apps (database down, module load failures, etc.), not just dead processes. To prevent health check requests from polluting the application logs every 30s, a `HealthCheckFilter` in `src/logger.py` silently drops `uvicorn.access` log entries whose message contains `/api/health`. The health check still runs and correctly reports unhealthy states — only its log noise is suppressed.
 - **Version endpoint** – `GET /api/version` now exposes the installed package version, name, and Python version. The welcome page and status badge fetch this dynamically instead of hardcoding the version string, so the UI always reflects the running build.
 - **Docker entrypoint script** – `deployment/docker/docker-entrypoint.sh` auto-creates and chowns all data directories (`/app/.modules_installed`, `/app/.modules_loaded`, `/app/.modules_upload`, `/app/.chacc_cache`, `/app/backups`, `/app/plugins`) at container start, then drops privileges to the `chacc` user via `gosu`. Any new volume mounted under `/app` is automatically handled — no script edits or rebuilds needed.
 
