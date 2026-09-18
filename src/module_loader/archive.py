@@ -233,6 +233,12 @@ def unzip_modules(
             os.makedirs(loaded_module_dir, exist_ok=True)
             safe_extract(zip_ref, loaded_module_dir)
             os.utime(loaded_module_dir, (chacc_mtime, chacc_mtime))
+        # Remove any stale *_chacc_temp directories that may have leaked into the archive
+        for item in os.listdir(loaded_module_dir):
+            if item.endswith("_chacc_temp"):
+                temp_path = os.path.join(loaded_module_dir, item)
+                shutil.rmtree(temp_path, ignore_errors=True)
+                chacc_logger.info(f"Removed stale {item} directory from {loaded_module_dir}")
         chacc_logger.info(f"Unzipping for '{module_name}' completed.")
 
         meta_file_path = os.path.join(loaded_module_dir, "module_meta.json")

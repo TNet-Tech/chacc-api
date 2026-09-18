@@ -15,6 +15,20 @@ class LogLevels(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+class HealthCheckFilter(logging.Filter):
+    """Suppress uvicorn access log entries for the health check endpoint.
+
+    Docker health checks hit /api/health every 30s. Without this filter each
+    check produces an access log line, polluting the application logs with
+    noise. The health check still runs (so unhealthy states are detected),
+    but its log output is silently dropped.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        return "/api/health" not in message
+
+
 def get_default_log_level() -> str:
     debug = os.environ.get("CHACC_DEBUG", "false").lower() in ("true", "1", "yes")
     verbose = os.environ.get("CHACC_VERBOSE", "false").lower() in ("true", "1", "yes")
@@ -62,5 +76,9 @@ def configure_logging(log_level: str | None = None) -> logging.Logger:
     logging.root.setLevel(log_level_upper)
     logging.root.addHandler(stream_handler)
     logging.getLogger("alembic").setLevel(logging.WARNING)
+
+    # Suppress uvicorn access log noise from Docker health checks.
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.addFilter(HealthCheckFilter())
 
     return logging.getLogger(LOGGER_NAME)

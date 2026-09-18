@@ -4,6 +4,8 @@ from decouple import config
 
 BASE_DIR = os.getcwd()
 
+API_PREFIX = "/api"
+
 MODULES_INSTALLED_DIR = os.path.join(
     BASE_DIR, config("MODULES_INSTALLED_DIR", default=".modules_installed", cast=str)
 )

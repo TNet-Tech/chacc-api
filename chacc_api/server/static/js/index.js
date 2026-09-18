@@ -1,6 +1,6 @@
 (async function () {
     try {
-        const res = await fetch('/health/live');
+        const res = await fetch('/api/health/live');
         if (!res.ok) throw new Error('Health check failed');
         const data = await res.json();
         const mode = (data.mode || 'development').charAt(0).toUpperCase() + (data.mode || 'development').slice(1);
@@ -9,5 +9,18 @@
     } catch (e) {
         const el = document.querySelector('.status-text');
         if (el) el.textContent = 'Unknown';
+    }
+})();
+
+(async function () {
+    try {
+        const res = await fetch('/api/version');
+        if (!res.ok) throw new Error('Version fetch failed');
+        const data = await res.json();
+        const el = document.querySelector('.version-text');
+        if (el) el.textContent = 'v' + data.version;
+    } catch (e) {
+        const el = document.querySelector('.version-text');
+        if (el) el.textContent = 'unknown';
     }
 })();

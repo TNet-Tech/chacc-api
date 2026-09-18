@@ -177,7 +177,7 @@ chacc build chacc_file_manager
 ```
 
 - You will see `chacc_file_manager.chacc` file in your location.
-- Install this file using `POST /modules` endpoint of your running chacc instance.
+- Install this file using `POST /api/modules` endpoint of your running chacc instance.
 - Done you have chacc file manager already running in your chacc installation.
 
 > During development:
@@ -187,7 +187,7 @@ chacc build chacc_file_manager
 file_service = get_module_context().get_service("file_service")
 ```
 
-- The module requires `aiofiles`, `uuid_utils`, `sqlalchemy`, and `fastapi`. These will be installed automatically when you add the module via l`plugins/` or `POST /modules`.
+- The module requires `aiofiles`, `uuid_utils`, `sqlalchemy`, and `fastapi`. These will be installed automatically when you add the module via `plugins/` or `POST /api/modules`.
 
 ## Unified `file` Parameter
 

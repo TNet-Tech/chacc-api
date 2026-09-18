@@ -23,7 +23,7 @@ Returns a welcome message and points users to the FastAPI documentation.
 ### Basic health
 
 ```http
-GET /health
+GET /api/health
 ```
 
 ```json
@@ -39,7 +39,7 @@ GET /health
 ### Readiness
 
 ```http
-GET /health/ready
+GET /api/health/ready
 ```
 
 Runs a lightweight database query and reports whether the API and database are
@@ -59,7 +59,7 @@ ready.
 ### Liveness
 
 ```http
-GET /health/live
+GET /api/health/live
 ```
 
 ```json
@@ -82,13 +82,13 @@ open.
 ### Install a module
 
 ```http
-POST /modules/
+POST /api/modules/
 ```
 
 Upload a `.chacc` archive as multipart form data.
 
 ```bash
-curl -F "file=@billing.chacc" http://localhost:8085/modules/
+curl -F "file=@billing.chacc" http://localhost:8085/api/modules/
 ```
 
 Response:
@@ -110,7 +110,7 @@ Validation:
 ### List modules
 
 ```http
-GET /modules/
+GET /api/modules/
 ```
 
 ```json
@@ -132,7 +132,7 @@ GET /modules/
 ### Enable a module
 
 ```http
-POST /modules/{module_name}/enable
+POST /api/modules/{module_name}/enable
 ```
 
 Marks a module enabled in the database, resolves dependencies, extracts the
@@ -141,7 +141,7 @@ archive, and requires a restart to mount it.
 ### Disable a module
 
 ```http
-POST /modules/{module_name}/disable
+POST /api/modules/{module_name}/disable
 ```
 
 Marks a module disabled in the database, removes its extracted code directory,
@@ -150,7 +150,7 @@ and requires a restart to unmount it.
 ### Uninstall a module
 
 ```http
-DELETE /modules/{module_name}/uninstall
+DELETE /api/modules/{module_name}/uninstall
 ```
 
 Removes:

@@ -207,5 +207,6 @@ h1 span {
     .subtitle { font-size: 1rem; }
     .cards { grid-template-columns: 1fr; gap: 1.5rem; }
     .card { padding: 1.5rem; }
-    .logo { width: 60px; }
+}
+
 }

@@ -1,5 +1,51 @@
 # Changelog
 
+
+## 1.0.0-beta5.2
+
+> Note: This version fixes the production startup issues specifically in docker image. If you plan to deploy with docker, then this is a must have version.
+
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api==1.0.0-b5.post2
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-beta5.2
+```
+
+## Added
+
+- **Quieter logs** – Docker health checks no longer spam your logs. The server still checks its health every 30 seconds, but those checks stay silent unless something's actually wrong.
+
+- **Version endpoint** – `GET /api/version` now tells you which version of ChaCC API you're running, along with the Python version. The welcome page and status badge read from this automatically, so what you see is always accurate for your running build.
+
+- **Smarter Docker startup** – The Docker entrypoint now creates all the data directories it needs (modules, cache, backups, plugins) and sets the right permissions at startup. Any new volume you mount under `/app` just works – no script editing, no rebuilding.
+
+---
+
+## Fixed
+
+- **Temp folders no longer sneak into your `.chacc` files** – When you built a module, a leftover temp folder could get packaged into the archive. That caused import errors and duplicate module structures when the server loaded it. Now the build skips temp folders, and the server cleans them up if they somehow slip through – so existing deployments get fixed too.
+
+- **Removed pointless health check tracking** – The server used to track dependency resolution progress and show it on the health endpoint. But by the time dependencies are being resolved, the server isn't accepting requests yet – so nobody could see it. That whole mechanism (and the related frontend spinner) is gone. Less code, less noise.
+
+- **PostgreSQL works out of the box now** – ChaCC now uses `psycopg[binary]`, which bundles the PostgreSQL client library right inside the Python package. No more installing `libpq` system-wide or compiling anything. The server starts cleanly on minimal images like `python:3.12-slim` and in fresh virtual environments. Just install and go.
+
+- **Docker permission errors fixed** – Several small permission issues that could stop the server from starting in Docker are now resolved:
+  - The dependency cache directory is created and used correctly.
+  - The `chacc` user's home directory is set up properly, so `pip-tools` no longer fails.
+  - The Docker build includes the entrypoint script correctly.
+
+- **Newly installed modules now get their dependencies** – This was a big one. Previously, if you deployed a module that needed extra packages, the server would try to resolve them before the module was even registered in the database. Result: the module loaded without its dependencies and crashed with an `ImportError`. Now the server registers the module first, then resolves dependencies – so everything installs correctly.
+
+- **Dependencies now install properly in Docker** – In Docker, dependency installation used to run as the `chacc` user, which doesn't have permission to write to `site-packages`. So dependencies were never actually installed, and modules failed to load. Now dependency resolution runs as root before the server starts, then drops to the `chacc` user. Modules work as expected.
+
+---
+
 ## 1.0.0-beta5.1
 
 

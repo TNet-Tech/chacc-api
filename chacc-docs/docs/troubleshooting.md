@@ -95,7 +95,7 @@ REDIS_DB=0
 | Deployment times out | Increase `CHACC_DEPLOY_TIMEOUT`. |
 | Deployment returns 401 | Set `CHACC_DEPLOY_API_KEY` to a valid bearer token. |
 | Module installed but not active | Restart the remote ChaCC API server. |
-| Docker health check fails | Confirm container and host port mapping use `8085` and health endpoint is `/health`. |
+| Docker health check fails | Confirm container and host port mapping use `8085` and health endpoint is `/api/health`. |
 
 ## Logging issues
 

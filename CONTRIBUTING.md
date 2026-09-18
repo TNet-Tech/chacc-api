@@ -181,7 +181,7 @@ chacc-api/
 │   ├── logger.py              # Colored logging setup (LogLevels, configure_logging)
 │   ├── database.py            # SQLAlchemy engine, BaseModel, register_model decorator, get_db
 │   ├── core_services.py       # BackboneContext — shared services given to every module
-│   ├── health.py              # /health, /health/ready, /health/live endpoints
+│   ├── health.py              # /api/health, /api/health/ready, /api/health/live endpoints
 │   ├── modules.py             # REST routes: install / list / enable / disable / uninstall modules
 │   ├── rate_limiter.py        # SlowAPI rate-limiting setup
 │   ├── redis_service.py       # Async Redis client wrapper
@@ -445,7 +445,7 @@ Starts the server with `--dev`, which runs in development mode and uses the
 chacc run server --dev
 # URL: http://localhost:8085
 # Docs: http://localhost:8085/docs
-# Health: http://localhost:8085/health
+# Health: http://localhost:8085/api/health
 ```
 
 Custom host / port:

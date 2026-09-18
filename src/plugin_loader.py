@@ -6,6 +6,7 @@ Supports both:
 - Production mode: Load from .modules_loaded with optional hot reload
 """
 
+import importlib
 import json
 import os
 
@@ -175,6 +176,7 @@ async def resolve_dependencies(modules: dict[str, dict], enabled_modules: list[s
 
             dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
             await dm.resolve_dependencies(enabled_requirements)
+            importlib.invalidate_caches()
             chacc_logger.info("Module dependencies resolved")
         except (ImportError, RuntimeError) as e:
             chacc_logger.warning(f"Dependency resolution failed: {e}")

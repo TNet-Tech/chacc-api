@@ -58,7 +58,7 @@ def cleanup_test_modules():
 
 def test_get_modules_empty(client):
     """Test getting modules list when no modules are installed."""
-    response = client.get("/modules/")
+    response = client.get("/api/modules/")
     assert response.status_code == 200
     data = response.json()
     assert "modules" in data
@@ -68,7 +68,7 @@ def test_get_modules_empty(client):
 def test_upload_invalid_file(client):
     """Test uploading a file that is not a .chacc package."""
     response = client.post(
-        "/modules/", files={"file": ("test.txt", b"not a zip file", "text/plain")}
+        "/api/modules/", files={"file": ("test.txt", b"not a zip file", "text/plain")}
     )
     assert response.status_code == 400
     assert "Only .chacc module packages are allowed" in response.json()["detail"]
@@ -84,7 +84,7 @@ def test_upload_malformed_chacc(client):
 
     zip_buffer.seek(0)
     response = client.post(
-        "/modules/", files={"file": ("test.chacc", zip_buffer, "application/zip")}
+        "/api/modules/", files={"file": ("test.chacc", zip_buffer, "application/zip")}
     )
     assert response.status_code == 400
     assert "Missing or invalid 'module_meta.json'" in response.json()["detail"]
@@ -101,7 +101,7 @@ def test_upload_chacc_missing_name(client):
 
     zip_buffer.seek(0)
     response = client.post(
-        "/modules/", files={"file": ("test.chacc", zip_buffer, "application/zip")}
+        "/api/modules/", files={"file": ("test.chacc", zip_buffer, "application/zip")}
     )
     assert response.status_code == 400
     assert "'name' field is missing" in response.json()["detail"]
@@ -142,7 +142,7 @@ def setup(backbone_context):
     zip_buffer.seek(0)
 
     response = client.post(
-        "/modules/", files={"file": ("simple_test_module.chacc", zip_buffer, "application/zip")}
+        "/api/modules/", files={"file": ("simple_test_module.chacc", zip_buffer, "application/zip")}
     )
 
     assert response.status_code in [200, 409]
@@ -155,28 +155,28 @@ def setup(backbone_context):
 
 def test_enable_nonexistent_module(client):
     """Test enabling a module that doesn't exist."""
-    response = client.post("/modules/nonexistent/enable")
+    response = client.post("/api/modules/nonexistent/enable")
     assert response.status_code == 404
     assert "Module not found" in response.json()["detail"]
 
 
 def test_disable_nonexistent_module(client):
     """Test disabling a module that doesn't exist."""
-    response = client.post("/modules/nonexistent/disable")
+    response = client.post("/api/modules/nonexistent/disable")
     assert response.status_code == 404
     assert "Module not found" in response.json()["detail"]
 
 
 def test_uninstall_nonexistent_module(client):
     """Test uninstalling a module that doesn't exist."""
-    response = client.delete("/modules/nonexistent/uninstall")
+    response = client.delete("/api/modules/nonexistent/uninstall")
     assert response.status_code == 404
     assert "Module not found" in response.json()["detail"]
 
 
 def test_enable_test_module(client):
     """Test enabling a module - simplified version."""
-    response = client.post("/modules/fake_module/enable")
+    response = client.post("/api/modules/fake_module/enable")
     assert response.status_code == 404
     data = response.json()
     assert "Module not found" in data["detail"]
@@ -184,7 +184,7 @@ def test_enable_test_module(client):
 
 def test_disable_test_module(client):
     """Test disabling a module - simplified version."""
-    response = client.post("/modules/fake_module/disable")
+    response = client.post("/api/modules/fake_module/disable")
     assert response.status_code == 404
     data = response.json()
     assert "Module not found" in data["detail"]
@@ -192,7 +192,7 @@ def test_disable_test_module(client):
 
 def test_uninstall_test_module(client):
     """Test uninstalling a module - simplified version."""
-    response = client.delete("/modules/authentication/uninstall")
+    response = client.delete("/api/modules/authentication/uninstall")
     assert response.status_code in [200, 404]
 
     if response.status_code == 200:
@@ -202,7 +202,7 @@ def test_uninstall_test_module(client):
 
 def test_module_workflow_with_authentication(client):
     """Test complete module workflow: enable/disable operations on existing authentication module."""
-    response = client.get("/modules/")
+    response = client.get("/api/modules/")
     assert response.status_code == 200
     modules = response.json()["modules"]
 
@@ -214,23 +214,23 @@ def test_module_workflow_with_authentication(client):
 
     if auth_module:
         if not auth_module["is_enabled"]:
-            response = client.post("/modules/authentication/enable")
+            response = client.post("/api/modules/authentication/enable")
             assert response.status_code == 200
             assert "enabled" in response.json()["message"].lower()
 
-        response = client.post("/modules/authentication/enable")
+        response = client.post("/api/modules/authentication/enable")
         assert response.status_code == 200
         assert "already enabled" in response.json()["message"].lower()
 
-        response = client.post("/modules/authentication/disable")
+        response = client.post("/api/modules/authentication/disable")
         assert response.status_code == 200
         assert "disabled" in response.json()["message"].lower()
 
-        response = client.post("/modules/authentication/disable")
+        response = client.post("/api/modules/authentication/disable")
         assert response.status_code == 200
         assert "already disabled" in response.json()["message"].lower()
 
-        response = client.post("/modules/authentication/enable")
+        response = client.post("/api/modules/authentication/enable")
         assert response.status_code == 200
     else:
         pytest.skip("Authentication module not found - skipping integration test")

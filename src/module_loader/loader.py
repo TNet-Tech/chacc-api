@@ -13,7 +13,13 @@ import sys
 
 from fastapi import APIRouter, FastAPI
 
-from src.constants import DEPENDENCY_CACHE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.constants import (
+    API_PREFIX,
+    DEPENDENCY_CACHE_DIR,
+    ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
+    MODULES_INSTALLED_DIR,
+    MODULES_LOADED_DIR,
+)
 from src.core_services import BackboneContext
 from src.database import (
     ModuleRecord,
@@ -132,16 +138,18 @@ async def load_single_module(
         plugin_router = setup_func(backbone_context)
 
     if plugin_router and isinstance(plugin_router, APIRouter):
-        prefix = base_path_prefix or module_metadata.get("base_path_prefix", f"/{module_name}")
+        base_prefix = base_path_prefix or module_metadata.get("base_path_prefix", f"/{module_name}")
+        if not base_prefix.startswith(API_PREFIX):
+            base_prefix = f"{API_PREFIX}{base_prefix}"
         module_tags = tags or module_metadata.get(
             "tags", [module_metadata.get("display_name", module_name)]
         )
         if not isinstance(module_tags, list):
             module_tags = [module_tags]
 
-        app.include_router(plugin_router, prefix=prefix, tags=module_tags)
+        app.include_router(plugin_router, prefix=base_prefix, tags=module_tags)
 
-        chacc_logger.info(f"Module '{module_name}' loaded and enabled with prefix: {prefix}")
+        chacc_logger.info(f"Module '{module_name}' loaded and enabled with prefix: {base_prefix}")
         chacc_logger.info(f"Module '{module_name}' documentation tags: {module_tags}")
 
         if hasattr(plugin_router, "routes"):
@@ -196,24 +204,6 @@ async def load_modules(
         existing_records = {record.name: record for record in db.query(ModuleRecord).all()}
 
         modules_requirements = await collect_module_requirements()
-        enabled_modules = [r.name for r in existing_records.values() if r.is_enabled]
-
-        enabled_requirements = {}
-        for mod_name, reqs in modules_requirements.items():
-            if mod_name in enabled_modules or mod_name == "backbone":
-                enabled_requirements[mod_name] = reqs
-
-        if enabled_requirements:
-            chacc_logger.info("Ensuring dependencies are resolved for all enabled modules...")
-            try:
-                from chacc import DependencyManager
-
-                dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
-                await dm.resolve_dependencies(enabled_requirements)
-            except Exception as e:  # noqa: BLE001
-                chacc_logger.error(f"Dependency resolution failed: {e}")
-                chacc_logger.error("Aborting module loading to prevent inconsistent state.")
-                raise RuntimeError(f"Dependency resolution failed: {e}")
 
         chacc_to_module_name = extract_module_names_from_chacc_files(installed_chacc_files)
 
@@ -226,6 +216,28 @@ async def load_modules(
         sync_database_with_filesystem(chacc_to_module_name, existing_records, db)
 
         db.commit()
+
+        enabled_modules = [r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()]
+
+        enabled_requirements = {}
+        for mod_name, reqs in modules_requirements.items():
+            if mod_name in enabled_modules or mod_name == "backbone":
+                enabled_requirements[mod_name] = reqs
+
+        if ENABLE_PLUGIN_DEPENDENCY_RESOLUTION and enabled_requirements:
+            chacc_logger.info("Ensuring dependencies are resolved for all enabled modules...")
+            try:
+                from chacc import DependencyManager
+
+                dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
+                await dm.resolve_dependencies(enabled_requirements)
+
+                importlib.invalidate_caches()
+                chacc_logger.info("Python import cache refreshed after dependency resolution.")
+            except Exception as e:  # noqa: BLE001
+                chacc_logger.error(f"Dependency resolution failed: {e}")
+                chacc_logger.error("Aborting module loading to prevent inconsistent state.")
+                raise RuntimeError(f"Dependency resolution failed: {e}")
 
         module_found = db.query(ModuleRecord).first()
         if module_found:

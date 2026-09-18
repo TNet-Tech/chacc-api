@@ -13,6 +13,7 @@ from starlette.staticfiles import FileResponse
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
 from src.constants import (
+    API_PREFIX,
     CORS_ALLOW_CREDENTIALS,
     CORS_ALLOW_HEADERS,
     CORS_ALLOW_METHODS,
@@ -130,11 +131,10 @@ async def onStartupLifespan(app: FastAPI):
 app = FastAPI(
     title="ChaCC API Backbone",
     description="Plug and Play Modular Application for extensible APIs with FastAPI.",
-    version="1.0.0-b5",
+    version="1.0.0-b5.2",
     docs_url=None,
     redoc_url=None,
     lifespan=onStartupLifespan,
-    root_path="/api",
 )
 patch_binary_file_schema(app)
 
@@ -189,5 +189,5 @@ async def custom_redoc_html(request: Request):
     return get_themed_redoc_html(request, app_title="ChaCC API Backbone")
 
 
-app.include_router(health_router)
-app.include_router(modules_router)
+app.include_router(health_router, prefix=API_PREFIX)
+app.include_router(modules_router, prefix=API_PREFIX)

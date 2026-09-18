@@ -4,19 +4,21 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r chacc && useradd -r -g chacc chacc
+RUN groupadd -r chacc && useradd -r -g chacc -d /app chacc
 
-RUN mkdir -p /app/plugins /app/.modules_loaded
+RUN mkdir -p /app/plugins /app/.modules_loaded /app/.modules_installed /app/.modules_upload /app/.chacc_cache /app/backups
 
 COPY . /app/
 
 RUN pip install --no-cache-dir chacc-api
 
-RUN chown -R chacc:chacc /app
+COPY deployment/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-USER chacc
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -29,6 +31,6 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE 8085
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8085/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8085/api/health')" || exit 1
 
 CMD ["chacc", "run", "server"]
