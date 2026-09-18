@@ -17,7 +17,7 @@ The backbone owns the HTTP server, configuration validation, database engine, an
 | Item | Value |
 | --- | --- |
 | Package | `chacc-api` |
-| Version | `1.0.0-b4.5` |
+| Version | `1.0.0-b5.2` |
 | Runtime | Python 3.10, 3.11, or 3.12 |
 | Web framework | FastAPI |
 | Database | SQLite by default, PostgreSQL supported |

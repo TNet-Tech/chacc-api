@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased
+
+## 1.0.0-beta5.2
+
+> Note: This version fixes the production startup issues specifically in docker image. If you plan to deploy with docker, then this is a must have version.
+
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api==1.0.0-b5.post2
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-beta5.2
+```
 
 ## Added
 
