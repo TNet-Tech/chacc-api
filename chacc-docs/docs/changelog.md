@@ -2,25 +2,32 @@
 
 ## Unreleased
 
-### Added
+## Added
 
-- **Health check log suppression** – `src/logger.py` now adds a `HealthCheckFilter` to the `uvicorn.access` logger that silently drops access log entries containing `/api/health`. Docker health checks hit this endpoint every 30s, and without the filter each check produced an access log line polluting the application logs. The health check still runs and correctly reports unhealthy states — only its log noise is suppressed. This works regardless of how the health check is invoked (Docker HEALTHCHECK, docker-compose `healthcheck.test`, or manual curl).
-- **Version endpoint** – `GET /api/version` now exposes the installed package version, name, and Python version. The welcome page and status badge fetch this dynamically instead of hardcoding the version string, so the UI always reflects the running build.
-- **Docker entrypoint script** – `deployment/docker/docker-entrypoint.sh` auto-creates and chowns all data directories (`/app/.modules_installed`, `/app/.modules_loaded`, `/app/.modules_upload`, `/app/.chacc_cache`, `/app/backups`, `/app/plugins`) at container start, then drops privileges to the `chacc` user via `gosu`. Any new volume mounted under `/app` is automatically handled — no script edits or rebuilds needed.
+- **Quieter logs** – Docker health checks no longer spam your logs. The server still checks its health every 30 seconds, but those checks stay silent unless something's actually wrong.
 
-### Fixed
+- **Version endpoint** – `GET /api/version` now tells you which version of ChaCC API you're running, along with the Python version. The welcome page and status badge read from this automatically, so what you see is always accurate for your running build.
 
-- **`_chacc_temp` directory leaking into `.chacc` archives** – `build_module_chacc()` in `chacc_cli/commands.py` now skips `{module_name}_chacc_temp` directories when copying the module source into the temp zip dir, and removes any stale temp dir from the source before building. This prevents leftover temp directories from previous builds from being packaged into `.chacc` archives, which caused import failures and duplicate module structures when the server extracted them.
-- **Stale `_chacc_temp` directories cleaned up on server side** – After `safe_extract()`, both `unzip_modules()` in `src/module_loader/archive.py` and the install/enable extraction paths in `src/modules.py` now recursively remove any `*_chacc_temp` directories from the loaded module directory. This is a safety net for archives that already contain leaked temp dirs (existing production deployments).
-- **Dependency resolution health check integration removed** – The status file mechanism (`src/module_loader/resolve_deps.py`) that communicated resolution progress to the `/api/health` endpoint has been removed. By the time resolution runs, the server is not yet accepting requests, so the health check integration served no purpose. The `/api/health` endpoint no longer tracks dependency resolution state. The frontend polling animation (`index.js`), banner element (`index.html`), and spinner styles (`index.css`) have also been removed.
-- **psycopg3 binary backend** – PostgreSQL connections now use `psycopg[binary]`, which bundles the required `libpq` library inside the Python package. This removes the need for system-level `libpq` installation or compilation, so the server starts cleanly on minimal images like `python:3.12-slim` and in fresh virtual environments without a PostgreSQL client installed.
-- **Docker permission denied** – `DependencyManager()` calls in `src/chacc_dependency_manager.py` now pass `DEPENDENCY_CACHE_DIR` instead of falling back to the default `.dependency_cache`, which was never created in the image.
-- **Docker build failure** – `.dockerignore` now re-includes `deployment/docker/docker-entrypoint.sh` after the `deployment/` exclusion, so the entrypoint script is available in the build context.
-- **Piptools home directory error** – the `chacc` user is now created with `-d /app`, and the entrypoint chowns `/home/chacc` as a safety net. Previously, `pip-tools` resolved `~` from `/etc/passwd` to `/home/chacc` and failed with `Permission denied`.
-- **New modules loaded without dependency resolution** – `load_modules()` in `src/module_loader/loader.py` now processes archives and commits DB records **before** resolving dependencies, then re-queries the database for the enabled set. Previously, dependency resolution ran before `process_module_archives()` created DB records for newly-discovered modules, so a module deployed via `POST /api/modules/` would start without its dependencies installed. Resolution is now gated behind `ENABLE_PLUGIN_DEPENDENCY_RESOLUTION` for both production and dev paths, and the misleading production-stability warning in `src/env_validator.py` has been removed.
-- **Module dependencies not installed in Docker** – dependency resolution now runs as root in the Docker entrypoint (`deployment/docker/docker-entrypoint.sh`) via a new standalone script (`src/module_loader/resolve_deps.py`) before the entrypoint drops to the `chacc` user. Previously, `pip install` ran inside the app process as the `chacc` user, which lacks write access to `site-packages`, so module dependencies were never installed and modules failed to load with `ImportError`. The cache-hit path in the chacc dependency manager now correctly detects missing packages and installs them.
-- **Docker entrypoint now fails fast on dependency resolution failure** – Removed `|| true` from the `python -m src.module_loader.resolve_deps` line in `deployment/docker/docker-entrypoint.sh`. The entrypoint now exits with a non-zero code if resolution fails, preventing the server from starting in a broken state where modules cannot import their dependencies.
-- **Dependency resolution retry on failure** – `src/module_loader/resolve_deps.py` now retries `dm.resolve_dependencies()` up to 3 times with a 5-second delay between attempts. The chacc dependency manager catches `TimeoutExpired` internally and re-raises as `CalledProcessError`, so the retry logic catches that exception. This handles transient pip timeouts gracefully instead of failing the entrypoint immediately.
+- **Smarter Docker startup** – The Docker entrypoint now creates all the data directories it needs (modules, cache, backups, plugins) and sets the right permissions at startup. Any new volume you mount under `/app` just works – no script editing, no rebuilding.
+
+---
+
+## Fixed
+
+- **Temp folders no longer sneak into your `.chacc` files** – When you built a module, a leftover temp folder could get packaged into the archive. That caused import errors and duplicate module structures when the server loaded it. Now the build skips temp folders, and the server cleans them up if they somehow slip through – so existing deployments get fixed too.
+
+- **Removed pointless health check tracking** – The server used to track dependency resolution progress and show it on the health endpoint. But by the time dependencies are being resolved, the server isn't accepting requests yet – so nobody could see it. That whole mechanism (and the related frontend spinner) is gone. Less code, less noise.
+
+- **PostgreSQL works out of the box now** – ChaCC now uses `psycopg[binary]`, which bundles the PostgreSQL client library right inside the Python package. No more installing `libpq` system-wide or compiling anything. The server starts cleanly on minimal images like `python:3.12-slim` and in fresh virtual environments. Just install and go.
+
+- **Docker permission errors fixed** – Several small permission issues that could stop the server from starting in Docker are now resolved:
+  - The dependency cache directory is created and used correctly.
+  - The `chacc` user's home directory is set up properly, so `pip-tools` no longer fails.
+  - The Docker build includes the entrypoint script correctly.
+
+- **Newly installed modules now get their dependencies** – This was a big one. Previously, if you deployed a module that needed extra packages, the server would try to resolve them before the module was even registered in the database. Result: the module loaded without its dependencies and crashed with an `ImportError`. Now the server registers the module first, then resolves dependencies – so everything installs correctly.
+
+- **Dependencies now install properly in Docker** – In Docker, dependency installation used to run as the `chacc` user, which doesn't have permission to write to `site-packages`. So dependencies were never actually installed, and modules failed to load. Now dependency resolution runs as root before the server starts, then drops to the `chacc` user. Modules work as expected.
 
 ---
 
