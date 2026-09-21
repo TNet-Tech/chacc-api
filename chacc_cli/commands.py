@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 import zipfile
-from asyncio import subprocess
+import subprocess
 
 import requests
 from decouple import config
