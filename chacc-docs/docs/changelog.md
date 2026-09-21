@@ -1,6 +1,11 @@
 # Changelog
 
 
+## Unreleased
+
+## Fixed
+- ** chacc create command ** - The command was breaking, for this fix to work in your development environment, kindly install from source in github where this has been fixed.
+
 ## 1.0.0-beta5.2
 
 > Note: This version fixes the production startup issues specifically in docker image. If you plan to deploy with docker, then this is a must have version.

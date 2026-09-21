@@ -6,8 +6,8 @@ Separated from main CLI interface for better organization.
 import json
 import os
 import shutil
-import zipfile
 import subprocess
+import zipfile
 
 import requests
 from decouple import config
@@ -239,8 +239,10 @@ modules_installed/
             f.write(gitignore_content)
 
         try:
-            subprocess.run(["git", "init"], cwd=module_root_dir, capture_output=True)
-            subprocess.run(["git", "add", "."], cwd=module_root_dir, capture_output=True)
+            subprocess.run(["git", "init"], cwd=module_root_dir, capture_output=True, check=False)
+            subprocess.run(
+                ["git", "add", "."], cwd=module_root_dir, capture_output=True, check=False
+            )
             cli_logger.info("Initialized git repository.")
         except FileNotFoundError:
             cli_logger.warning("git not found. Skipping git initialization.")
