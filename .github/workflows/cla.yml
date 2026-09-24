@@ -23,7 +23,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           path-to-signatures: 'signatures/version1/cla.json'
-          path-to-document: 'https://github.com/YOUR_USERNAME/YOUR_REPO/blob/main/CLA.md'
+          path-to-document: 'https://github.com/TNet-Tech/chacc-api/blob/main/CLA.md'
           branch: 'develop'
           allowlist: bot*,dependabot[bot],github-actions[bot]
           create-file-commit-message: 'chore: create CLA signature file'
