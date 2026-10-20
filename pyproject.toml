@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
     "fastapi",
     "uvicorn",
-    "sqlalchemy",
+    "sqlalchemy[asyncio]",
     "alembic",
     "psycopg[binary]",
     "slowapi",
@@ -50,6 +50,7 @@ dependencies = [
 dev = [
     "ruff",
     "mypy",
+    "pytest-cov",
 ]
 
 [project.scripts]
