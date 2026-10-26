@@ -23,9 +23,10 @@ from src.constants import (
     PLUGINS_DIR,
 )
 from src.core_services import BackboneContext
+from src.csv_utils import parse_csv
 from src.database import get_async_db, get_db
 from src.env_validator import ValidationError, validate_environment
-from src.health import health_router
+from src.health import get_version, health_router
 from src.logger import configure_logging, get_default_log_level
 from src.migration.runner import run_migration
 from src.modules import modules_router
@@ -131,20 +132,19 @@ async def onStartupLifespan(app: FastAPI):
 app = FastAPI(
     title="ChaCC API Backbone",
     description="Plug and Play Modular Application for extensible APIs with FastAPI.",
-    version="1.0.0-b5.2",
+    version=get_version(),
     docs_url=None,
     redoc_url=None,
     lifespan=onStartupLifespan,
 )
 patch_binary_file_schema(app)
 
-allowed_origins = [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=parse_csv(CORS_ALLOWED_ORIGINS),
     allow_credentials=CORS_ALLOW_CREDENTIALS,
-    allow_methods=([CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]),
-    allow_headers=([CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]),
+    allow_methods=parse_csv(CORS_ALLOW_METHODS),
+    allow_headers=parse_csv(CORS_ALLOW_HEADERS),
 )
 
 app.state.limiter = limiter

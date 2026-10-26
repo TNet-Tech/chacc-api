@@ -29,7 +29,21 @@ def main():
         "  CHACC_DEPLOY_API_KEY=optional-api-key\n"
         "  CHACC_DEPLOY_TIMEOUT=30",
     )
+    parser.add_argument(
+        "--version", action="store_true", help="Show the installed ChaCC API version and exit."
+    )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    doctor_parser = subparsers.add_parser(
+        "doctor", help="Check your setup and get plain-language fixes for any problems."
+    )
+    doctor_parser.add_argument("--dev", action="store_true", help="Check as a development setup.")
+    doctor_parser.add_argument("--json", action="store_true", help="Print results as JSON.")
+    doctor_parser.add_argument(
+        "--strict", action="store_true", help="Exit with an error on warnings too (for CI)."
+    )
+    doctor_parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to check.")
+    doctor_parser.add_argument("--port", type=int, default=8085, help="Port to check.")
 
     scaffold_parser = subparsers.add_parser("create", help="Create a new ChaCC API module.")
     scaffold_parser.add_argument(
@@ -130,6 +144,28 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.version:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            print(f"chacc-api {version('chacc-api')}")
+        except PackageNotFoundError:
+            print("chacc-api (version unknown: not installed as a package)")
+        sys.exit(0)
+
+    if args.command == "doctor":
+        from .doctor import run_doctor
+
+        sys.exit(
+            run_doctor(
+                as_json=args.json,
+                strict=args.strict,
+                dev=args.dev,
+                host=args.host,
+                port=args.port,
+            )
+        )
 
     from .commands import (
         build_install_parser,

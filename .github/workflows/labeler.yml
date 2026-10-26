@@ -1,0 +1,50 @@
+name: PR Labeler
+
+# pull_request_target so labels also work on PRs from forks.
+# SAFE: this workflow never checks out or runs code from the PR; it only reads
+# the labeler config from the base branch and the list of changed files.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  path-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          sync-labels: true
+
+  size-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply size label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const changed = pr.additions + pr.deletions;
+            const size =
+              changed < 10 ? "XS" :
+              changed < 50 ? "S" :
+              changed < 250 ? "M" :
+              changed < 750 ? "L" : "XL";
+            const wanted = `size: ${size}`;
+            const { owner, repo } = context.repo;
+            const issue_number = pr.number;
+
+            const { data: current } = await github.rest.issues.listLabelsOnIssue({
+              owner, repo, issue_number,
+            });
+            for (const l of current) {
+              if (l.name.startsWith("size: ") && l.name !== wanted) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: l.name });
+              }
+            }
+            if (!current.some((l) => l.name === wanted)) {
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [wanted] });
+            }

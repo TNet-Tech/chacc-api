@@ -43,7 +43,9 @@ GET /api/health/ready
 ```
 
 Runs a lightweight database query and reports whether the API and database are
-ready.
+ready. Returns `200` when everything is ready and `503 Service Unavailable` (with
+`"status": "unhealthy"`) when the database cannot be reached, so load balancers
+and Kubernetes readiness probes stop sending traffic to the instance.
 
 ```json
 {
