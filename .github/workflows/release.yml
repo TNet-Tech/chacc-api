@@ -13,6 +13,10 @@ on:
         description: 'Custom Docker tag to use (optional)'
         type: string
         default: ''
+      publish_testpypi:
+        description: 'Publish to Test PyPI'
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -74,7 +78,7 @@ jobs:
   publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    if: inputs.publish_testpypi == true
 
     environment:
       name: testpypi
