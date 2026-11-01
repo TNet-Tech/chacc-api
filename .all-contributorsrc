@@ -4,7 +4,8 @@
   "repoType": "github",
   "repoHost": "https://github.com",
   "files": [
-    "README.md"
+    "README.md",
+    "chacc-docs/docs/overview.md"
   ],
   "imageSize": 100,
   "commit": false,
@@ -20,11 +21,47 @@
         "infra",
         "test",
         "design",
-        "docs"
+        "doc"
+      ]
+    },
+    {
+      "login": "bashirii",
+      "name": "Bashiri Idd",
+      "avatar_url": "https://avatars.githubusercontent.com/u/104256265?v=4",
+      "profile": "https://github.com/bashirii",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "cleven12",
+      "name": "cleven",
+      "avatar_url": "https://avatars.githubusercontent.com/u/168540659?v=4",
+      "profile": "https://linktr.ee/cleven02",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "awodesigns-github",
+      "name": "awodesigns-github",
+      "avatar_url": "https://avatars.githubusercontent.com/u/135214966?v=4",
+      "profile": "https://github.com/awodesigns-github",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "Gody19",
+      "name": "GODY OUWA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/163418534?v=4",
+      "profile": "https://gody19.github.io/portfolio/",
+      "contributions": [
+        "code"
       ]
     }
   ],
-  "linkToUsage": true,
+  "linkToUsage": false,
   "skipCi": true,
   "commitConvention": "angular",
   "commitType": "docs"

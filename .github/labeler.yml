@@ -1,0 +1,42 @@
+# Path-based labels, applied automatically by .github/workflows/labeler.yml
+# Format: actions/labeler v5
+
+"area: core":
+  - changed-files:
+      - any-glob-to-any-file: ["src/*.py"]
+
+"area: modules":
+  - changed-files:
+      - any-glob-to-any-file: ["src/module_loader/**", "src/plugin_loader.py", "src/modules.py"]
+
+"area: migrations":
+  - changed-files:
+      - any-glob-to-any-file: ["src/migration/**", "tests/migrations/**"]
+
+"area: cli":
+  - changed-files:
+      - any-glob-to-any-file: ["chacc_cli/**"]
+
+"area: server":
+  - changed-files:
+      - any-glob-to-any-file: ["chacc_api/**"]
+
+"area: docker":
+  - changed-files:
+      - any-glob-to-any-file: ["deployment/**", "**/Dockerfile*", "**/docker-compose*.yml", ".dockerignore"]
+
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file: ["chacc-docs/**", "*.md", "CONTRIBUTING.md"]
+
+"tests":
+  - changed-files:
+      - any-glob-to-any-file: ["tests/**", "**/test_*.py"]
+
+"ci":
+  - changed-files:
+      - any-glob-to-any-file: [".github/**"]
+
+"dependencies":
+  - changed-files:
+      - any-glob-to-any-file: ["requirements*.txt", "pyproject.toml"]

@@ -130,6 +130,18 @@ class TestExtractTableName:
         result = runner._extract_table_name("modify_type", ("modify_type", MagicMock(), "users"))
         assert result == "users"
 
+    def test_modify_nullable(self, runner):
+        result = runner._extract_table_name(
+            "modify_nullable", ("modify_nullable", MagicMock(), "users")
+        )
+        assert result == "users"
+
+    def test_modify_default(self, runner):
+        result = runner._extract_table_name(
+            "modify_default", ("modify_default", MagicMock(), "users")
+        )
+        assert result == "users"
+
     def test_add_index(self, runner):
         table = MagicMock()
         table.name = "users"

@@ -1,6 +1,41 @@
 # Changelog
 
 
+## Unreleased
+
+## 1.0.0-beta5.3
+
+> Patch release with bug fixes and improvements. For initial module scaffold failures, patch to this version.
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api==1.0.0-b5.post3
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-beta5.3
+```
+
+## Added
+
+- **All branches on install** – `chacc install` now fetches all branches by default. Use `--single-branch` to opt out.
+
+- **Contributors section** – README and overview docs now include a contributors table.
+
+- **`chacc doctor` command** – New diagnostic command to check your ChaCC installation health.
+
+## Fixed
+
+- **CLA workflow** – Fixed file extension, branch reference, and allowlist format so CLA signing works correctly.
+
+- **Label sync** – Quoted color values in labels.yml so YAML no longer misparses hex colors as numbers.
+
+- **Install command** – Fixed development mode install to fetch all branch info by default.
+
+- **`chacc create` command** – Fixed a bug that prevented module scaffolding from working.
+
 ## 1.0.0-beta5.2
 
 > Note: This version fixes the production startup issues specifically in docker image. If you plan to deploy with docker, then this is a must have version.

@@ -17,7 +17,7 @@ The backbone owns the HTTP server, configuration validation, database engine, an
 | Item | Value |
 | --- | --- |
 | Package | `chacc-api` |
-| Version | `1.0.0-b5.2` |
+| Version | `1.0.0-b5.3` |
 | Runtime | Python 3.10, 3.11, or 3.12 |
 | Web framework | FastAPI |
 | Database | SQLite by default, PostgreSQL supported |
@@ -127,3 +127,34 @@ flowchart LR
 | `/api/modules/{module_name}/enable` | `POST` | Mark a module enabled. Requires restart. |
 | `/api/modules/{module_name}/disable` | `POST` | Mark a module disabled. Requires restart. |
 | `/api/modules/{module_name}/uninstall` | `DELETE` | Remove module archive, extracted code, and DB record. Requires restart. |
+
+---
+
+## Contributors
+
+ChaCC API exists because people gave their time to make it better.
+
+To everyone who has opened an issue, fixed a bug, improved a sentence of documentation, asked a hard question, or simply tried the beta and told us what broke, thank you so much. You are the reason this project moves forward.
+
+If you'd like to join us, you're welcome here. There is no contribution too small. A typo fix, a clearer error message, a test, a module idea, or a kind word in a discussion all count. Check out [CONTRIBUTING.md](https://github.com/TNet-Tech/chacc-api/blob/develop/CONTRIBUTING.md) to get started, and know that your name will appear below when you do.
+
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jonas1015"><img src="https://avatars.githubusercontent.com/u/54990284?v=4&size=100" width="100px" height="100px" alt="Jonas G Mwambimbi"/><br /><sub><b>Jonas G Mwambimbi</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=jonas1015" title="Code">💻</a> <a href="#ideas-jonas1015" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-jonas1015" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/jonas1015/chacc-api/commits?author=jonas1015" title="Tests">⚠️</a> <a href="#design-jonas1015" title="Design">🎨</a> <a href="https://github.com/jonas1015/chacc-api/commits?author=jonas1015" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/bashirii"><img src="https://avatars.githubusercontent.com/u/104256265?v=4&size=100" width="100px" height="100px" alt="Bashiri Idd"/><br /><sub><b>Bashiri Idd</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=bashirii" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://linktr.ee/cleven02"><img src="https://avatars.githubusercontent.com/u/168540659?v=4&size=100" width="100px" height="100px" alt="cleven"/><br /><sub><b>cleven</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=cleven12" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/awodesigns-github"><img src="https://avatars.githubusercontent.com/u/135214966?v=4&size=100" width="100px" height="100px" alt="awodesigns-github"/><br /><sub><b>awodesigns-github</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=awodesigns-github" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://gody19.github.io/portfolio/"><img src="https://avatars.githubusercontent.com/u/163418534?v=4&size=100" width="100px" height="100px" alt="GODY OUWA"/><br /><sub><b>GODY OUWA</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=Gody19" title="Code">💻</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->

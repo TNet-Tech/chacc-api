@@ -6,7 +6,7 @@ Provides health and readiness checks for container orchestration:
 - /api/health/ready - Readiness check (includes database)
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -37,7 +37,7 @@ class VersionResponse(BaseModel):
     python_version: str
 
 
-def _get_version() -> str:
+def get_version() -> str:
     """Read the installed package version from metadata, falling back to a static string."""
     try:
         from importlib.metadata import version
@@ -63,12 +63,13 @@ async def health_check():
 
 
 @health_router.get("/health/ready", response_model=HealthResponse)
-async def readiness_check(db: AsyncSession = Depends(get_async_db)):
+async def readiness_check(response: Response, db: AsyncSession = Depends(get_async_db)):
     """
     Readiness check with database connectivity.
 
-    Returns 200 when the service is ready to accept traffic.
-    Includes database connectivity check.
+    Returns 200 when the service is ready to accept traffic and 503 when a
+    dependency (the database) is unavailable, so load balancers and Kubernetes
+    stop routing traffic to this instance.
     """
     checks = {"api": "ok", "database": "unknown"}
 
@@ -81,6 +82,8 @@ async def readiness_check(db: AsyncSession = Depends(get_async_db)):
 
     all_ok = all(v == "ok" for v in checks.values())
     overall_status = "healthy" if all_ok else "unhealthy"
+    if not all_ok:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return HealthResponse(
         status=overall_status,
@@ -115,7 +118,7 @@ async def version_check():
     import sys
 
     return VersionResponse(
-        version=_get_version(),
+        version=get_version(),
         name="ChaCC API",
         python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
     )

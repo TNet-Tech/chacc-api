@@ -162,7 +162,7 @@ class MigrationRunner:
         if hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
             return "unknown"
 
-        if op_type == "modify_type":
+        if op_type in ("modify_type", "modify_nullable", "modify_default"):
             return op[2] if op[2] else "unknown"
 
         if op_type in ("drop_table", "remove_table"):

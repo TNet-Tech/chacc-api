@@ -32,10 +32,10 @@ class SourceError(Exception):
 class ResolvedSource:
     """Result of turning a user-typed string into something we can install."""
 
-    kind: str  # "local" | "git"
-    path: str  # absolute path to a directory holding module_meta.json
-    origin_url: str | None = None  # the original (possibly redacted) URL, for logging
-    cleanup: bool = True  # whether the caller should remove ``path`` on exit
+    kind: str
+    path: str
+    origin_url: str | None = None
+    cleanup: bool = True
 
 
 def split_source_and_ref(source: str) -> tuple[str, str | None]:
@@ -80,7 +80,7 @@ def _ensure_git_available() -> None:
         raise SourceError("git executable not found in PATH. Install git and retry.")
 
 
-def fetch_git_source(url: str, ref: str | None, depth: int) -> str:
+def fetch_git_source(url: str, ref: str | None, depth: int, single_branch: bool = False) -> str:
     """
     Clone ``url`` into a temp dir and return the staging path.
     Credentials are passed via git config, not embedded in the URL.
@@ -96,6 +96,8 @@ def fetch_git_source(url: str, ref: str | None, depth: int) -> str:
         cmd += [f"--depth={depth}"]
     if ref:
         cmd += ["--branch", ref]
+    elif not single_branch:
+        cmd += ["--no-single-branch"]
     cmd += [clone_url, staging]
 
     env = os.environ.copy()
@@ -154,7 +156,9 @@ def fetch_git_source(url: str, ref: str | None, depth: int) -> str:
     return staging
 
 
-def resolve(source: str, ref: str | None, depth: int) -> ResolvedSource:
+def resolve(
+    source: str, ref: str | None, depth: int, single_branch: bool = False
+) -> ResolvedSource:
     """
     Top-level entry: turn a user-typed source into a ``ResolvedSource``.
     Cleans up cloned staging on failure.
@@ -173,7 +177,7 @@ def resolve(source: str, ref: str | None, depth: int) -> ResolvedSource:
     else:
         url = src
 
-    staging = fetch_git_source(url, effective_ref, depth)
+    staging = fetch_git_source(url, effective_ref, depth, single_branch)
     return ResolvedSource(
         kind="git",
         path=staging,

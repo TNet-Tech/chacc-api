@@ -184,6 +184,24 @@ CHACC_DEPLOY_API_KEY=optional-token
 CHACC_DEPLOY_TIMEOUT=30
 ```
 
+## Check your setup (`chacc doctor`)
+
+Not sure why the server will not start? Run:
+
+```bash
+chacc doctor          # checks the current folder
+chacc doctor --dev    # treat it as a development setup
+chacc doctor --json   # machine-readable output
+chacc doctor --strict # exit 1 on warnings too (handy in CI)
+```
+
+It checks your Python version, `.env`, `SECRET_KEY` strength, production-only
+flags, database and Redis reachability, module folder permissions and whether the
+server port is free. Every problem comes with a plain-language fix. The exit code
+is `1` when something must be fixed, so it can gate deployments.
+
+`chacc --version` prints the installed version.
+
 ## Run the server
 
 Development server:

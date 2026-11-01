@@ -6,8 +6,8 @@ Separated from main CLI interface for better organization.
 import json
 import os
 import shutil
+import subprocess
 import zipfile
-from asyncio import subprocess
 
 import requests
 from decouple import config
@@ -239,8 +239,10 @@ modules_installed/
             f.write(gitignore_content)
 
         try:
-            subprocess.run(["git", "init"], cwd=module_root_dir, capture_output=True)
-            subprocess.run(["git", "add", "."], cwd=module_root_dir, capture_output=True)
+            subprocess.run(["git", "init"], cwd=module_root_dir, capture_output=True, check=False)
+            subprocess.run(
+                ["git", "add", "."], cwd=module_root_dir, capture_output=True, check=False
+            )
             cli_logger.info("Initialized git repository.")
         except FileNotFoundError:
             cli_logger.warning("git not found. Skipping git initialization.")
@@ -373,6 +375,11 @@ def build_install_parser(subparsers):
         help="Override the env var name used for token lookup (e.g. MY_CI_TOKEN).",
     )
     install_parser.add_argument(
+        "--single-branch",
+        action="store_true",
+        help="Clone only the default branch (opt out of fetching all branches).",
+    )
+    install_parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress per-step progress output. Only the final result is printed.",
@@ -387,6 +394,7 @@ def install_module(
     force: bool = False,
     depth: int = 1,
     full: bool = False,
+    single_branch: bool = False,
     token_env: str | None = None,
     quiet: bool = False,
 ):
@@ -413,7 +421,7 @@ def install_module(
     progress_mod.info(f"Mode: {effective_mode} ({'--dev flag' if dev else 'default'})")
 
     with progress_mod.step("Resolving source", detail=source):
-        resolved = source_mod.resolve(source, ref, depth)
+        resolved = source_mod.resolve(source, ref, depth, single_branch)
 
     try:
         with progress_mod.step("Validating module", detail=resolved.path):
