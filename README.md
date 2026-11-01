@@ -80,6 +80,7 @@ If you'd like to join us, you're welcome here. There is no contribution too smal
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/bashirii"><img src="https://avatars.githubusercontent.com/u/104256265?v=4&size=100" width="100px" height="100px" alt="Bashiri Idd"/><br /><sub><b>Bashiri Idd</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=bashirii" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://linktr.ee/cleven02"><img src="https://avatars.githubusercontent.com/u/168540659?v=4&size=100" width="100px" height="100px" alt="cleven"/><br /><sub><b>cleven</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=cleven12" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/awodesigns-github"><img src="https://avatars.githubusercontent.com/u/135214966?v=4&size=100" width="100px" height="100px" alt="awodesigns-github"/><br /><sub><b>awodesigns-github</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=awodesigns-github" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://gody19.github.io/portfolio/"><img src="https://avatars.githubusercontent.com/u/163418534?v=4&size=100" width="100px" height="100px" alt="GODY OUWA"/><br /><sub><b>GODY OUWA</b></sub></a><br /><a href="https://github.com/jonas1015/chacc-api/commits?author=Gody19" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
