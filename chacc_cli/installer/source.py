@@ -32,10 +32,10 @@ class SourceError(Exception):
 class ResolvedSource:
     """Result of turning a user-typed string into something we can install."""
 
-    kind: str  # "local" | "git"
-    path: str  # absolute path to a directory holding module_meta.json
-    origin_url: str | None = None  # the original (possibly redacted) URL, for logging
-    cleanup: bool = True  # whether the caller should remove ``path`` on exit
+    kind: str
+    path: str
+    origin_url: str | None = None
+    cleanup: bool = True
 
 
 def split_source_and_ref(source: str) -> tuple[str, str | None]:
@@ -156,7 +156,9 @@ def fetch_git_source(url: str, ref: str | None, depth: int, single_branch: bool 
     return staging
 
 
-def resolve(source: str, ref: str | None, depth: int, single_branch: bool = False) -> ResolvedSource:
+def resolve(
+    source: str, ref: str | None, depth: int, single_branch: bool = False
+) -> ResolvedSource:
     """
     Top-level entry: turn a user-typed source into a ``ResolvedSource``.
     Cleans up cloned staging on failure.
