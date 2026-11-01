@@ -190,6 +190,7 @@ def main():
                 force=args.force,
                 depth=args.depth,
                 full=args.full,
+                single_branch=args.single_branch,
                 token_env=args.token_env,
                 quiet=args.quiet,
             )
