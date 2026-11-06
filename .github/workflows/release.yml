@@ -148,7 +148,7 @@ jobs:
             type=match,pattern=v?(\\d+\\.\\d+-(?:beta|rc)\\.\\d+),group=1
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deployment/docker/Dockerfile
@@ -193,7 +193,7 @@ jobs:
             type=sha
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./chacc-docs
           file: ./chacc-docs/Dockerfile
