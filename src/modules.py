@@ -11,13 +11,14 @@ This module contains the FastAPI routes for managing ChaCC modules:
 The actual module loading logic is in src/module_loader.py.
 """
 
-import io
 import json
 import os
 import shutil
+import tempfile
 import zipfile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +31,15 @@ from src.chacc_dependency_manager import (
 from src.chacc_dependency_manager import (
     resolve_chacc_dependencies as re_resolve_dependencies,
 )
-from src.constants import BASE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.constants import (
+    BASE_DIR,
+    MAX_MODULE_UNCOMPRESSED_SIZE,
+    MAX_MODULE_UPLOAD_SIZE,
+    MODULE_UPLOAD_CHUNK_SIZE,
+    MODULES_INSTALLED_DIR,
+    MODULES_LOADED_DIR,
+    MODULES_UPLOAD_DIR,
+)
 from src.database import ModuleRecord, get_async_db, get_db
 from src.logger import configure_logging, get_default_log_level
 from src.module_loader.archive import (
@@ -103,6 +112,175 @@ async def get_current_user_optional(
         )
 
 
+class ModuleUploadSizeLimitMiddleware:
+    """
+    Pure ASGI middleware that rejects oversized module uploads early.
+
+    If a POST to the module install endpoint declares a ``Content-Length``
+    larger than the allowed limit, it is rejected with 413 before the body is
+    read. Requests without a declared length (chunked) are still guarded by
+    the per-file streaming check in the endpoint itself.
+    """
+
+    MULTIPART_OVERHEAD = 64 * 1024
+
+    def __init__(self, app, path_prefix: str = "", max_size: int = MAX_MODULE_UPLOAD_SIZE):
+        self.app = app
+        self.paths = {f"{path_prefix}/modules", f"{path_prefix}/modules/"}
+        self.max_size = max_size
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and scope.get("method") == "POST"
+            and scope.get("path") in self.paths
+        ):
+            content_length = None
+            for name, value in scope.get("headers", []):
+                if name == b"content-length":
+                    try:
+                        content_length = int(value)
+                    except ValueError:
+                        content_length = None
+                    break
+            if (
+                content_length is not None
+                and content_length > self.max_size + self.MULTIPART_OVERHEAD
+            ):
+                response = JSONResponse(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    content={"detail": _too_large_message(self.max_size)},
+                )
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+def _too_large_message(max_size: int) -> str:
+    return f"Module package exceeds the maximum allowed size of {max_size / (1024 * 1024):g} MB."
+
+
+async def _stream_upload_to_disk(file: UploadFile, max_size: int) -> str:
+    """
+    Stream an uploaded file to a temporary file in chunks, enforcing ``max_size``.
+
+    Returns the path of the temporary file. The caller is responsible for
+    removing or moving it.
+    """
+    fd, tmp_path = tempfile.mkstemp(suffix=".chacc.part", dir=MODULES_UPLOAD_DIR)
+    total = 0
+    try:
+        with os.fdopen(fd, "wb") as out:
+            while chunk := await file.read(MODULE_UPLOAD_CHUNK_SIZE):
+                total += len(chunk)
+                if total > max_size:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                        detail=_too_large_message(max_size),
+                    )
+                out.write(chunk)
+    except BaseException:
+        _remove_quietly(tmp_path)
+        raise
+    finally:
+        await file.close()
+
+    if total == 0:
+        _remove_quietly(tmp_path)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded module package is empty.",
+        )
+    return tmp_path
+
+
+def _remove_quietly(path: str | None) -> None:
+    if path and os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError:
+            chacc_logger.warning(f"Could not remove temporary upload file '{path}'.")
+
+
+def _read_module_archive(archive_path: str) -> tuple[str, dict[str, str]]:
+    """
+    Validate a .chacc archive on disk and return (module_name, module_requirements).
+
+    Raises HTTPException for invalid packages.
+    """
+    try:
+        zip_ref = zipfile.ZipFile(archive_path, "r")
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is not a valid .chacc (zip) package.",
+        )
+
+    with zip_ref:
+        uncompressed_size = sum(info.file_size for info in zip_ref.infolist())
+        if uncompressed_size > MAX_MODULE_UNCOMPRESSED_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=(
+                    "Module package expands beyond the maximum allowed uncompressed size of "
+                    f"{MAX_MODULE_UNCOMPRESSED_SIZE / (1024 * 1024):g} MB."
+                ),
+            )
+
+        try:
+            with zip_ref.open("module_meta.json") as meta_file:
+                meta_data = json.load(meta_file)
+        except (KeyError, json.JSONDecodeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing or invalid 'module_meta.json' in the .chacc package.",
+            )
+
+        module_name = meta_data.get("name")
+        if not module_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="'name' field is missing in 'module_meta.json'.",
+            )
+
+        try:
+            module_name = validate_module_name(module_name)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid module name in module_meta.json: {exc}",
+            )
+
+        module_requirements = {}
+        try:
+            with zip_ref.open("requirements.txt") as req_file:
+                module_requirements[module_name] = req_file.read().decode("utf-8")
+        except KeyError:
+            pass
+
+    return module_name, module_requirements
+
+
+def _extract_module_archive(module_name: str, target_chacc_path: str) -> None:
+    loaded_module_dir = os.path.join(MODULES_LOADED_DIR, module_name)
+    if os.path.exists(loaded_module_dir):
+        shutil.rmtree(loaded_module_dir)
+    with zipfile.ZipFile(target_chacc_path, "r") as zip_ref:
+        os.makedirs(loaded_module_dir, exist_ok=True)
+        safe_extract(zip_ref, loaded_module_dir)
+        os.utime(
+            loaded_module_dir,
+            (os.path.getmtime(target_chacc_path), os.path.getmtime(target_chacc_path)),
+        )
+    # Remove any stale *_chacc_temp directories that may have leaked into the archive
+    for item in os.listdir(loaded_module_dir):
+        if item.endswith("_chacc_temp"):
+            temp_path = os.path.join(loaded_module_dir, item)
+            shutil.rmtree(temp_path, ignore_errors=True)
+            chacc_logger.info(f"Removed stale {item} directory from {loaded_module_dir}")
+    chacc_logger.info(f"Successfully unzipped module '{module_name}' to '{loaded_module_dir}'.")
+
+
 @modules_router.post("/modules/", dependencies=[])
 @modules_router.post("/modules", dependencies=[])
 async def install_chacc_module_endpoint(
@@ -112,6 +290,9 @@ async def install_chacc_module_endpoint(
 ):
     """
     Installs a new ChaCC API module from an .chacc package.
+
+    The upload is streamed to disk in chunks (never fully buffered in memory)
+    and limited to ``MAX_MODULE_UPLOAD_SIZE`` bytes (default 10 MB).
     Resolves dependencies BEFORE unzipping to prevent inconsistent state.
     Requires server restart to activate/deactivate the new module.
     """
@@ -122,41 +303,10 @@ async def install_chacc_module_endpoint(
             detail="Only .chacc module packages are allowed.",
         )
 
-    file_content = await file.read()
+    tmp_path = await _stream_upload_to_disk(file, MAX_MODULE_UPLOAD_SIZE)
 
     try:
-        with zipfile.ZipFile(io.BytesIO(file_content), "r") as zip_ref:
-            try:
-                with zip_ref.open("module_meta.json") as meta_file:
-                    meta_data = json.load(meta_file)
-            except (KeyError, json.JSONDecodeError):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Missing or invalid 'module_meta.json' in the .chacc package.",
-                )
-
-            module_name = meta_data.get("name")
-            if not module_name:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="'name' field is missing in 'module_meta.json'.",
-                )
-
-            try:
-                module_name = validate_module_name(module_name)
-            except ValueError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid module name in module_meta.json: {exc}",
-                )
-
-            module_requirements = {}
-            try:
-                with zip_ref.open("requirements.txt") as req_file:
-                    req_content = req_file.read().decode("utf-8")
-                    module_requirements[module_name] = req_content
-            except KeyError:
-                pass
+        module_name, module_requirements = await run_in_threadpool(_read_module_archive, tmp_path)
 
         backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
         if os.path.exists(backbone_req_path):
@@ -174,27 +324,12 @@ async def install_chacc_module_endpoint(
             chacc_logger.info("Dependencies resolved successfully.")
 
         target_chacc_path = os.path.join(MODULES_INSTALLED_DIR, f"{module_name}.chacc")
-        with open(target_chacc_path, "wb") as f:
-            f.write(file_content)
+        # shutil.move is an atomic rename on the same filesystem, copy+delete otherwise.
+        await run_in_threadpool(shutil.move, tmp_path, target_chacc_path)
+        tmp_path = None
         chacc_logger.info(f"Module archive '{module_name}.chacc' saved to '{target_chacc_path}'.")
 
-        loaded_module_dir = os.path.join(MODULES_LOADED_DIR, module_name)
-        if os.path.exists(loaded_module_dir):
-            shutil.rmtree(loaded_module_dir)
-        with zipfile.ZipFile(target_chacc_path, "r") as zip_ref:
-            os.makedirs(loaded_module_dir, exist_ok=True)
-            safe_extract(zip_ref, loaded_module_dir)
-            os.utime(
-                loaded_module_dir,
-                (os.path.getmtime(target_chacc_path), os.path.getmtime(target_chacc_path)),
-            )
-        # Remove any stale *_chacc_temp directories that may have leaked into the archive
-        for item in os.listdir(loaded_module_dir):
-            if item.endswith("_chacc_temp"):
-                temp_path = os.path.join(loaded_module_dir, item)
-                shutil.rmtree(temp_path, ignore_errors=True)
-                chacc_logger.info(f"Removed stale {item} directory from {loaded_module_dir}")
-        chacc_logger.info(f"Successfully unzipped module '{module_name}' to '{loaded_module_dir}'.")
+        await run_in_threadpool(_extract_module_archive, module_name, target_chacc_path)
 
         invalidate_module_cache(module_name)
         return JSONResponse(
@@ -211,6 +346,8 @@ async def install_chacc_module_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Installation failed: {e}"
         )
+    finally:
+        _remove_quietly(tmp_path)
 
 
 @modules_router.get("/modules")

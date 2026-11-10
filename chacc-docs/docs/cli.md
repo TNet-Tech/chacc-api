@@ -177,12 +177,30 @@ Required environment variable:
 CHACC_DEPLOY_URL=http://localhost:8085
 ```
 
-Optional environment variables (still under development):
+Optional environment variables:
 
 ```bash
-CHACC_DEPLOY_API_KEY=optional-token
-CHACC_DEPLOY_TIMEOUT=30
+CHACC_DEPLOY_API_KEY=optional-token      # bearer token sent with every request
+CHACC_DEPLOY_USERNAME=admin              # non-interactive login (e.g. CI)
+CHACC_DEPLOY_PASSWORD=secret
+CHACC_DEPLOY_AUTH_PATH=/authentication   # base path of the auth module
+CHACC_DEPLOY_TIMEOUT=600                 # seconds to wait for the server response
 ```
+
+**Authentication.** Before uploading, `chacc deploy` checks whether the server
+requires authentication. If it answers `401` (the
+[authentication module](official-modules/authentication.md) is installed), you
+are prompted for a username and password (up to 3 attempts), unless
+`CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` are set. The CLI logs in, uploads
+with the returned token, refreshes it once if it expires mid-upload, and revokes
+the session afterwards. Credentials and tokens are never written to disk.
+
+**Waiting for the server.** Installing a module resolves its dependencies on the
+server, which can take minutes. The CLI waits up to `CHACC_DEPLOY_TIMEOUT`
+seconds (default 600) and shows the elapsed time. Packages are limited to 10 MB
+by default (server setting `MAX_MODULE_UPLOAD_SIZE`).
+
+The command exits with status `1` on failure, so it can be used in scripts.
 
 ## Check your setup (`chacc doctor`)
 

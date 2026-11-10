@@ -9,9 +9,6 @@ import shutil
 import subprocess
 import zipfile
 
-import requests
-from decouple import config
-
 from src.logger import configure_logging
 
 cli_logger = configure_logging()
@@ -471,70 +468,14 @@ def install_module(
         source_mod.cleanup(resolved)
 
 
-def deploy_module(chacc_file_path: str):
+def deploy_module(chacc_file_path: str) -> bool:
     """
     Deploys an .chacc module to a remote ChaCC API instance.
-    Reads deployment configuration from environment variables.
+
+    Reads configuration from environment variables and prompts for a username
+    and password only when the server requires authentication (401).
+    See :mod:`chacc_cli.deploy`.
     """
-    if not os.path.exists(chacc_file_path):
-        cli_logger.error(f"Error: ChaCC file '{chacc_file_path}' not found.")
-        return
+    from chacc_cli.deploy import deploy_module as _deploy
 
-    try:
-        deploy_url = config("CHACC_DEPLOY_URL", default=None)
-        deploy_api_key = config("CHACC_DEPLOY_API_KEY", default=None)
-        deploy_timeout = config("CHACC_DEPLOY_TIMEOUT", default=30, cast=int)
-
-        if not deploy_url:
-            cli_logger.error("Error: CHACC_DEPLOY_URL not set in environment variables.")
-            cli_logger.info(
-                "Please set CHACC_DEPLOY_URL in your .env file (e.g., CHACC_DEPLOY_URL=http://your-api.com)"
-            )
-            return
-
-    except (ValueError, TypeError) as e:
-        cli_logger.error(f"Error reading deployment configuration: {e}")
-        return
-
-    cli_logger.info(f"Deploying '{chacc_file_path}' to {deploy_url}...")
-
-    try:
-        with open(chacc_file_path, "rb") as f:
-            files = {"file": (os.path.basename(chacc_file_path), f, "application/zip")}
-            headers = {}
-            if deploy_api_key:
-                headers["Authorization"] = f"Bearer {deploy_api_key}"
-
-            response = requests.post(
-                f"{deploy_url}/api/modules/", files=files, headers=headers, timeout=deploy_timeout
-            )
-
-            if response.status_code == 200:
-                cli_logger.info("=" * 60)
-                cli_logger.info("SUCCESS: Module deployed successfully!")
-                cli_logger.info(
-                    "SUCCESS: Response: %s", response.json().get("message", "No message")
-                )
-                cli_logger.info(
-                    "SUCCESS: Please restart your remote ChaCC API server to activate the module."
-                )
-                cli_logger.info("=" * 60)
-            else:
-                cli_logger.error(
-                    f"FAILED: Deployment failed with status code {response.status_code}"
-                )
-                try:
-                    error_data = response.json()
-                    cli_logger.error(
-                        f"FAILED: Error details: {error_data.get('detail', 'No details available')}"
-                    )
-                except (ValueError, AttributeError):
-                    cli_logger.error(f"FAILED: Response: {response.text}")
-
-    except requests.exceptions.Timeout:
-        cli_logger.error(f"FAILED: Deployment timed out after {deploy_timeout} seconds")
-    except requests.exceptions.ConnectionError:
-        cli_logger.error(f"FAILED: Could not connect to {deploy_url}")
-        cli_logger.info("NOTE: Check that your ChaCC API server is running and accessible")
-    except Exception as e:  # noqa: BLE001
-        cli_logger.error(f"FAILED: Deployment error: {e}")
+    return _deploy(chacc_file_path)

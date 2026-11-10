@@ -234,3 +234,62 @@ def test_module_workflow_with_authentication(client):
         assert response.status_code == 200
     else:
         pytest.skip("Authentication module not found - skipping integration test")
+
+
+def test_upload_exceeds_size_limit(client, monkeypatch):
+    """Uploads larger than MAX_MODULE_UPLOAD_SIZE are rejected with 413 while streaming."""
+    import io
+
+    from src import modules
+
+    monkeypatch.setattr(modules, "MAX_MODULE_UPLOAD_SIZE", 1024)
+    payload = io.BytesIO(b"x" * 4096)
+    response = client.post(
+        "/api/modules/", files={"file": ("big.chacc", payload, "application/zip")}
+    )
+    assert response.status_code == 413
+    assert "maximum allowed size" in response.json()["detail"]
+    leftovers = [f for f in os.listdir(modules.MODULES_UPLOAD_DIR) if f.endswith(".part")]
+    assert leftovers == []
+
+
+def test_upload_rejected_by_content_length(client):
+    """Requests declaring a Content-Length far above the limit are rejected before parsing."""
+    from src.constants import MAX_MODULE_UPLOAD_SIZE
+
+    response = client.post(
+        "/api/modules/",
+        content=b"",
+        headers={
+            "Content-Type": "multipart/form-data; boundary=x",
+            "Content-Length": str(MAX_MODULE_UPLOAD_SIZE * 2),
+        },
+    )
+    assert response.status_code == 413
+
+
+def test_upload_not_a_zip(client):
+    """A .chacc file that is not a zip archive returns 400, not 500."""
+    response = client.post(
+        "/api/modules/", files={"file": ("bad.chacc", b"not a zip", "application/zip")}
+    )
+    assert response.status_code == 400
+    assert "not a valid .chacc" in response.json()["detail"]
+
+
+def test_upload_zip_bomb_guard(client, monkeypatch):
+    """Archives whose uncompressed size exceeds the limit are rejected."""
+    import io
+
+    from src import modules
+
+    monkeypatch.setattr(modules, "MAX_MODULE_UNCOMPRESSED_SIZE", 1024)
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("module_meta.json", json.dumps({"name": "bomb"}))
+        zf.writestr("filler.txt", "0" * 10_000)
+    zip_buffer.seek(0)
+    response = client.post(
+        "/api/modules/", files={"file": ("bomb.chacc", zip_buffer, "application/zip")}
+    )
+    assert response.status_code == 413

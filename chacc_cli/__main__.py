@@ -26,8 +26,10 @@ def main():
         description="ChaCC API CLI for module scaffolding, packaging, and deployment.\n\n"
         "Deployment requires environment variables:\n"
         "  CHACC_DEPLOY_URL=http://your-api-server.com\n"
-        "  CHACC_DEPLOY_API_KEY=optional-api-key\n"
-        "  CHACC_DEPLOY_TIMEOUT=30",
+        "  CHACC_DEPLOY_API_KEY=optional-bearer-token\n"
+        "  CHACC_DEPLOY_USERNAME / CHACC_DEPLOY_PASSWORD=optional, for non-interactive login\n"
+        "  CHACC_DEPLOY_AUTH_PATH=/authentication\n"
+        "  CHACC_DEPLOY_TIMEOUT=600 (seconds to wait for the server response)",
     )
     parser.add_argument(
         "--version", action="store_true", help="Show the installed ChaCC API version and exit."
@@ -81,7 +83,9 @@ def main():
     build_install_parser(subparsers)
 
     deploy_parser = subparsers.add_parser(
-        "deploy", help="Deploy an .chacc module to a remote ChaCC API instance."
+        "deploy",
+        help="Deploy an .chacc module to a remote ChaCC API instance.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     deploy_parser.add_argument(
         "chacc_file",
@@ -89,10 +93,14 @@ def main():
         help="The path to the .chacc file to deploy (e.g., 'my_module.chacc').",
     )
     deploy_parser.epilog = (
-        "Environment variables required:\n"
+        "If the server requires authentication (401), you are prompted for a\n"
+        "username and password unless credentials are provided via env.\n\n"
+        "Environment variables:\n"
         "  CHACC_DEPLOY_URL=http://your-api-server.com\n"
-        "  CHACC_DEPLOY_API_KEY=optional-api-key\n"
-        "  CHACC_DEPLOY_TIMEOUT=30"
+        "  CHACC_DEPLOY_API_KEY=optional-bearer-token\n"
+        "  CHACC_DEPLOY_USERNAME / CHACC_DEPLOY_PASSWORD=optional, for non-interactive login\n"
+        "  CHACC_DEPLOY_AUTH_PATH=/authentication\n"
+        "  CHACC_DEPLOY_TIMEOUT=600 (seconds to wait for the server response)"
     )
 
     server_cmd_parser = subparsers.add_parser("server", help="Run the ChaCC development server.")
@@ -204,7 +212,7 @@ def main():
     elif args.command == "build":
         build_module_chacc(args.module_source_dir, args.output_filename)
     elif args.command == "deploy":
-        deploy_module(args.chacc_file)
+        sys.exit(0 if deploy_module(args.chacc_file) else 1)
 
     elif args.command == "run":
         if args.run_subcommand == "server":

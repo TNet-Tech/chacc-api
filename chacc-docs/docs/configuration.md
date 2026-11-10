@@ -86,7 +86,10 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | --- | --- | --- |
 | `CHACC_DEPLOY_URL` | `http://localhost:8085` | Remote ChaCC API base URL for `chacc deploy`. |
 | `CHACC_DEPLOY_API_KEY` | empty | Optional bearer token for deployment. |
-| `CHACC_DEPLOY_TIMEOUT` | `30` | HTTP timeout in seconds. |
+| `CHACC_DEPLOY_USERNAME` | empty | Username for non-interactive login when the server returns 401. |
+| `CHACC_DEPLOY_PASSWORD` | empty | Password for non-interactive login when the server returns 401. |
+| `CHACC_DEPLOY_AUTH_PATH` | `/authentication` | Base path of the authentication module on the server. |
+| `CHACC_DEPLOY_TIMEOUT` | `600` | Seconds to wait for the server response after upload. |
 
 ## Module-specific configuration
 

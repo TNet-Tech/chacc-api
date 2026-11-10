@@ -12,12 +12,9 @@
         <div class="header">
             <div class="logo-wrapper">
                 <img src="/static/img/chacc-icon.ico" alt="ChaCC Logo" class="logo">
-                <span class="status-badge">
-                    <!-- small circle -->
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
-                        <circle cx="4" cy="4" r="3" />
-                    </svg>
-                    <span class="status-text">Running</span>
+                <span class="status" data-state="loading" aria-live="polite">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span class="status-text">Checking…</span>
                 </span>
             </div>
             <h1><span>ChaCC</span> API</h1>

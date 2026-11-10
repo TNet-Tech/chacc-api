@@ -15,6 +15,14 @@ MODULES_LOADED_DIR = os.path.join(
 MODULES_UPLOAD_DIR = os.path.join(
     BASE_DIR, config("MODULES_UPLOAD_DIR", default=".modules_upload", cast=str)
 )
+# Maximum size (bytes) of an uploaded .chacc module package. Default: 10 MB.
+MAX_MODULE_UPLOAD_SIZE = config("MAX_MODULE_UPLOAD_SIZE", default=10 * 1024 * 1024, cast=int)
+# Maximum total uncompressed size (bytes) of a module archive (zip-bomb guard). Default: 100 MB.
+MAX_MODULE_UNCOMPRESSED_SIZE = config(
+    "MAX_MODULE_UNCOMPRESSED_SIZE", default=100 * 1024 * 1024, cast=int
+)
+# Chunk size (bytes) used when streaming uploads to disk.
+MODULE_UPLOAD_CHUNK_SIZE = 1024 * 1024
 PLUGINS_DIR = os.path.join(BASE_DIR, config("PLUGINS_DIR", default="plugins", cast=str))
 DEPENDENCY_CACHE_DIR = os.path.join(
     BASE_DIR, config("DEPENDENCY_CACHE_DIR", default=".chacc_cache", cast=str)

@@ -29,7 +29,7 @@ from src.env_validator import ValidationError, validate_environment
 from src.health import get_version, health_router
 from src.logger import configure_logging, get_default_log_level
 from src.migration.runner import run_migration
-from src.modules import modules_router
+from src.modules import ModuleUploadSizeLimitMiddleware, modules_router
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.redis_service import RedisService
 
@@ -146,6 +146,8 @@ app.add_middleware(
     allow_methods=parse_csv(CORS_ALLOW_METHODS),
     allow_headers=parse_csv(CORS_ALLOW_HEADERS),
 )
+
+app.add_middleware(ModuleUploadSizeLimitMiddleware, path_prefix=API_PREFIX)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
