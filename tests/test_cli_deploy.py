@@ -1,8 +1,11 @@
-"""Tests for ``chacc deploy`` authentication and upload flow."""
+"""Tests for ``chacc deploy`` prefix discovery, authentication and upload flow."""
 
 import pytest
 
 from chacc_cli.deploy import Deployer, DeployError, DeploySettings
+
+BASE = "http://server"
+DISCOVERY = ("GET", "/.well-known/chacc")
 
 
 class FakeResponse:
@@ -17,20 +20,29 @@ class FakeResponse:
 
 
 class FakeSession:
-    """Routes (method, path) to a queue of responses and records calls."""
+    """
+    Routes (method, path) to a queue of responses and records calls.
+
+    The discovery endpoint answers 404 unless a route is given, mimicking an
+    older server; the client must then fall back to '/api'.
+    """
 
     def __init__(self, routes):
         self.routes = {k: list(v) for k, v in routes.items()}
+        self.routes.setdefault(DISCOVERY, [FakeResponse(404)])
         self.calls = []
 
     def request(self, method, url, headers=None, timeout=None, **kwargs):
-        path = url.replace("http://api", "")
+        path = url.removeprefix(BASE)
         self.calls.append((method, path, dict(headers or {}), kwargs))
         queue = self.routes[(method, path)]
         return queue.pop(0) if len(queue) > 1 else queue[0]
 
     def post(self, url, **kwargs):
         return self.request("POST", url, **kwargs)
+
+    def calls_to(self, method, path):
+        return [c for c in self.calls if c[:2] == (method, path)]
 
 
 @pytest.fixture
@@ -44,7 +56,7 @@ def make(routes, *, interactive=True, answers=("alice",), typed_password="secret
     session = FakeSession(routes)
     prompts = list(answers)
     deployer = Deployer(
-        DeploySettings(url="http://api", **settings),
+        DeploySettings(url=BASE, **settings),
         session=session,
         prompt=lambda _msg: prompts.pop(0),
         prompt_password=lambda _msg: typed_password,
@@ -57,31 +69,97 @@ OK_UPLOAD = FakeResponse(200, {"message": "Module 'demo' installed/updated succe
 LOGIN_OK = FakeResponse(200, {"access_token": "tok", "refresh_token": "ref"})
 
 
+# ---------- Prefix handling ----------
+
+
+def test_falls_back_to_api_prefix_when_discovery_missing(chacc_file):
+    deployer, session = make(
+        {("GET", "/api/modules/"): [FakeResponse(200)], ("POST", "/api/modules/"): [OK_UPLOAD]}
+    )
+    deployer.deploy(chacc_file)
+    assert session.calls_to("POST", "/api/modules/")
+
+
+def test_uses_discovered_custom_prefix_for_modules_and_auth(chacc_file):
+    deployer, session = make(
+        {
+            DISCOVERY: [FakeResponse(200, {"api_prefix": "/backbone/v1/"})],
+            ("GET", "/backbone/v1/modules/"): [FakeResponse(401)],
+            ("POST", "/backbone/v1/authentication/login"): [LOGIN_OK],
+            ("POST", "/backbone/v1/modules/"): [OK_UPLOAD],
+            ("POST", "/backbone/v1/authentication/revoke"): [FakeResponse(200)],
+        }
+    )
+    deployer.deploy(chacc_file)
+    assert session.calls_to("POST", "/backbone/v1/modules/")
+    assert len(session.calls_to(*DISCOVERY)) == 1
+
+
+def test_discovered_empty_prefix(chacc_file):
+    deployer, session = make(
+        {
+            DISCOVERY: [FakeResponse(200, {"api_prefix": ""})],
+            ("GET", "/modules/"): [FakeResponse(200)],
+            ("POST", "/modules/"): [OK_UPLOAD],
+        }
+    )
+    deployer.deploy(chacc_file)
+    assert session.calls_to("POST", "/modules/")
+
+
+def test_env_prefix_overrides_discovery(chacc_file):
+    deployer, session = make(
+        {
+            ("GET", "/custom/modules/"): [FakeResponse(200)],
+            ("POST", "/custom/modules/"): [OK_UPLOAD],
+        },
+        api_prefix="/custom",
+    )
+    deployer.deploy(chacc_file)
+    assert not session.calls_to(*DISCOVERY)
+
+
+def test_settings_normalize_env_prefix(monkeypatch):
+    monkeypatch.setenv("CHACC_DEPLOY_URL", "http://x/")
+    monkeypatch.setenv("CHACC_DEPLOY_API_PREFIX", "gateway/api/")
+    settings = DeploySettings.from_env()
+    assert settings.url == "http://x"
+    assert settings.api_prefix == "/gateway/api"
+
+    monkeypatch.setenv("CHACC_DEPLOY_API_PREFIX", "")
+    assert DeploySettings.from_env().api_prefix == ""
+
+    monkeypatch.delenv("CHACC_DEPLOY_API_PREFIX")
+    assert DeploySettings.from_env().api_prefix is None
+
+
+# ---------- Authentication ----------
+
+
 def test_no_auth_server_does_not_prompt(chacc_file):
     deployer, session = make(
         {("GET", "/api/modules/"): [FakeResponse(200)], ("POST", "/api/modules/"): [OK_UPLOAD]},
         answers=(),
     )
     assert "installed" in deployer.deploy(chacc_file)
-    assert [c[:2] for c in session.calls] == [("GET", "/api/modules/"), ("POST", "/api/modules/")]
-    assert "Authorization" not in session.calls[1][2]
+    assert "Authorization" not in session.calls_to("POST", "/api/modules/")[0][2]
 
 
 def test_prompts_on_401_then_uploads_with_token_and_revokes(chacc_file):
     deployer, session = make(
         {
             ("GET", "/api/modules/"): [FakeResponse(401)],
-            ("POST", "/authentication/login"): [LOGIN_OK],
+            ("POST", "/api/authentication/login"): [LOGIN_OK],
             ("POST", "/api/modules/"): [OK_UPLOAD],
-            ("POST", "/authentication/revoke"): [FakeResponse(200)],
+            ("POST", "/api/authentication/revoke"): [FakeResponse(200)],
         }
     )
     deployer.deploy(chacc_file)
-    login = session.calls[1]
+    login = session.calls_to("POST", "/api/authentication/login")[0]
     assert login[3]["json"] == {"username": "alice", "password": "secret"}
-    upload = session.calls[2]
+    upload = session.calls_to("POST", "/api/modules/")[0]
     assert upload[2]["Authorization"] == "Bearer tok"
-    assert session.calls[-1][1] == "/authentication/revoke"
+    assert session.calls[-1][1] == "/api/authentication/revoke"
     assert session.calls[-1][3]["json"] == {"refresh_token": "ref"}
 
 
@@ -89,13 +167,13 @@ def test_wrong_password_retries_then_gives_up(chacc_file):
     deployer, session = make(
         {
             ("GET", "/api/modules/"): [FakeResponse(401)],
-            ("POST", "/authentication/login"): [FakeResponse(400, {"detail": "Incorrect"})],
+            ("POST", "/api/authentication/login"): [FakeResponse(400, {"detail": "Incorrect"})],
         },
         answers=("a", "b", "c"),
     )
     with pytest.raises(DeployError, match="Authentication failed"):
         deployer.deploy(chacc_file)
-    assert sum(1 for c in session.calls if c[1] == "/authentication/login") == 3
+    assert len(session.calls_to("POST", "/api/authentication/login")) == 3
 
 
 def test_non_interactive_without_credentials_fails_clearly(chacc_file):
@@ -108,32 +186,33 @@ def test_non_interactive_uses_env_credentials(chacc_file):
     deployer, session = make(
         {
             ("GET", "/api/modules/"): [FakeResponse(401)],
-            ("POST", "/authentication/login"): [LOGIN_OK],
+            ("POST", "/api/authentication/login"): [LOGIN_OK],
             ("POST", "/api/modules/"): [OK_UPLOAD],
-            ("POST", "/authentication/revoke"): [FakeResponse(200)],
+            ("POST", "/api/authentication/revoke"): [FakeResponse(200)],
         },
         interactive=False,
         username="ci",
         password="pw",
     )
     deployer.deploy(chacc_file)
-    assert session.calls[1][3]["json"] == {"username": "ci", "password": "pw"}
+    login = session.calls_to("POST", "/api/authentication/login")[0]
+    assert login[3]["json"] == {"username": "ci", "password": "pw"}
 
 
 def test_expired_token_on_upload_is_refreshed_once(chacc_file):
     deployer, session = make(
         {
             ("GET", "/api/modules/"): [FakeResponse(401)],
-            ("POST", "/authentication/login"): [LOGIN_OK],
+            ("POST", "/api/authentication/login"): [LOGIN_OK],
             ("POST", "/api/modules/"): [FakeResponse(401), OK_UPLOAD],
-            ("POST", "/authentication/refresh"): [
+            ("POST", "/api/authentication/refresh"): [
                 FakeResponse(200, {"access_token": "tok2", "refresh_token": "ref2"})
             ],
-            ("POST", "/authentication/revoke"): [FakeResponse(200)],
+            ("POST", "/api/authentication/revoke"): [FakeResponse(200)],
         }
     )
     deployer.deploy(chacc_file)
-    uploads = [c for c in session.calls if c[:2] == ("POST", "/api/modules/")]
+    uploads = session.calls_to("POST", "/api/modules/")
     assert uploads[-1][2]["Authorization"] == "Bearer tok2"
     assert session.calls[-1][3]["json"] == {"refresh_token": "ref2"}
 
@@ -144,7 +223,8 @@ def test_api_key_is_sent_and_not_revoked(chacc_file):
         api_key="KEY",
     )
     deployer.deploy(chacc_file)
-    assert all(c[2].get("Authorization") == "Bearer KEY" for c in session.calls)
+    api_calls = [c for c in session.calls if c[1].startswith("/api/")]
+    assert all(c[2].get("Authorization") == "Bearer KEY" for c in api_calls)
     assert not any("revoke" in c[1] for c in session.calls)
 
 

@@ -4,7 +4,7 @@ from enum import Enum
 
 import colorlog
 
-from src.constants import LOG_FORMAT_DEBUG, LOG_FORMAT_DEFAULT, LOGGER_NAME
+from src.constants import API_PREFIX, LOG_FORMAT_DEBUG, LOG_FORMAT_DEFAULT, LOGGER_NAME
 
 
 class LogLevels(str, Enum):
@@ -26,7 +26,7 @@ class HealthCheckFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
-        return "/api/health" not in message
+        return f"{API_PREFIX}/health" not in message
 
 
 def get_default_log_level() -> str:

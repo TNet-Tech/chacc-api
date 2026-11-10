@@ -1,14 +1,16 @@
 import os
 from builtins import Exception
+from functools import lru_cache
+from html import escape
 from importlib.resources import files
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
-from starlette.staticfiles import FileResponse
 
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
@@ -175,10 +177,25 @@ async def read_root():
     Root endpoint of the ChaCC API backbone.
     Returns a welcome page with links to interactive API documentation.
     """
-    return FileResponse(
-        TEMPLATES_DIR / "index.html",
+    return HTMLResponse(
+        _render_index(),
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
     )
+
+
+@lru_cache(maxsize=1)
+def _render_index() -> str:
+    html = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+    return html.replace("{{API_PREFIX}}", escape(API_PREFIX, quote=True))
+
+
+@app.get("/.well-known/chacc", include_in_schema=False)
+async def chacc_discovery():
+    """
+    Unprefixed discovery endpoint so clients (e.g. ``chacc deploy``) can learn
+    the API prefix this server uses without guessing.
+    """
+    return {"api_prefix": API_PREFIX, "version": get_version()}
 
 
 @app.get("/docs", include_in_schema=False)

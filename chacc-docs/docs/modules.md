@@ -34,7 +34,7 @@ my_module/
 | `author` | No | Author or organization. |
 | `description` | No | Module description. |
 | `entry_point` | Yes | Python path to setup function, for example `my_module_src.main:setup_plugin`. |
-| `base_path_prefix` | No | Default API prefix, for example `/billing`. |
+| `base_path_prefix` | No | Module path, for example `/billing`. Always mounted under the server's `API_PREFIX` (default `/api`), so `/billing` is served at `/api/billing`. |
 | `tags` | No | FastAPI documentation tags. |
 | `dependencies_file` | No | Requirements file name, usually `requirements.txt`. |
 | `required_chacc_version` | No | Minimum ChaCC version. |

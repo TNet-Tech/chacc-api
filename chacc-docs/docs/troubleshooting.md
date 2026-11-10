@@ -94,7 +94,7 @@ REDIS_DB=0
 | `chacc deploy` cannot connect | Confirm `CHACC_DEPLOY_URL` points to a running API. |
 | Deployment times out | Increase `CHACC_DEPLOY_TIMEOUT`. |
 | Deployment returns 401 | Enter valid credentials when prompted, or set `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` (CI) or `CHACC_DEPLOY_API_KEY`. |
-| Deployment says "Login endpoint not found" | Set `CHACC_DEPLOY_AUTH_PATH` to the auth module's `base_path_prefix`. |
+| Deployment says "Login endpoint not found" | Set `CHACC_DEPLOY_AUTH_PATH` to the auth module's `base_path_prefix` (without the API prefix). |
 | Deployment returns 413 | The package exceeds `MAX_MODULE_UPLOAD_SIZE` (10 MB by default) on the server. |
 | Module installed but not active | Restart the remote ChaCC API server. |
 | Docker health check fails | Confirm container and host port mapping use `8085` and health endpoint is `/api/health`. |

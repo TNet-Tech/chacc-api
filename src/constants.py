@@ -4,7 +4,15 @@ from decouple import config
 
 BASE_DIR = os.getcwd()
 
-API_PREFIX = "/api"
+
+def _normalize_prefix(value: str | None) -> str:
+    """Return '' or '/segment[/segment]' (leading slash, no trailing slash)."""
+    value = (value or "").strip().strip("/")
+    return f"/{value}" if value else ""
+
+
+# Prefix under which core and module routes are mounted. Empty string = no prefix.
+API_PREFIX = _normalize_prefix(config("API_PREFIX", default="/api", cast=str))
 
 MODULES_INSTALLED_DIR = os.path.join(
     BASE_DIR, config("MODULES_INSTALLED_DIR", default=".modules_installed", cast=str)

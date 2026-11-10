@@ -183,7 +183,8 @@ Optional environment variables:
 CHACC_DEPLOY_API_KEY=optional-token      # bearer token sent with every request
 CHACC_DEPLOY_USERNAME=admin              # non-interactive login (e.g. CI)
 CHACC_DEPLOY_PASSWORD=secret
-CHACC_DEPLOY_AUTH_PATH=/authentication   # base path of the auth module
+CHACC_DEPLOY_AUTH_PATH=/authentication   # auth module path (API prefix added automatically)
+CHACC_DEPLOY_API_PREFIX=/api             # override; normally discovered from the server
 CHACC_DEPLOY_TIMEOUT=600                 # seconds to wait for the server response
 ```
 
@@ -194,6 +195,12 @@ are prompted for a username and password (up to 3 attempts), unless
 `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` are set. The CLI logs in, uploads
 with the returned token, refreshes it once if it expires mid-upload, and revokes
 the session afterwards. Credentials and tokens are never written to disk.
+
+**API prefix.** All core and module routes live under the server's
+`API_PREFIX` (default `/api`). The CLI reads it from the unprefixed
+`GET /.well-known/chacc` endpoint, so a custom prefix works without extra
+configuration. Older servers without that endpoint fall back to `/api`; set
+`CHACC_DEPLOY_API_PREFIX` to override.
 
 **Waiting for the server.** Installing a module resolves its dependencies on the
 server, which can take minutes. The CLI waits up to `CHACC_DEPLOY_TIMEOUT`

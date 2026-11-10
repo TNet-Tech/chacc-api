@@ -139,8 +139,8 @@ async def load_single_module(
 
     if plugin_router and isinstance(plugin_router, APIRouter):
         base_prefix = base_path_prefix or module_metadata.get("base_path_prefix", f"/{module_name}")
-        if not base_prefix.startswith(API_PREFIX):
-            base_prefix = f"{API_PREFIX}{base_prefix}"
+        # Every module is mounted under the API prefix, without exception.
+        base_prefix = f"{API_PREFIX}/{base_prefix.strip('/')}"
         module_tags = tags or module_metadata.get(
             "tags", [module_metadata.get("display_name", module_name)]
         )

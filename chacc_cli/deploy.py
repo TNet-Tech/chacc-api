@@ -33,12 +33,20 @@ from src.logger import configure_logging
 
 cli_logger = configure_logging(log_level="INFO")
 
-MODULES_ENDPOINT = "/api/modules/"
+MODULES_PATH = "/modules/"
+DISCOVERY_PATH = "/.well-known/chacc"
+DEFAULT_API_PREFIX = "/api"
 DEFAULT_AUTH_PATH = "/authentication"
 DEFAULT_TIMEOUT = 600
 CONNECT_TIMEOUT = 10
 PROBE_TIMEOUT = 30
 MAX_LOGIN_ATTEMPTS = 3
+
+
+def normalize_prefix(value: str | None) -> str:
+    """Return '' or '/segment[/segment]' (leading slash, no trailing slash)."""
+    value = (value or "").strip().strip("/")
+    return f"/{value}" if value else ""
 
 
 class DeployError(Exception):
@@ -51,6 +59,8 @@ class DeploySettings:
     api_key: str | None = None
     timeout: int = DEFAULT_TIMEOUT
     auth_path: str = DEFAULT_AUTH_PATH
+    # None = discover from the server (GET /.well-known/chacc), falling back to /api.
+    api_prefix: str | None = None
     username: str | None = None
     password: str | None = None
 
@@ -67,11 +77,14 @@ class DeploySettings:
                 "(e.g. CHACC_DEPLOY_URL=http://your-api.com)."
             )
         auth_path = config("CHACC_DEPLOY_AUTH_PATH", default=DEFAULT_AUTH_PATH) or ""
+        # Set-but-empty CHACC_DEPLOY_API_PREFIX means "no prefix"; unset means discover.
+        api_prefix = config("CHACC_DEPLOY_API_PREFIX", default=None)
         return cls(
             url=url.rstrip("/"),
             api_key=config("CHACC_DEPLOY_API_KEY", default=None) or None,
             timeout=timeout,
             auth_path="/" + auth_path.strip("/"),
+            api_prefix=None if api_prefix is None else normalize_prefix(api_prefix),
             username=config("CHACC_DEPLOY_USERNAME", default=None) or None,
             password=config("CHACC_DEPLOY_PASSWORD", default=None) or None,
         )
@@ -136,8 +149,8 @@ class Deployer:
         self.prompt_password = prompt_password
         self.interactive = sys.stdin.isatty() if interactive is None else interactive
         self.auth = _AuthState(access_token=settings.api_key)
+        self.api_prefix: str | None = None
 
-    
     def _headers(self) -> dict[str, str]:
         if self.auth.access_token:
             return {"Authorization": f"Bearer {self.auth.access_token}"}
@@ -170,7 +183,6 @@ class Deployer:
             pass
         return response.text.strip()[:500] or response.reason or "no details"
 
-    
     def _credentials(self, attempt: int) -> tuple[str, str]:
         s = self.settings
         if s.username and s.password and attempt == 1:
@@ -195,7 +207,7 @@ class Deployer:
         if self.settings.api_key and self.auth.access_token == self.settings.api_key:
             cli_logger.warning("CHACC_DEPLOY_API_KEY was rejected by the server (401).")
         self.auth.access_token = None
-        login_path = f"{self.settings.auth_path}/login"
+        login_path = f"{self.auth_base}/login"
 
         for attempt in range(1, MAX_LOGIN_ATTEMPTS + 1):
             username, password = self._credentials(attempt)
@@ -237,7 +249,7 @@ class Deployer:
         self.auth.access_token = None
         response = self._request(
             "POST",
-            f"{self.settings.auth_path}/refresh",
+            f"{self.auth_base}/refresh",
             timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT),
             json={"refresh_token": self.auth.refresh_token},
         )
@@ -254,17 +266,51 @@ class Deployer:
             return
         try:
             self.session.post(
-                f"{self.settings.url}{self.settings.auth_path}/revoke",
+                f"{self.settings.url}{self.auth_base}/revoke",
                 json={"refresh_token": self.auth.refresh_token},
                 timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT),
             )
         except requests.exceptions.RequestException:
             pass
 
-    
+    # ---------- Routing ----------
+
+    def resolve_prefix(self) -> str:
+        """
+        Determine the server's API prefix.
+
+        Order: CHACC_DEPLOY_API_PREFIX (if set) → GET /.well-known/chacc → '/api'.
+        """
+        if self.api_prefix is not None:
+            return self.api_prefix
+        if self.settings.api_prefix is not None:
+            self.api_prefix = self.settings.api_prefix
+            return self.api_prefix
+
+        self.api_prefix = DEFAULT_API_PREFIX
+        response = self._request("GET", DISCOVERY_PATH, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT))
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if isinstance(data, dict) and isinstance(data.get("api_prefix"), str):
+                    self.api_prefix = normalize_prefix(data["api_prefix"])
+            except ValueError:
+                pass
+        cli_logger.info(f"Using API prefix '{self.api_prefix or '/'}'.")
+        return self.api_prefix
+
+    @property
+    def modules_path(self) -> str:
+        return f"{self.resolve_prefix()}{MODULES_PATH}"
+
+    @property
+    def auth_base(self) -> str:
+        """Modules (incl. authentication) are always mounted under the API prefix."""
+        return f"{self.resolve_prefix()}{self.settings.auth_path}"
+
     def ensure_authenticated(self) -> None:
         """Probe the modules endpoint and log in only if the server answers 401."""
-        response = self._request("GET", MODULES_ENDPOINT, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT))
+        response = self._request("GET", self.modules_path, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT))
         if response.status_code == 401:
             self.login()
 
@@ -273,7 +319,7 @@ class Deployer:
         with open(chacc_file_path, "rb") as f, _Waiter("Uploading and waiting for server response"):
             return self._request(
                 "POST",
-                MODULES_ENDPOINT,
+                self.modules_path,
                 timeout=(CONNECT_TIMEOUT, self.settings.timeout),
                 files={"file": (name, f, "application/zip")},
             )
