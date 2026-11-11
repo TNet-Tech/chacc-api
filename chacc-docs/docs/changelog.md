@@ -3,6 +3,26 @@
 
 ## Unreleased
 
+## Added
+
+- **Automatic restarts** – `POST /api/system/restart` restarts the server gracefully, and `chacc run server` brings it back on its own. `chacc deploy --restart` deploys a module and makes it live in one step. See [Automatic Restarts](server-restarts.md).
+- **Login prompt in `chacc deploy`** – When the server answers `401`, the CLI asks for a username and password, uploads with the token and revokes the session afterwards. `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` cover CI.
+- **Configurable API prefix** – `API_PREFIX` (default `/api`). Every core and module route is mounted under it. Clients discover it at `GET /.well-known/chacc`.
+- **Large module uploads** – Uploads stream to disk in chunks. Packages up to 10 MB are accepted (`MAX_MODULE_UPLOAD_SIZE`), with a guard against zip bombs (`MAX_MODULE_UNCOMPRESSED_SIZE`).
+- **Live landing page** – The status next to the logo keeps listening and shows when the server restarts.
+
+## Changed
+
+- `chacc deploy` waits up to 600 s for the server response by default (`CHACC_DEPLOY_TIMEOUT`) and exits with status `1` on failure.
+- `chacc run server` now exits with the server's exit code when it crashes.
+- Landing page uses solid colours instead of gradients.
+
+## Fixed
+
+- `docker stop` now shuts the server down gracefully.
+- Docker health checks follow `API_PREFIX`.
+- A `.chacc` file that is not a valid zip now returns `400` instead of `500`.
+
 ## 1.0.0-beta5.3
 
 > Patch release with bug fixes and improvements. For initial module scaffold failures, patch to this version.

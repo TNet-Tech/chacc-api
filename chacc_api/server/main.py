@@ -34,6 +34,7 @@ from src.migration.runner import run_migration
 from src.modules import ModuleUploadSizeLimitMiddleware, modules_router
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.redis_service import RedisService
+from src.system import server_info, system_router
 
 
 def copy_sample_env():
@@ -195,7 +196,7 @@ async def chacc_discovery():
     Unprefixed discovery endpoint so clients (e.g. ``chacc deploy``) can learn
     the API prefix this server uses without guessing.
     """
-    return {"api_prefix": API_PREFIX, "version": get_version()}
+    return {"api_prefix": API_PREFIX, "version": get_version(), **server_info()}
 
 
 @app.get("/docs", include_in_schema=False)
@@ -210,3 +211,4 @@ async def custom_redoc_html(request: Request):
 
 app.include_router(health_router, prefix=API_PREFIX)
 app.include_router(modules_router, prefix=API_PREFIX)
+app.include_router(system_router, prefix=API_PREFIX)

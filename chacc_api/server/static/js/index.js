@@ -5,34 +5,107 @@ const API_PREFIX = (function () {
     return value.includes('{{') ? '/api' : value.replace(/\/+$/, '');
 })();
 
-(async function () {
+/*
+ * Keep listening to the server.
+ *
+ * Polls /.well-known/chacc (unprefixed, cheap). While the server is up we
+ * check every few seconds; when it goes away (e.g. a restart) we poll fast
+ * and show "Restarting…". A changed boot_id means a new process is serving.
+ */
+(function () {
     const status = document.querySelector('.status');
     const label = document.querySelector('.status-text');
+    const versionEl = document.querySelector('.version-text');
+
+    const UP_INTERVAL = 5000;
+    const DOWN_INTERVAL = 1000;
+    const TIMEOUT = 4000;
+
+    let bootId = null;
+    let mode = null;
+    let wasDown = false;
+    let timer = null;
 
     function setState(state, text) {
         if (status) status.dataset.state = state;
         if (label) label.textContent = text;
     }
 
-    try {
-        const res = await fetch(API_PREFIX + '/health/live', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Health check failed');
-        const data = await res.json();
-        const raw = data.mode || 'development';
-        setState('running', raw.charAt(0).toUpperCase() + raw.slice(1));
-    } catch (e) {
-        setState('error', 'Unknown');
+    function capitalize(value) {
+        return value.charAt(0).toUpperCase() + value.slice(1);
     }
-})();
 
-(async function () {
-    const el = document.querySelector('.version-text');
-    try {
-        const res = await fetch(API_PREFIX + '/version');
-        if (!res.ok) throw new Error('Version fetch failed');
-        const data = await res.json();
-        if (el) el.textContent = 'v' + data.version;
-    } catch (e) {
-        if (el) el.textContent = 'unknown';
+    async function fetchJson(url) {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), TIMEOUT);
+        try {
+            const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
+            if (!res.ok) throw new Error(url + ' -> ' + res.status);
+            return await res.json();
+        } finally {
+            clearTimeout(t);
+        }
     }
+
+    async function refreshMode() {
+        try {
+            const data = await fetchJson(API_PREFIX + '/health/live');
+            mode = capitalize(data.mode || 'development');
+        } catch (e) {
+            mode = mode || 'Running';
+        }
+    }
+
+    async function refreshVersion() {
+        try {
+            const data = await fetchJson(API_PREFIX + '/version');
+            if (versionEl) versionEl.textContent = 'v' + data.version;
+        } catch (e) {
+            if (versionEl && versionEl.textContent.includes('Loading')) versionEl.textContent = 'unknown';
+        }
+    }
+
+    function schedule(ms) {
+        clearTimeout(timer);
+        timer = setTimeout(poll, ms);
+    }
+
+    async function poll() {
+        try {
+            const info = await fetchJson('/.well-known/chacc');
+            const restarted = bootId !== null && info.boot_id !== bootId;
+
+            if (bootId === null || restarted) {
+                await Promise.all([refreshMode(), refreshVersion()]);
+            }
+            bootId = info.boot_id;
+
+            if (info.restart_pending) {
+                setState('loading', 'Restarting…');
+                schedule(DOWN_INTERVAL);
+                return;
+            }
+            if (restarted || wasDown) {
+                setState('running', restarted ? 'Restarted' : 'Reconnected');
+                setTimeout(() => {
+                    if (status && status.dataset.state === 'running') setState('running', mode);
+                }, 3000);
+            } else {
+                setState('running', mode);
+            }
+            wasDown = false;
+            schedule(UP_INTERVAL);
+        } catch (e) {
+            // Failing before we ever connected means the server is not reachable at all.
+            setState(bootId === null ? 'error' : 'loading', bootId === null ? 'Unknown' : 'Restarting…');
+            wasDown = true;
+            schedule(DOWN_INTERVAL);
+        }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) schedule(0);
+    });
+
+    poll();
 })();

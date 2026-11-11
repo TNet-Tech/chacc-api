@@ -237,3 +237,61 @@ def test_server_error_surfaces_detail(chacc_file):
     )
     with pytest.raises(DeployError, match="too big"):
         deployer.deploy(chacc_file)
+
+
+# ---------- Restart ----------
+
+
+@pytest.fixture
+def no_sleep(monkeypatch):
+    import chacc_cli.deploy as deploy_mod
+
+    monkeypatch.setattr(deploy_mod.time, "sleep", lambda _s: None)
+
+
+def test_deploy_with_restart_waits_for_new_boot_id(chacc_file, no_sleep):
+    deployer, session = make(
+        {
+            DISCOVERY: [
+                FakeResponse(200, {"api_prefix": "/api", "boot_id": "old"}),  # prefix
+                FakeResponse(200, {"api_prefix": "/api", "boot_id": "old"}),  # before restart
+                FakeResponse(200, {"api_prefix": "/api", "boot_id": "old"}),  # still shutting down
+                FakeResponse(200, {"api_prefix": "/api", "boot_id": "new"}),
+            ],
+            ("GET", "/api/modules/"): [FakeResponse(200)],
+            ("POST", "/api/modules/"): [OK_UPLOAD],
+            ("POST", "/api/system/restart"): [FakeResponse(202, {"boot_id": "old"})],
+        }
+    )
+    message = deployer.deploy(chacc_file, restart=True)
+    assert "Server restarted" in message
+    assert session.calls_to("POST", "/api/system/restart")
+
+
+def test_restart_unsupported_is_reported_not_fatal(chacc_file, no_sleep):
+    deployer, _ = make(
+        {
+            ("GET", "/api/modules/"): [FakeResponse(200)],
+            ("POST", "/api/modules/"): [OK_UPLOAD],
+            ("POST", "/api/system/restart"): [
+                FakeResponse(409, {"detail": "not running under the ChaCC supervisor"})
+            ],
+        }
+    )
+    message = deployer.deploy(chacc_file, restart=True)
+    assert "installed" in message
+    assert "supervisor" in message
+
+
+def test_restart_timeout_raises(chacc_file, no_sleep, monkeypatch):
+    deployer, _ = make(
+        {
+            DISCOVERY: [FakeResponse(200, {"api_prefix": "/api", "boot_id": "old"})],
+            ("GET", "/api/modules/"): [FakeResponse(200)],
+            ("POST", "/api/modules/"): [OK_UPLOAD],
+            ("POST", "/api/system/restart"): [FakeResponse(202, {"boot_id": "old"})],
+        },
+        restart_timeout=0,
+    )
+    with pytest.raises(DeployError, match="did not come back"):
+        deployer.deploy(chacc_file, restart=True)

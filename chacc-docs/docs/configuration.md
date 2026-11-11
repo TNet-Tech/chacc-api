@@ -38,6 +38,7 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `API_PREFIX` | `/api` | Prefix for all core and module routes (empty for none). Exposed to clients at `GET /.well-known/chacc`. |
+| `CHACC_GRACEFUL_SHUTDOWN_TIMEOUT` | `30` | Seconds in-flight requests get to finish on shutdown/restart. |
 | `PLUGINS_DIR` | `plugins` | Directory for development modules. |
 | `MODULES_INSTALLED_DIR` | `.modules_installed` | Directory containing `.chacc` archives. |
 | `MODULES_LOADED_DIR` | `.modules_loaded` | Directory where archives are extracted. |
@@ -91,6 +92,7 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | `CHACC_DEPLOY_PASSWORD` | empty | Password for non-interactive login when the server returns 401. |
 | `CHACC_DEPLOY_AUTH_PATH` | `/authentication` | Authentication module's `base_path_prefix` (the API prefix is added automatically). |
 | `CHACC_DEPLOY_API_PREFIX` | discovered | Override the server's API prefix. Unset: read from `GET /.well-known/chacc`, falling back to `/api`. Empty: no prefix. |
+| `CHACC_DEPLOY_RESTART_TIMEOUT` | `180` | Seconds `chacc deploy --restart` waits for the server to come back. |
 | `CHACC_DEPLOY_TIMEOUT` | `600` | Seconds to wait for the server response after upload. |
 
 ## Module-specific configuration

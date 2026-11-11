@@ -468,7 +468,7 @@ def install_module(
         source_mod.cleanup(resolved)
 
 
-def deploy_module(chacc_file_path: str) -> bool:
+def deploy_module(chacc_file_path: str, restart: bool = False) -> bool:
     """
     Deploys an .chacc module to a remote ChaCC API instance.
 
@@ -478,4 +478,4 @@ def deploy_module(chacc_file_path: str) -> bool:
     """
     from chacc_cli.deploy import deploy_module as _deploy
 
-    return _deploy(chacc_file_path)
+    return _deploy(chacc_file_path, restart=restart)

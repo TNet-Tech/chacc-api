@@ -16,6 +16,7 @@ nav:
     - Database and Migrations: database-migrations.md
     - CLI: cli.md
     - Deployment: deployment.md
+    - Automatic Restarts: server-restarts.md
   - DEVELOPMENT:
       - Modules:
         - modules.md

@@ -36,6 +36,9 @@ cli_logger = configure_logging(log_level="INFO")
 MODULES_PATH = "/modules/"
 DISCOVERY_PATH = "/.well-known/chacc"
 DEFAULT_API_PREFIX = "/api"
+RESTART_PATH = "/system/restart"
+DEFAULT_RESTART_TIMEOUT = 180
+RESTART_POLL_INTERVAL = 1.0
 DEFAULT_AUTH_PATH = "/authentication"
 DEFAULT_TIMEOUT = 600
 CONNECT_TIMEOUT = 10
@@ -49,6 +52,14 @@ def normalize_prefix(value: str | None) -> str:
     return f"/{value}" if value else ""
 
 
+def _safe_json(response) -> dict:
+    try:
+        data = response.json()
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 class DeployError(Exception):
     """Raised for any deploy failure; the message is user-facing."""
 
@@ -59,6 +70,7 @@ class DeploySettings:
     api_key: str | None = None
     timeout: int = DEFAULT_TIMEOUT
     auth_path: str = DEFAULT_AUTH_PATH
+    restart_timeout: int = DEFAULT_RESTART_TIMEOUT
     # None = discover from the server (GET /.well-known/chacc), falling back to /api.
     api_prefix: str | None = None
     username: str | None = None
@@ -69,6 +81,9 @@ class DeploySettings:
         try:
             url = config("CHACC_DEPLOY_URL", default=None)
             timeout = config("CHACC_DEPLOY_TIMEOUT", default=DEFAULT_TIMEOUT, cast=int)
+            restart_timeout = config(
+                "CHACC_DEPLOY_RESTART_TIMEOUT", default=DEFAULT_RESTART_TIMEOUT, cast=int
+            )
         except (ValueError, TypeError) as exc:
             raise DeployError(f"Invalid deployment configuration: {exc}") from exc
         if not url:
@@ -83,6 +98,7 @@ class DeploySettings:
             url=url.rstrip("/"),
             api_key=config("CHACC_DEPLOY_API_KEY", default=None) or None,
             timeout=timeout,
+            restart_timeout=restart_timeout,
             auth_path="/" + auth_path.strip("/"),
             api_prefix=None if api_prefix is None else normalize_prefix(api_prefix),
             username=config("CHACC_DEPLOY_USERNAME", default=None) or None,
@@ -288,16 +304,29 @@ class Deployer:
             return self.api_prefix
 
         self.api_prefix = DEFAULT_API_PREFIX
-        response = self._request("GET", DISCOVERY_PATH, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT))
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                if isinstance(data, dict) and isinstance(data.get("api_prefix"), str):
-                    self.api_prefix = normalize_prefix(data["api_prefix"])
-            except ValueError:
-                pass
+        info = self.discover()
+        if info and isinstance(info.get("api_prefix"), str):
+            self.api_prefix = normalize_prefix(info["api_prefix"])
         cli_logger.info(f"Using API prefix '{self.api_prefix or '/'}'.")
         return self.api_prefix
+
+    def discover(self, quiet: bool = False) -> dict | None:
+        """GET /.well-known/chacc. Returns None if unavailable (older server / down)."""
+        try:
+            response = self._request(
+                "GET", DISCOVERY_PATH, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT)
+            )
+        except DeployError:
+            if quiet:
+                return None
+            raise
+        if response.status_code != 200:
+            return None
+        try:
+            data = response.json()
+        except ValueError:
+            return None
+        return data if isinstance(data, dict) else None
 
     @property
     def modules_path(self) -> str:
@@ -324,8 +353,58 @@ class Deployer:
                 files={"file": (name, f, "application/zip")},
             )
 
-    def deploy(self, chacc_file_path: str) -> str:
-        """Deploy the package. Returns the server's success message."""
+    def restart(self) -> str:
+        """
+        Ask the server to restart and wait until a new process is serving.
+
+        Returns a user-facing message. Raises DeployError only for hard failures;
+        an unsupported restart (409/404) is reported as a message, not an error,
+        because the module itself was installed.
+        """
+        before = self.discover(quiet=True) or {}
+        response = self._request(
+            "POST",
+            f"{self.resolve_prefix()}{RESTART_PATH}",
+            timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT),
+        )
+        if response.status_code == 401 and (self.refresh() or self._login_quietly()):
+            response = self._request(
+                "POST",
+                f"{self.resolve_prefix()}{RESTART_PATH}",
+                timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT),
+            )
+        if response.status_code in (404, 405):
+            return "This server does not support automatic restart; restart it manually."
+        if response.status_code == 409:
+            return f"Automatic restart unavailable: {self._detail(response)}"
+        if response.status_code not in (200, 202):
+            raise DeployError(
+                f"Restart request failed with status {response.status_code}: "
+                f"{self._detail(response)}"
+            )
+
+        old_boot = before.get("boot_id") or _safe_json(response).get("boot_id")
+        deadline = time.monotonic() + self.settings.restart_timeout
+        with _Waiter("Restarting server"):
+            while time.monotonic() < deadline:
+                time.sleep(RESTART_POLL_INTERVAL)
+                info = self.discover(quiet=True)
+                if info and info.get("boot_id") and info.get("boot_id") != old_boot:
+                    return "Server restarted; the module is now active."
+        raise DeployError(
+            f"Server did not come back within {self.settings.restart_timeout}s. "
+            "Check the server logs (CHACC_DEPLOY_RESTART_TIMEOUT to wait longer)."
+        )
+
+    def _login_quietly(self) -> bool:
+        try:
+            self.login()
+            return True
+        except DeployError:
+            return False
+
+    def deploy(self, chacc_file_path: str, restart: bool = False) -> str:
+        """Deploy the package (and optionally restart). Returns a success message."""
         try:
             self.ensure_authenticated()
             response = self.upload(chacc_file_path)
@@ -335,10 +414,10 @@ class Deployer:
                 response = self.upload(chacc_file_path)
 
             if response.status_code == 200:
-                try:
-                    return response.json().get("message", "Module deployed.")
-                except ValueError:
-                    return "Module deployed."
+                message = _safe_json(response).get("message", "Module deployed.")
+                if restart:
+                    message = f"{message}\n{self.restart()}"
+                return message
             if response.status_code == 401:
                 raise DeployError("The server rejected the credentials (401).")
             if response.status_code == 403:
@@ -352,7 +431,7 @@ class Deployer:
             self.revoke()
 
 
-def deploy_module(chacc_file_path: str) -> bool:
+def deploy_module(chacc_file_path: str, restart: bool = False) -> bool:
     """CLI entry point. Returns True on success."""
     if not os.path.isfile(chacc_file_path):
         cli_logger.error(f"ChaCC file '{chacc_file_path}' not found.")
@@ -362,7 +441,7 @@ def deploy_module(chacc_file_path: str) -> bool:
         settings = DeploySettings.from_env()
         size_mb = os.path.getsize(chacc_file_path) / (1024 * 1024)
         cli_logger.info(f"Deploying '{chacc_file_path}' ({size_mb:.2f} MB) to {settings.url}...")
-        message = Deployer(settings).deploy(chacc_file_path)
+        message = Deployer(settings).deploy(chacc_file_path, restart=restart)
     except DeployError as exc:
         cli_logger.error(f"FAILED: {exc}")
         return False
@@ -373,7 +452,12 @@ def deploy_module(chacc_file_path: str) -> bool:
 
     cli_logger.info("=" * 60)
     cli_logger.info("SUCCESS: Module deployed successfully!")
-    cli_logger.info(f"SUCCESS: {message}")
-    cli_logger.info("SUCCESS: Restart the remote ChaCC API server to activate the module.")
+    for line in message.splitlines():
+        cli_logger.info(f"SUCCESS: {line}")
+    if not restart:
+        cli_logger.info(
+            "SUCCESS: Restart the server to activate the module "
+            "(or deploy with --restart to do it automatically)."
+        )
     cli_logger.info("=" * 60)
     return True

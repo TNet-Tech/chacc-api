@@ -98,3 +98,8 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 exclude = ["build/", "plans/", "modules_installed/", "plugins/", "src/"]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: starts real servers via 'chacc run server' (slower); deselect with -m 'not e2e'",
+]

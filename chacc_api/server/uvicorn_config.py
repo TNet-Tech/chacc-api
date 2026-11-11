@@ -35,6 +35,8 @@ config = {
     "host": _host,
     "port": _port,
     "reload": True,
+    # Seconds to let in-flight requests finish on shutdown/restart before forcing it.
+    "timeout_graceful_shutdown": int(os.environ.get("CHACC_GRACEFUL_SHUTDOWN_TIMEOUT", "30")),
     "reload_dirs": ["src", "main.py"],
     "reload_excludes": [
         f"{get_relative_path(MODULES_LOADED_DIR)}/",
@@ -66,4 +68,6 @@ config = {
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(**config)
+    from src.lifecycle import run_server
+
+    run_server(lambda: uvicorn.run(**config))

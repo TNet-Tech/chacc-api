@@ -188,24 +188,17 @@ CHACC_DEPLOY_API_PREFIX=/api             # override; normally discovered from th
 CHACC_DEPLOY_TIMEOUT=600                 # seconds to wait for the server response
 ```
 
-**Authentication.** Before uploading, `chacc deploy` checks whether the server
-requires authentication. If it answers `401` (the
-[authentication module](official-modules/authentication.md) is installed), you
-are prompted for a username and password (up to 3 attempts), unless
-`CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` are set. The CLI logs in, uploads
-with the returned token, refreshes it once if it expires mid-upload, and revokes
-the session afterwards. Credentials and tokens are never written to disk.
+If the server requires authentication, you are prompted for a username and
+password unless `CHACC_DEPLOY_USERNAME` and `CHACC_DEPLOY_PASSWORD` are set.
 
-**API prefix.** All core and module routes live under the server's
-`API_PREFIX` (default `/api`). The CLI reads it from the unprefixed
-`GET /.well-known/chacc` endpoint, so a custom prefix works without extra
-configuration. Older servers without that endpoint fall back to `/api`; set
-`CHACC_DEPLOY_API_PREFIX` to override.
+Packages are limited to 10 MB by default.
 
-**Waiting for the server.** Installing a module resolves its dependencies on the
-server, which can take minutes. The CLI waits up to `CHACC_DEPLOY_TIMEOUT`
-seconds (default 600) and shows the elapsed time. Packages are limited to 10 MB
-by default (server setting `MAX_MODULE_UPLOAD_SIZE`).
+Add `--restart` to activate the module right away. See
+[Automatic Restarts](server-restarts.md).
+
+```bash
+chacc deploy my_module.chacc --restart
+```
 
 The command exits with status `1` on failure, so it can be used in scripts.
 
@@ -250,6 +243,9 @@ Options:
 | `--port` | Port to bind. Defaults to `8085`. |
 | `-v` / `--verbose` | Enable verbose logging (`CHACC_VERBOSE=true`). The flag is passed to the server subprocess, so startup logs and application logs use `INFO` level. |
 | `--debug` | Enable debug logging (`CHACC_DEBUG=true` in development mode). |
+
+`chacc run server` starts the server again after a restart request. See
+[Automatic Restarts](server-restarts.md).
 
 ## Legacy server command
 

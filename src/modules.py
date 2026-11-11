@@ -32,6 +32,7 @@ from src.chacc_dependency_manager import (
     resolve_chacc_dependencies as re_resolve_dependencies,
 )
 from src.constants import (
+    API_PREFIX,
     BASE_DIR,
     MAX_MODULE_UNCOMPRESSED_SIZE,
     MAX_MODULE_UPLOAD_SIZE,
@@ -336,7 +337,8 @@ async def install_chacc_module_endpoint(
             status_code=status.HTTP_200_OK,
             content={
                 "message": f"Module '{module_name}' installed/updated successfully. "
-                f"Dependencies resolved. Please restart the API server to apply changes."
+                "Dependencies resolved. Restart the server to apply changes "
+                f"(POST {API_PREFIX}/system/restart)."
             },
         )
     except HTTPException:

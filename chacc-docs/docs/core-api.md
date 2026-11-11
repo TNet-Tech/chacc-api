@@ -163,6 +163,20 @@ Removes:
 
 A restart is required to complete the uninstall.
 
+## Server discovery
+
+`GET /.well-known/chacc` is never prefixed. It returns the server's `api_prefix`
+and a `boot_id` that changes on every restart.
+
+## Restart the server
+
+```http
+POST /api/system/restart
+```
+
+Applies module changes. Returns `202`, or `409` if the server was not started
+with `chacc run server`. See [Automatic Restarts](server-restarts.md).
+
 ## Rate limiting
 
 The backbone installs a SlowAPI limiter and a custom handler for

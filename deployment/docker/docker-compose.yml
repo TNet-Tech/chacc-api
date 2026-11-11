@@ -24,8 +24,10 @@ services:
       - chacc_plugins:/app/plugins
       - chacc_cache:/app/.chacc_cache
     restart: unless-stopped
+    # Seconds `docker stop` waits before SIGKILL; keep above CHACC_GRACEFUL_SHUTDOWN_TIMEOUT.
+    stop_grace_period: 40s
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8085/api/health')"]
+      test: ["CMD", "python", "-c", "import os, urllib.request; p = '/' + os.environ.get('API_PREFIX', '/api').strip('/'); urllib.request.urlopen('http://localhost:8085' + p.rstrip('/') + '/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

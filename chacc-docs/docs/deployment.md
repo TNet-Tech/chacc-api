@@ -77,6 +77,11 @@ Check service logs:
 journalctl -u chacc-api -f
 ```
 
+## Restarting after module changes
+
+Use `chacc deploy my_module.chacc --restart`. The container keeps running. See
+[Automatic Restarts](server-restarts.md#docker).
+
 ## Health checks
 
 | Endpoint | Use |
