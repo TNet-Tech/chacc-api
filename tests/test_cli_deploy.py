@@ -295,3 +295,42 @@ def test_restart_timeout_raises(chacc_file, no_sleep, monkeypatch):
     )
     with pytest.raises(DeployError, match="did not come back"):
         deployer.deploy(chacc_file, restart=True)
+
+
+# ---------- Module dependencies ----------
+
+
+def test_missing_required_modules_are_listed(chacc_file):
+    deployer, _ = make(
+        {
+            ("GET", "/api/modules/"): [FakeResponse(200)],
+            ("POST", "/api/modules/"): [
+                FakeResponse(
+                    409,
+                    {
+                        "detail": "requires modules",
+                        "missing_dependencies": {"required": ["auth"], "optional": ["files"]},
+                    },
+                )
+            ],
+        }
+    )
+    with pytest.raises(DeployError) as exc:
+        deployer.deploy(chacc_file)
+    text = str(exc.value)
+    assert "  - auth" in text
+    assert "Optional module(s) also missing: files" in text
+    assert "Deploy the required modules first" in text
+
+
+def test_server_warnings_are_kept(chacc_file):
+    deployer, _ = make(
+        {
+            ("GET", "/api/modules/"): [FakeResponse(200)],
+            ("POST", "/api/modules/"): [
+                FakeResponse(200, {"message": "ok", "warnings": ["Optional module(s) x"]})
+            ],
+        }
+    )
+    deployer.deploy(chacc_file)
+    assert deployer.warnings == ["Optional module(s) x"]

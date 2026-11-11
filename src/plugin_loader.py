@@ -7,7 +7,6 @@ Supports both:
 """
 
 import importlib
-import json
 import os
 
 from fastapi import FastAPI
@@ -24,7 +23,9 @@ from src.constants import (
 )
 from src.database import apply_deferred_schema_changes
 from src.logger import configure_logging, get_default_log_level
-from src.module_loader.loader import load_single_module
+from src.module_graph import check_graph, scan_module_directory
+from src.module_loader.dependencies import log_report
+from src.module_loader.loader import load_single_module, migration_mode_for
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -92,48 +93,13 @@ def discover_modules_from_directory(directory: str) -> dict[str, dict]:
     Returns:
         Dict mapping module_name -> module_info
     """
-    modules = {}
-
     if not os.path.isdir(directory):
         chacc_logger.warning(f"Modules directory not found: {directory}")
-        return modules
+        return {}
 
-    for entry in os.listdir(directory):
-        module_path = os.path.join(directory, entry)
-
-        if not os.path.isdir(module_path) or entry.startswith("."):
-            continue
-
-        meta_path = os.path.join(module_path, "module_meta.json")
-        if not os.path.exists(meta_path):
-            for subentry in os.listdir(module_path):
-                subpath = os.path.join(module_path, subentry)
-                if os.path.isdir(subpath) and not subentry.startswith("."):
-                    meta_path = os.path.join(subpath, "module_meta.json")
-                    if os.path.exists(meta_path):
-                        module_path = subpath
-                        break
-
-        if not os.path.exists(meta_path):
-            chacc_logger.debug(f"Skipping {entry}: no module_meta.json")
-            continue
-
-        try:
-            with open(meta_path, "r") as f:
-                meta_data = json.load(f)
-
-            module_name = meta_data.get("name", entry)
-
-            modules[module_name] = {
-                "name": module_name,
-                "module_path": module_path,
-                "meta": meta_data,
-            }
-
-            chacc_logger.debug(f"Discovered module: {module_name}")
-        except (OSError, KeyError) as e:
-            chacc_logger.warning(f"Failed to read module_meta.json for {entry}: {e}")
-
+    modules = scan_module_directory(directory)
+    for module_name in modules:
+        chacc_logger.debug(f"Discovered module: {module_name}")
     return modules
 
 
@@ -224,8 +190,13 @@ async def _load_modules(
     source: str,
 ):
     """Internal function to load modules."""
+    # Check dependencies against everything in the source directory before any
+    # models are imported; skipped modules never reach model discovery.
+    report = check_graph({name: info["meta"] for name, info in modules.items()})
+    log_report(report, chacc_logger, dev=True)
+
     modules_to_load = []
-    for name in modules:
+    for name in report.order:
         if only_modules and name not in only_modules:
             continue
         if exclude_modules and name in exclude_modules:
@@ -273,7 +244,7 @@ async def _load_modules(
         from src.migration.runner import run_migration
 
         chacc_logger.info("Running database migrations after model discovery...")
-        await run_migration()
+        await run_migration(mode=migration_mode_for(report))
         chacc_logger.info("Database migrations completed.")
     except Exception:
         chacc_logger.exception("Migration failed")
@@ -306,7 +277,7 @@ async def _load_modules(
             chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
             from src.migration.runner import run_migration
 
-            await run_migration()
+            await run_migration(mode=migration_mode_for(report))
             chacc_logger.info("Deferred migration completed.")
     except Exception:
         chacc_logger.exception("Deferred schema migration failed")

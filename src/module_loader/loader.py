@@ -17,6 +17,7 @@ from src.constants import (
     API_PREFIX,
     DEPENDENCY_CACHE_DIR,
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
+    MIGRATION_MODE,
     MODULES_INSTALLED_DIR,
     MODULES_LOADED_DIR,
 )
@@ -28,6 +29,7 @@ from src.database import (
     initialize_database_models,
 )
 from src.logger import configure_logging, get_default_log_level
+from src.module_graph import GraphReport, check_graph
 
 from .archive import (
     collect_module_requirements,
@@ -35,6 +37,7 @@ from .archive import (
     process_module_archives,
     unzip_modules,
 )
+from .dependencies import log_report
 from .discovery import discover_and_import_models
 from .metadata import sync_database_with_filesystem
 
@@ -168,6 +171,34 @@ async def load_single_module(
         return False
 
 
+def _record_meta(record: ModuleRecord) -> dict:
+    """module_meta.json of an extracted module, falling back to the DB copy."""
+    meta_file_path = os.path.join(MODULES_LOADED_DIR, record.name, "module_meta.json")
+    if os.path.exists(meta_file_path):
+        try:
+            with open(meta_file_path, "r") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            chacc_logger.warning(f"Could not read {meta_file_path}; using stored metadata.")
+    return record.meta_data or {}
+
+
+def migration_mode_for(report: GraphReport) -> str | None:
+    """
+    Never drop anything while modules are skipped.
+
+    A skipped module's models are not imported, so in 'full' mode its tables
+    would look unused and be dropped. Fall back to 'auto' (additive only).
+    """
+    if report.blocked and MIGRATION_MODE == "full":
+        chacc_logger.warning(
+            "Some modules were skipped; running migrations in 'auto' mode this time "
+            "so their tables are not dropped."
+        )
+        return "auto"
+    return None
+
+
 async def load_modules(
     app: FastAPI,
     backbone_context: BackboneContext,
@@ -245,25 +276,29 @@ async def load_modules(
 
         chacc_logger.info("Database synchronized with filesystem. Proceeding to load modules...")
 
-        query = db.query(ModuleRecord).filter_by(is_enabled=True)
-        if only_modules:
-            query = query.filter(ModuleRecord.name.in_(only_modules))
+        enabled_records = db.query(ModuleRecord).filter_by(is_enabled=True).all()
+        record_metas = {record.name: _record_meta(record) for record in enabled_records}
+
+        # Dependencies are checked against every enabled module, before any
+        # models are imported: a module whose required module is missing is
+        # skipped entirely (its models would reference tables nobody defines).
+        report = check_graph(record_metas)
+        log_report(report, chacc_logger, dev=False)
+
         if exclude_modules:
             chacc_logger.info(f"Excluding modules from loading: {exclude_modules}")
-            query = query.filter(ModuleRecord.name.notin_(exclude_modules))
-
-        updated_records = query.all()
+        by_name = {record.name: record for record in enabled_records}
+        updated_records = [
+            by_name[name]
+            for name in report.order
+            if (not only_modules or name in only_modules)
+            and not (exclude_modules and name in exclude_modules)
+        ]
 
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)
-
-                meta_file_path = os.path.join(module_path, "module_meta.json")
-                if os.path.exists(meta_file_path):
-                    with open(meta_file_path, "r") as f:
-                        metadata = json.load(f)
-                else:
-                    metadata = record.meta_data if record.meta_data else {}
+                metadata = record_metas[record.name]
 
                 discovery_success = await load_single_module(
                     module_name=record.name,
@@ -288,20 +323,14 @@ async def load_modules(
         try:
             from src.migration.runner import run_migration
 
-            await run_migration()
+            await run_migration(mode=migration_mode_for(report))
         except Exception:
             chacc_logger.exception("Migration after model discovery failed")
 
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)
-
-                meta_file_path = os.path.join(module_path, "module_meta.json")
-                if os.path.exists(meta_file_path):
-                    with open(meta_file_path, "r") as f:
-                        metadata = json.load(f)
-                else:
-                    metadata = record.meta_data if record.meta_data else {}
+                metadata = record_metas[record.name]
 
                 success = await load_single_module(
                     module_name=record.name,
@@ -331,7 +360,7 @@ async def load_modules(
                 chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
                 from src.migration.runner import run_migration
 
-                await run_migration()
+                await run_migration(mode=migration_mode_for(report))
                 chacc_logger.info("Deferred migration completed.")
         except Exception:
             chacc_logger.exception("Deferred schema migration failed")

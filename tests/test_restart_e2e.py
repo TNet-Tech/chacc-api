@@ -5,7 +5,7 @@ These start a real ``chacc run server`` (the supervisor) in a temporary
 working directory, talk to it over HTTP and check that:
 
 - ``POST /api/system/restart`` replaces the server process while the
-  supervisor keeps running (production and ``--dev`` mode);
+  supervisor keeps running (production; ``--dev`` refuses restarts);
 - a request already in progress finishes during a restart (graceful shutdown);
 - ``chacc deploy --restart`` makes a new module live with no manual step;
 - Ctrl+C still stops everything cleanly.
@@ -140,20 +140,18 @@ class Server:
         return self.proc.returncode
 
 
-def _make_module(path: Path, name: str, routes: str) -> Path:
+def _make_module(path: Path, name: str, routes: str, required: tuple[str, ...] = ()) -> Path:
+    meta = {
+        "name": name,
+        "display_name": name,
+        "version": "1.0.0",
+        "entry_point": "module.main:setup",
+        "base_path_prefix": f"/{name}",
+    }
+    if required:
+        meta["module_dependencies"] = {"required": list(required)}
     with zipfile.ZipFile(path, "w") as z:
-        z.writestr(
-            "module_meta.json",
-            json.dumps(
-                {
-                    "name": name,
-                    "display_name": name,
-                    "version": "1.0.0",
-                    "entry_point": "module.main:setup",
-                    "base_path_prefix": f"/{name}",
-                }
-            ),
-        )
+        z.writestr("module_meta.json", json.dumps(meta))
         z.writestr("module/__init__.py", "")
         z.writestr(
             "module/main.py",
@@ -258,13 +256,13 @@ def test_ctrl_c_stops_supervisor_cleanly(tmp_path):
     assert srv.info() is None
 
 
-def test_restart_in_dev_mode(tmp_path):
+def test_restart_refused_in_dev_mode(tmp_path):
     srv = Server(tmp_path, dev=True)
     try:
         before = srv.wait_up()
-        assert _status(f"{srv.base}/api/system/restart", method="POST") == 202
-        srv.wait_new_boot(before["boot_id"])
-        assert srv.proc.poll() is None
+        assert before["restart_supported"] is False
+        assert _status(f"{srv.base}/api/system/restart", method="POST") == 409
+        assert srv.info()["boot_id"] == before["boot_id"]
     finally:
         srv.stop()
 
@@ -366,3 +364,29 @@ def test_sigterm_to_supervisor_shuts_down_gracefully(server, tmp_path):
         time.sleep(0.2)
     assert not any(_alive(p) for p in server_pids), "server process was orphaned"
     assert server.info() is None
+
+
+def test_module_dependencies_end_to_end(server, tmp_path):
+    """Deploy refuses a missing required module; startup skips and highlights it."""
+    menu = _make_module(tmp_path / "menu_e2e.chacc", "menu_e2e", PING_ROUTE, ("auth_e2e",))
+    auth = _make_module(tmp_path / "auth_e2e.chacc", "auth_e2e", PING_ROUTE)
+
+    refused = _deploy(server, menu, restart=False)
+    assert refused.returncode == 1
+    assert "- auth_e2e" in refused.stdout + refused.stderr
+
+    # Bypass the API (e.g. copied by hand): the server must skip it, not crash.
+    installed = server.workdir / ".modules_installed"
+    (installed / "menu_e2e.chacc").write_bytes(menu.read_bytes())
+    boot = server.info()["boot_id"]
+    assert _status(f"{server.base}/api/system/restart", method="POST") == 202
+    server.wait_new_boot(boot)
+    assert _status(f"{server.base}/api/menu_e2e/ping") == 404
+    assert "MODULE DEPENDENCIES NEED ATTENTION" in server.log()
+    assert "menu_e2e: NOT LOADED - missing required module(s): auth_e2e" in server.log()
+
+    # Install the dependency: both load after the restart.
+    result = _deploy(server, auth, restart=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _get_json(f"{server.base}/api/auth_e2e/ping") == {"pong": True}
+    assert _get_json(f"{server.base}/api/menu_e2e/ping") == {"pong": True}

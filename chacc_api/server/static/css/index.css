@@ -30,16 +30,21 @@ body {
     text-align: center;
     position: relative;
 }
-.header { margin-bottom: 3rem; }
+.header {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 .logo-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
 }
 .logo {
-    width: 120px;
+    width: 96px;
     height: auto;
     image-rendering: crisp-edges;
 }
@@ -55,6 +60,7 @@ body {
     letter-spacing: 0.4px;
     text-transform: uppercase;
     color: var(--status-color);
+    margin-bottom: 1rem;
 }
 .status[data-state="loading"] { --status-color: var(--chacc-text-faint); }
 .status[data-state="error"] { --status-color: var(--chacc-warn); }
@@ -104,28 +110,37 @@ h1 span {
     margin-left: auto;
     margin-right: auto;
 }
+.meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
 .version-tag {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    margin-top: 1.25rem;
     font-size: 0.8rem;
     color: var(--chacc-text-faint);
 }
 .version-tag strong { color: var(--chacc-teal); font-weight: 600; }
 
+.card:focus-visible { outline: 2px solid var(--chacc-teal); outline-offset: 3px; }
+
 /* ---------- Cards ---------- */
 .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-    margin: 3rem 0 2.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.25rem;
+    margin: 2.5rem 0 2.5rem;
 }
 .card {
     background: var(--chacc-surface);
     border: 1px solid var(--chacc-border);
-    border-radius: 24px;
-    padding: 2rem 1.8rem;
+    border-radius: 20px;
+    padding: 1.75rem 1.5rem;
     text-align: left;
     transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
     text-decoration: none;
@@ -168,8 +183,10 @@ h1 span {
     stroke: currentColor;
     fill: none;
 }
+.card-primary { border-color: var(--chacc-teal-soft); }
+.card-primary::before { opacity: 1; }
 .card h2 {
-    font-size: 1.6rem;
+    font-size: 1.35rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--chacc-text);

@@ -52,3 +52,24 @@ pytest tests/ -v
 - Pydantic
 
 See `requirements.txt` for full dependencies.
+
+### Module dependencies
+
+If this module uses other ChaCC modules, list them in `module_meta.json`:
+
+```json
+"module_dependencies": {
+  "required": ["chacc_authentication"],
+  "optional": ["chacc_file_manager"]
+}
+```
+
+- **required**: this module can't work without them, for example because its
+  models have foreign keys to their tables. Installing this module is refused
+  until they are installed, and the server skips it at startup while one is
+  missing.
+- **optional**: this module works without them, with fewer features. A missing
+  one only produces a warning.
+
+ChaCC never installs them for you. Install them first: in `plugins/` for dev
+mode, or with `chacc deploy` in production.

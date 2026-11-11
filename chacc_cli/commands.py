@@ -172,6 +172,7 @@ def create_module_scaffold(module_name: str, output_dir: str, force: bool = Fals
             "test_entry_point": f"{clean_module_name}_src.tests.test_module:run_module_tests",
             "base_path_prefix": f"/{clean_module_name.replace('_', '-')}",
             "dependencies_file": "requirements.txt",
+            "module_dependencies": {"required": [], "optional": []},
             "required_chacc_version": ">=1.0.0",
             "license": "MIT",
             "tags": ["testing"],
@@ -281,6 +282,14 @@ def build_module_chacc(module_source_dir: str, output_filename: str | None = Non
         cli_logger.error(f"Error: 'module_meta.json' in '{module_source_dir}' is not valid JSON.")
         return
 
+    from src.module_graph import DependencyDeclarationError, declared_dependencies
+
+    try:
+        declared_dependencies({**meta_data, "name": module_name})
+    except DependencyDeclarationError as exc:
+        cli_logger.error(f"Error: 'module_meta.json' in '{module_source_dir}': {exc}")
+        return
+
     if not output_filename:
         output_filename = f"{module_name}.chacc"
     elif not output_filename.endswith(".chacc"):
@@ -384,6 +393,30 @@ def build_install_parser(subparsers):
     return install_parser
 
 
+def _check_module_dependencies(meta, destinations, mode: str) -> list[str]:
+    """
+    Refuse to install a module whose required modules are not installed.
+
+    "Installed" depends on the mode: the plugins directory in dev, the
+    installed .chacc archives in prod. Returns the missing optional modules.
+    """
+    from chacc_cli.installer.validate import ValidationError
+    from src.module_graph import archive_metas, missing_dependencies, scan_module_directory
+
+    if mode == "dev":
+        available, where = scan_module_directory(destinations.plugins_dir), destinations.plugins_dir
+    else:
+        available = archive_metas(destinations.modules_installed_dir)
+        where = destinations.modules_installed_dir
+    missing = missing_dependencies(meta.meta, set(available) - {meta.name})
+    if missing.required:
+        lines = [f"'{meta.name}' requires module(s) that are not installed in {where}:"]
+        lines += [f"  - {name}" for name in missing.required]
+        lines.append("Install them first, then install this module again.")
+        raise ValidationError("\n".join(lines))
+    return missing.optional
+
+
 def install_module(
     source: str,
     ref: str | None = None,
@@ -425,6 +458,7 @@ def install_module(
             meta = validate_mod.load_and_validate(resolved.path)
 
         progress_mod.info(f"Module name: {meta.name}")
+        missing_optional = _check_module_dependencies(meta, destinations, effective_mode)
         destination, is_archive = destinations.resolve(effective_mode, meta.name)
         progress_mod.info(f"Destination: {destination}")
 
@@ -456,6 +490,11 @@ def install_module(
             f"Module '{meta.name}' installed. Restart the ChaCC server to activate it.",
             success=True,
         )
+        if missing_optional:
+            progress_mod.warn_always(
+                f"Optional module(s) not installed: {', '.join(missing_optional)}. "
+                f"'{meta.name}' works without them, with fewer features."
+            )
         if meta.has_requirements:
             progress_mod.warn_always(
                 f"Module '{meta.name}' ships requirements.txt. "

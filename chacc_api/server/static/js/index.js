@@ -9,7 +9,7 @@ const API_PREFIX = (function () {
  * Keep listening to the server.
  *
  * Polls /.well-known/chacc (unprefixed, cheap). While the server is up we
- * check every few seconds; when it goes away (e.g. a restart) we poll fast
+ * check every 30 seconds (paused while the tab is hidden); when it goes away (e.g. a restart) we poll fast
  * and show "Restarting…". A changed boot_id means a new process is serving.
  */
 (function () {
@@ -17,8 +17,8 @@ const API_PREFIX = (function () {
     const label = document.querySelector('.status-text');
     const versionEl = document.querySelector('.version-text');
 
-    const UP_INTERVAL = 5000;
-    const DOWN_INTERVAL = 1000;
+    const UP_INTERVAL = 30000;
+    const DOWN_INTERVAL = 2000;
     const TIMEOUT = 4000;
 
     let bootId = null;
@@ -71,6 +71,7 @@ const API_PREFIX = (function () {
     }
 
     async function poll() {
+        if (document.hidden) return; // resumed by visibilitychange
         try {
             const info = await fetchJson('/.well-known/chacc');
             const restarted = bootId !== null && info.boot_id !== bootId;

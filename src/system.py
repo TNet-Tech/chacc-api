@@ -36,6 +36,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
+from src.constants import DEVELOPMENT_MODE
 from src.lifecycle import SERVER_ROOT_PID_ENV, request_restart, restart_supported
 from src.logger import configure_logging, get_default_log_level
 from src.modules import get_current_user_optional
@@ -59,11 +60,17 @@ async def _signal_shutdown(root_pid: int) -> None:
     os.kill(root_pid, signal.SIGTERM)
 
 
+DEV_MODE_RESTART_MESSAGE = (
+    "Restart is disabled in development mode: the server reloads by itself when "
+    "files change. Restart 'chacc run server --dev' manually if needed."
+)
+
+
 def server_info() -> dict:
     return {
         "boot_id": BOOT_ID,
         "started_at": STARTED_AT,
-        "restart_supported": restart_supported(),
+        "restart_supported": restart_supported() and not DEVELOPMENT_MODE,
         "restart_pending": _restart_pending,
     }
 
@@ -75,12 +82,15 @@ async def restart_server_endpoint(
     """
     Gracefully restart the server so installed/enabled/disabled modules take effect.
 
-    Requires the server to be started with ``chacc run server`` (the supervisor).
+    Requires the server to be started with ``chacc run server`` (the supervisor),
+    and is refused (409) in development mode, where uvicorn reloads on file changes.
     In-flight requests are allowed to finish. Poll ``/.well-known/chacc`` until
     ``boot_id`` changes to know the new process is up.
     """
     global _restart_pending, _restart_task
 
+    if DEVELOPMENT_MODE:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DEV_MODE_RESTART_MESSAGE)
     if not restart_supported():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

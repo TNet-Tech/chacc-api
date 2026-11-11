@@ -10,6 +10,8 @@
 - **Configurable API prefix** – `API_PREFIX` (default `/api`). Every core and module route is mounted under it. Clients discover it at `GET /.well-known/chacc`.
 - **Large module uploads** – Uploads stream to disk in chunks. Packages up to 10 MB are accepted (`MAX_MODULE_UPLOAD_SIZE`), with a guard against zip bombs (`MAX_MODULE_UNCOMPRESSED_SIZE`).
 - **Live landing page** – The status next to the logo keeps listening and shows when the server restarts.
+- **Module console** – `/console` lists modules, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It shows a login dialog when the authentication module protects the API. The landing page links to it.
+- **Module dependencies** – Modules list required and optional modules in `module_meta.json` (`module_dependencies`). Installing a module whose required modules are missing is refused, and the server skips such modules at startup and lists them in the log. Modules load after the modules they depend on. See [Module dependencies](modules.md#module-dependencies).
 
 ## Changed
 

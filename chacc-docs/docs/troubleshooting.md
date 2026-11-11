@@ -36,6 +36,8 @@ Common causes:
 | Setup function returns wrong type | Return a FastAPI `APIRouter`. |
 | Relative import issue | Import from the module package, not from sibling paths. |
 | Dependency resolution failed | Add required packages to `requirements.txt`. |
+| `NOT LOADED - missing required module(s)` in the log | Install the listed modules, then restart. See [Module dependencies](modules.md#module-dependencies). |
+| `Foreign key ... could not find table 'users'` | A module uses another module's tables without declaring it. Add it to `module_dependencies.required` and install it. |
 | Module discover-loading mismatch with `PLUGIN_AUTO_DISCOVERY=False` | Ensure module metadata, entry points, and base paths are correctly stored in the `modules` table when skipping filesystem discovery. |
 
 Restart the backbone after installing, enabling, disabling, or uninstalling a

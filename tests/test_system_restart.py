@@ -132,3 +132,15 @@ def test_run_server_reload_mode_returns_normally(tmp_path):
         check=False,
     )
     assert result.returncode == lifecycle.RESTART_EXIT_CODE
+
+
+def test_restart_refused_in_dev_mode(client, monkeypatch, tmp_path):
+    monkeypatch.setenv(lifecycle.SUPERVISED_ENV, "1")
+    monkeypatch.setenv(lifecycle.SERVER_ROOT_PID_ENV, "999999")
+    monkeypatch.setattr(lifecycle, "DEPENDENCY_CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(system, "DEVELOPMENT_MODE", True)
+    response = client.post("/api/system/restart")
+    assert response.status_code == 409
+    assert "development mode" in response.json()["detail"]
+    assert list(tmp_path.iterdir()) == []
+    assert client.get("/.well-known/chacc").json()["restart_supported"] is False

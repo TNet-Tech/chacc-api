@@ -163,10 +163,27 @@ Removes:
 
 A restart is required to complete the uninstall.
 
+### Dependency graph
+
+```text
+GET /api/modules/graph
+```
+
+Returns the modules the server would load (installed archives in production,
+`plugins/` in dev mode), the dependencies between them, which modules are
+blocked, disabled or not installed, and the load order.
+
+## Module console
+
+Open `/console` in a browser to install, enable, disable and uninstall modules,
+view the dependency graph and restart the server. When the authentication module
+is loaded, the console asks you to log in.
+
 ## Server discovery
 
-`GET /.well-known/chacc` is never prefixed. It returns the server's `api_prefix`
-and a `boot_id` that changes on every restart.
+`GET /.well-known/chacc` is never prefixed. It returns the server's `api_prefix`,
+a `boot_id` that changes on every restart, and `auth` (whether core routes need a
+login, and the login path).
 
 ## Restart the server
 
@@ -175,7 +192,8 @@ POST /api/system/restart
 ```
 
 Applies module changes. Returns `202`, or `409` if the server was not started
-with `chacc run server`. See [Automatic Restarts](server-restarts.md).
+with `chacc run server`. Like the module routes, it requires a login when the
+authentication module is loaded. See [Automatic Restarts](server-restarts.md).
 
 ## Rate limiting
 

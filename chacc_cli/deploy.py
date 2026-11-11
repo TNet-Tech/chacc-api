@@ -110,7 +110,7 @@ class DeploySettings:
 class _AuthState:
     access_token: str | None = None
     refresh_token: str | None = None
-    logged_in: bool = False  # True only when *we* created the session
+    logged_in: bool = False
     prompted: bool = False
 
 
@@ -166,6 +166,7 @@ class Deployer:
         self.interactive = sys.stdin.isatty() if interactive is None else interactive
         self.auth = _AuthState(access_token=settings.api_key)
         self.api_prefix: str | None = None
+        self.warnings: list[str] = []
 
     def _headers(self) -> dict[str, str]:
         if self.auth.access_token:
@@ -289,8 +290,6 @@ class Deployer:
         except requests.exceptions.RequestException:
             pass
 
-    # ---------- Routing ----------
-
     def resolve_prefix(self) -> str:
         """
         Determine the server's API prefix.
@@ -396,6 +395,21 @@ class Deployer:
             "Check the server logs (CHACC_DEPLOY_RESTART_TIMEOUT to wait longer)."
         )
 
+    def _dependency_conflict(self, response: requests.Response) -> str:
+        """Readable message for a 409, listing missing required modules if given."""
+        data = _safe_json(response)
+        missing = data.get("missing_dependencies") or {}
+        required = missing.get("required") or []
+        if not required:
+            return f"Deployment refused (409): {self._detail(response)}"
+        lines = ["Deployment refused: required module(s) are not installed on the server:"]
+        lines += [f"  - {name}" for name in required]
+        optional = missing.get("optional") or []
+        if optional:
+            lines.append(f"Optional module(s) also missing: {', '.join(optional)}")
+        lines.append("Deploy the required modules first, then deploy this one again.")
+        return "\n".join(lines)
+
     def _login_quietly(self) -> bool:
         try:
             self.login()
@@ -414,10 +428,14 @@ class Deployer:
                 response = self.upload(chacc_file_path)
 
             if response.status_code == 200:
-                message = _safe_json(response).get("message", "Module deployed.")
+                data = _safe_json(response)
+                message = data.get("message", "Module deployed.")
+                self.warnings = [w for w in data.get("warnings") or [] if isinstance(w, str)]
                 if restart:
                     message = f"{message}\n{self.restart()}"
                 return message
+            if response.status_code == 409:
+                raise DeployError(self._dependency_conflict(response))
             if response.status_code == 401:
                 raise DeployError("The server rejected the credentials (401).")
             if response.status_code == 403:
@@ -441,9 +459,13 @@ def deploy_module(chacc_file_path: str, restart: bool = False) -> bool:
         settings = DeploySettings.from_env()
         size_mb = os.path.getsize(chacc_file_path) / (1024 * 1024)
         cli_logger.info(f"Deploying '{chacc_file_path}' ({size_mb:.2f} MB) to {settings.url}...")
-        message = Deployer(settings).deploy(chacc_file_path, restart=restart)
+        deployer = Deployer(settings)
+        message = deployer.deploy(chacc_file_path, restart=restart)
     except DeployError as exc:
-        cli_logger.error(f"FAILED: {exc}")
+        lines = str(exc).splitlines() or [""]
+        cli_logger.error(f"FAILED: {lines[0]}")
+        for line in lines[1:]:
+            cli_logger.error(line)
         return False
     except KeyboardInterrupt:
         print()
@@ -459,5 +481,7 @@ def deploy_module(chacc_file_path: str, restart: bool = False) -> bool:
             "SUCCESS: Restart the server to activate the module "
             "(or deploy with --restart to do it automatically)."
         )
+    for warning in deployer.warnings:
+        cli_logger.warning(f"WARNING: {warning}")
     cli_logger.info("=" * 60)
     return True

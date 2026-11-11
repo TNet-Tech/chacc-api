@@ -184,19 +184,75 @@ async def read_root():
     )
 
 
-@lru_cache(maxsize=1)
+@app.get("/console", include_in_schema=False)
+async def module_console():
+    """Web console: manage modules, view the dependency graph, restart the server."""
+    return HTMLResponse(
+        _render_template("console.html"),
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+    )
+
+
 def _render_index() -> str:
-    html = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+    return _render_template("index.html")
+
+
+def _render_template(name: str) -> str:
+    # In dev mode, read the template on every request so edits show up without
+    # a restart (uvicorn only reloads on .py changes).
+    if DEVELOPMENT_MODE:
+        return _read_template(name)
+    return _cached_template(name)
+
+
+def _read_template(name: str) -> str:
+    html = (TEMPLATES_DIR / name).read_text(encoding="utf-8")
     return html.replace("{{API_PREFIX}}", escape(API_PREFIX, quote=True))
 
 
+_cached_template = lru_cache(maxsize=4)(_read_template)
+
+
+def _login_paths(app_: FastAPI) -> list[str]:
+    """
+    POST ``.../login`` paths of the loaded modules.
+
+    Read from the OpenAPI schema: newer FastAPI versions keep included routers
+    nested, so module routes do not show up in ``app.routes``.
+    """
+    try:
+        paths = app_.openapi().get("paths", {})
+    except Exception:  # noqa: BLE001 - a broken schema must not break discovery
+        chacc_logger.warning("Could not build the OpenAPI schema to find the login route.")
+        return []
+    return [path for path, ops in paths.items() if path.endswith("/login") and "post" in ops]
+
+
+def _auth_info(request: Request) -> dict:
+    """Whether core routes need a login, and where to log in."""
+    context = getattr(request.app.state, "backbone_context", None)
+    enabled = bool(context and context.get_service("get_current_user"))
+    login_path = None
+    if enabled:
+        logins = _login_paths(request.app)
+        preferred = f"{API_PREFIX}/authentication/login"
+        login_path = preferred if preferred in logins else (logins[0] if logins else None)
+    return {"required": enabled, "login_path": login_path}
+
+
 @app.get("/.well-known/chacc", include_in_schema=False)
-async def chacc_discovery():
+async def chacc_discovery(request: Request):
     """
     Unprefixed discovery endpoint so clients (e.g. ``chacc deploy``) can learn
     the API prefix this server uses without guessing.
     """
-    return {"api_prefix": API_PREFIX, "version": get_version(), **server_info()}
+    return {
+        "api_prefix": API_PREFIX,
+        "version": get_version(),
+        "mode": "development" if DEVELOPMENT_MODE else "production",
+        "auth": _auth_info(request),
+        **server_info(),
+    }
 
 
 @app.get("/docs", include_in_schema=False)

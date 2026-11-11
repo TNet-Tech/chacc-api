@@ -19,15 +19,16 @@ curl -X POST http://localhost:8085/api/system/restart \
 | --- | --- |
 | `202` | Restart scheduled. |
 | `401` | Authentication is required. |
-| `409` | The server was not started with `chacc run server`. Restart it manually. |
+| `409` | The server runs in development mode, or was not started with `chacc run server`. Restart it manually. |
 
 Requests in progress are allowed to finish first. The server is usually back
 within a few seconds.
 
 ## Requirements
 
-Start the server with `chacc run server` (with or without `--dev`). The
-production Docker image already does. Servers started with bare `uvicorn` return
+Start the server with `chacc run server`. The production Docker image already
+does. Restart is disabled in development mode (`--dev`), where the server
+reloads by itself when files change. Servers started with bare `uvicorn` return
 `409`, including `docker-compose.dev.yml`.
 
 ## Docker

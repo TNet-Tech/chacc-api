@@ -37,6 +37,7 @@ my_module/
 | `base_path_prefix` | No | Module path, for example `/billing`. Always mounted under the server's `API_PREFIX` (default `/api`), so `/billing` is served at `/api/billing`. |
 | `tags` | No | FastAPI documentation tags. |
 | `dependencies_file` | No | Requirements file name, usually `requirements.txt`. |
+| `module_dependencies` | No | Other ChaCC modules this module needs. See [Module dependencies](#module-dependencies). |
 | `required_chacc_version` | No | Minimum ChaCC version. |
 | `license` | No | Module license. |
 | `homepage` | No | Module homepage. |
@@ -158,6 +159,32 @@ extracting or enabling modules.
 requests
 pydantic==2.7.0
 ```
+
+## Module dependencies
+
+List the other ChaCC modules your module uses in `module_meta.json`:
+
+```json
+"module_dependencies": {
+  "required": ["chacc_authentication"],
+  "optional": ["chacc_file_manager"]
+}
+```
+
+- **required**: the module can't work without these, for example because its
+  models have foreign keys to their tables.
+- **optional**: the module works without these, with fewer features.
+
+ChaCC never installs modules for you. A module is checked against the modules in
+`plugins/` in dev mode, and against installed modules in production.
+
+| When | Required module missing | Optional module missing |
+| --- | --- | --- |
+| `chacc install`, `chacc deploy`, enable | Refused, with the missing modules listed. | Installed, with a warning. |
+| Server start | Module is skipped and listed in the log. | Module loads, and a warning is logged. |
+
+Install the missing modules yourself, then restart. Modules always load after
+the modules they depend on.
 
 ## Build and deploy
 

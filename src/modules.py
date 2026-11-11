@@ -43,10 +43,17 @@ from src.constants import (
 )
 from src.database import ModuleRecord, get_async_db, get_db
 from src.logger import configure_logging, get_default_log_level
+from src.module_graph import (
+    DependencyDeclarationError,
+    declared_dependencies,
+    dependents_of,
+    missing_dependencies,
+)
 from src.module_loader.archive import (
     get_chacc_filepath,
     safe_extract,
 )
+from src.module_loader.dependencies import available_module_metas, graph_payload
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -203,9 +210,9 @@ def _remove_quietly(path: str | None) -> None:
             chacc_logger.warning(f"Could not remove temporary upload file '{path}'.")
 
 
-def _read_module_archive(archive_path: str) -> tuple[str, dict[str, str]]:
+def _read_module_archive(archive_path: str) -> tuple[str, dict[str, str], dict]:
     """
-    Validate a .chacc archive on disk and return (module_name, module_requirements).
+    Validate a .chacc archive on disk and return (module_name, module_requirements, meta).
 
     Raises HTTPException for invalid packages.
     """
@@ -252,6 +259,14 @@ def _read_module_archive(archive_path: str) -> tuple[str, dict[str, str]]:
                 detail=f"Invalid module name in module_meta.json: {exc}",
             )
 
+        try:
+            declared_dependencies({**meta_data, "name": module_name})
+        except DependencyDeclarationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid module_meta.json: {exc}",
+            )
+
         module_requirements = {}
         try:
             with zip_ref.open("requirements.txt") as req_file:
@@ -259,7 +274,60 @@ def _read_module_archive(archive_path: str) -> tuple[str, dict[str, str]]:
         except KeyError:
             pass
 
-    return module_name, module_requirements
+    return module_name, module_requirements, meta_data
+
+
+def _check_module_dependencies(
+    module_name: str, meta: dict, db: Session
+) -> tuple[JSONResponse | None, list[str]]:
+    """
+    Check ``meta``'s declared modules against the modules available in this mode.
+
+    Returns ``(error_response, missing_optional)``. ``error_response`` is a 409
+    when a required module is missing; the caller returns it as is. Nothing is
+    installed automatically: the user installs the missing modules.
+    """
+    available = set(available_module_metas(db)) - {module_name}
+    missing = missing_dependencies(meta, available)
+    if missing.required:
+        names = ", ".join(missing.required)
+        return (
+            JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "detail": (
+                        f"Module '{module_name}' requires module(s) that are not installed: "
+                        f"{names}. Install them first, then try again."
+                    ),
+                    "missing_dependencies": {
+                        "required": missing.required,
+                        "optional": missing.optional,
+                    },
+                },
+            ),
+            missing.optional,
+        )
+    return None, missing.optional
+
+
+def _optional_warning(module_name: str, missing_optional: list[str]) -> str:
+    return (
+        f"Optional module(s) not installed: {', '.join(missing_optional)}. "
+        f"'{module_name}' works without them, with fewer features."
+    )
+
+
+def _dependents_warning(module_name: str, db: Session) -> list[str]:
+    """Warn when other available modules require the module being removed."""
+    dependents = dependents_of(module_name, available_module_metas(db))
+    if not dependents:
+        return []
+    return [
+        (
+            f"Module(s) {', '.join(dependents)} require '{module_name}' and will not be "
+            "loaded after the restart until it is installed and enabled again."
+        )
+    ]
 
 
 def _extract_module_archive(module_name: str, target_chacc_path: str) -> None:
@@ -287,6 +355,7 @@ def _extract_module_archive(module_name: str, target_chacc_path: str) -> None:
 async def install_chacc_module_endpoint(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_async_db),
+    sync_db: Session = Depends(get_db),
     current_user: object | None = Depends(get_current_user_optional),
 ):
     """
@@ -294,8 +363,9 @@ async def install_chacc_module_endpoint(
 
     The upload is streamed to disk in chunks (never fully buffered in memory)
     and limited to ``MAX_MODULE_UPLOAD_SIZE`` bytes (default 10 MB).
-    Resolves dependencies BEFORE unzipping to prevent inconsistent state.
-    Requires server restart to activate/deactivate the new module.
+    Refused with 409 if a required module (``module_dependencies.required``)
+    is not installed. Resolves Python dependencies BEFORE unzipping to prevent
+    inconsistent state. Requires server restart to activate the new module.
     """
     if not file.filename or not file.filename.endswith(".chacc"):
         chacc_logger.error(f"Uploaded file '{file.filename}' is not a .chacc package.")
@@ -307,7 +377,15 @@ async def install_chacc_module_endpoint(
     tmp_path = await _stream_upload_to_disk(file, MAX_MODULE_UPLOAD_SIZE)
 
     try:
-        module_name, module_requirements = await run_in_threadpool(_read_module_archive, tmp_path)
+        module_name, module_requirements, meta = await run_in_threadpool(
+            _read_module_archive, tmp_path
+        )
+
+        conflict, missing_optional = _check_module_dependencies(module_name, meta, sync_db)
+        if conflict is not None:
+            chacc_logger.warning(f"Refused to install '{module_name}': missing required module(s).")
+            return conflict
+        warnings = [_optional_warning(module_name, missing_optional)] if missing_optional else []
 
         backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
         if os.path.exists(backbone_req_path):
@@ -338,7 +416,8 @@ async def install_chacc_module_endpoint(
             content={
                 "message": f"Module '{module_name}' installed/updated successfully. "
                 "Dependencies resolved. Restart the server to apply changes "
-                f"(POST {API_PREFIX}/system/restart)."
+                f"(POST {API_PREFIX}/system/restart).",
+                "warnings": warnings,
             },
         )
     except HTTPException:
@@ -370,19 +449,43 @@ async def get_modules_endpoint(
     Retrieves a list of all installed modules and their current status from the database.
     """
     module_records = db.query(ModuleRecord).all()
+    available = set(available_module_metas(db))
+    return {"modules": [_module_summary(record, available) for record in module_records]}
+
+
+@modules_router.get("/modules/graph")
+async def get_module_graph_endpoint(
+    db: Session = Depends(get_db),
+    current_user: object | None = Depends(get_current_user_optional),
+):
+    """
+    Module dependency graph for the current mode: installed archives in
+    production, the plugins directory in dev mode. Shows which modules are
+    blocked, disabled, or missing, plus the order modules load in.
+    """
+    return graph_payload(db)
+
+
+def _module_summary(record: ModuleRecord, available: set[str]) -> dict:
+    meta = record.meta_data or {}
+    try:
+        required, optional = declared_dependencies(meta)
+        missing = missing_dependencies(meta, available - {record.name})
+    except DependencyDeclarationError:
+        required, optional, missing = [], [], None
     return {
-        "modules": [
-            {
-                "name": record.name,
-                "display_name": record.display_name,
-                "version": record.version,
-                "author": record.author,
-                "description": record.description,
-                "is_enabled": record.is_enabled,
-                "base_path_prefix": record.base_path_prefix,
-            }
-            for record in module_records
-        ]
+        "name": record.name,
+        "display_name": record.display_name,
+        "version": record.version,
+        "author": record.author,
+        "description": record.description,
+        "is_enabled": record.is_enabled,
+        "base_path_prefix": record.base_path_prefix,
+        "dependencies": {"required": required, "optional": optional},
+        "missing_dependencies": {
+            "required": missing.required if missing else [],
+            "optional": missing.optional if missing else [],
+        },
     }
 
 
@@ -413,6 +516,7 @@ async def enable_module_endpoint(
         )
 
     actual_module_name = module_name
+    meta_data = module_record.meta_data or {}
     try:
         with (
             zipfile.ZipFile(chacc_filepath, "r") as zip_ref,
@@ -422,6 +526,16 @@ async def enable_module_endpoint(
             actual_module_name = meta_data.get("name", module_name)
     except (zipfile.BadZipFile, json.JSONDecodeError, OSError) as e:
         chacc_logger.warning(f"Could not read module_meta.json from {chacc_filepath}: {e}")
+
+    try:
+        conflict, missing_optional = _check_module_dependencies(actual_module_name, meta_data, db)
+    except DependencyDeclarationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid module_meta.json: {exc}"
+        )
+    if conflict is not None:
+        return conflict
+    warnings = [_optional_warning(actual_module_name, missing_optional)] if missing_optional else []
 
     module_requirements = {}
     try:
@@ -489,7 +603,8 @@ async def enable_module_endpoint(
         status_code=status.HTTP_200_OK,
         content={
             "message": f"Module '{actual_module_name}' enabled. "
-            f"Dependencies resolved. Please restart the server for changes to take effect."
+            f"Dependencies resolved. Please restart the server for changes to take effect.",
+            "warnings": warnings,
         },
     )
 
@@ -518,6 +633,7 @@ async def disable_module_endpoint(
         shutil.rmtree(loaded_module_dir)
         chacc_logger.info(f"Successfully deleted module code directory: {loaded_module_dir}")
 
+    warnings = _dependents_warning(actual_module_name, db)
     module_record.is_enabled = False
     db.commit()
     db.refresh(module_record)
@@ -531,7 +647,8 @@ async def disable_module_endpoint(
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
-            "message": f"Module '{actual_module_name}' disabled. Please restart the server for changes to take effect."
+            "message": f"Module '{actual_module_name}' disabled. Please restart the server for changes to take effect.",
+            "warnings": warnings,
         },
     )
 
@@ -554,6 +671,7 @@ async def uninstall_module_endpoint(
         )
 
     actual_module_name = module_record.name
+    warnings = _dependents_warning(actual_module_name, db)
 
     try:
         loaded_module_dir = os.path.join(MODULES_LOADED_DIR, actual_module_name)
@@ -576,7 +694,8 @@ async def uninstall_module_endpoint(
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
-                "message": f"Module '{actual_module_name}' uninstalled. Please restart the API server to apply changes."
+                "message": f"Module '{actual_module_name}' uninstalled. Please restart the API server to apply changes.",
+                "warnings": warnings,
             },
         )
 

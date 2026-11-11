@@ -193,6 +193,10 @@ password unless `CHACC_DEPLOY_USERNAME` and `CHACC_DEPLOY_PASSWORD` are set.
 
 Packages are limited to 10 MB by default.
 
+If the module's required modules aren't installed on the server, the deploy is
+refused and the missing modules are listed. `chacc install` checks the same way.
+See [Module dependencies](modules.md#module-dependencies).
+
 Add `--restart` to activate the module right away. See
 [Automatic Restarts](server-restarts.md).
 
