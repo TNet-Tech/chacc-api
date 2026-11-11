@@ -165,7 +165,8 @@
         opts.headers = headers;
 
         const res = await fetch(API_PREFIX + path, opts);
-        if (res.status === 401 && !retried) {
+        // options.noLoginPrompt: report the 401 instead of opening the login dialog.
+        if (res.status === 401 && !retried && !(options && options.noLoginPrompt)) {
             storage.remove(TOKEN_KEY);
             updateAuthUi();
             await login();
@@ -515,7 +516,13 @@
         root.replaceChildren();
         $('#graph-problems').replaceChildren();
         $('#load-order').replaceChildren();
-        if (!graph) return;
+        const hasGraph = Boolean(graph && graph.nodes.length);
+        document.querySelector('.legend').hidden = !hasGraph;
+        $('.graph-wrap').hidden = !hasGraph;
+        if (!graph) {
+            $('#graph-intro').textContent = '';
+            return;
+        }
 
         $('#graph-intro').textContent = graph.mode === 'production'
             ? 'Installed production modules (from ' + graph.source + '). Arrows point from a module to the modules it depends on.'
@@ -598,23 +605,59 @@
 
     // ---------- loading ----------
 
+    function loginPrompt(text) {
+        return el('div', { class: 'empty' }, text + ' ',
+            el('button', { type: 'button', class: 'btn btn-small btn-primary', onclick: () => login().then(loadAll, () => {}) }, 'Log in'));
+    }
+
+    // Logged out on a protected server: both tabs ask for a login instead of looking empty.
+    function showLoginPrompt() {
+        state.modules = [];
+        state.graph = null;
+        state.loaded = false;
+        renderModules();
+        renderGraph();
+        $('#module-count').textContent = '';
+        $('#module-list').replaceChildren(loginPrompt('Log in to see and manage modules.'));
+        $('#graph-problems').replaceChildren(loginPrompt('Log in to see the dependency graph.'));
+    }
+
+    // The graph and the module list load independently: in development mode the
+    // graph is open while the module list may still need a login. There we show a
+    // "Log in" button rather than opening the dialog as soon as the page loads.
     async function loadAll() {
-        try {
-            const [modules, graph] = await Promise.all([api('/modules/'), api('/modules/graph')]);
-            state.modules = modules.modules || [];
-            state.graph = graph;
+        const dev = Boolean(state.info && state.info.mode === 'development');
+        const [modules, graph] = await Promise.allSettled([
+            api('/modules/', { noLoginPrompt: dev }),
+            api('/modules/graph'),
+        ]);
+
+        if (graph.status === 'fulfilled') {
+            state.graph = graph.value;
+            renderGraph();
+        } else {
+            state.graph = null;
+            renderGraph();
+            if (graph.reason.status === 401) {
+                $('#graph-problems').replaceChildren(loginPrompt('Log in to see the dependency graph.'));
+            } else {
+                toast(graph.reason.message, 'error');
+            }
+        }
+
+        if (modules.status === 'fulfilled') {
+            state.modules = modules.value.modules || [];
             state.loaded = true;
             renderModules();
-            renderGraph();
-        } catch (e) {
-            if (e.status === 401) {
-                const list = $('#module-list');
-                list.replaceChildren(el('div', { class: 'empty' },
-                    'Log in to see and manage modules. ',
-                    el('button', { type: 'button', class: 'btn btn-small btn-primary', onclick: () => login().then(loadAll, () => {}) }, 'Log in')));
-                return;
+        } else {
+            state.modules = [];
+            state.loaded = false;
+            renderModules();
+            if (modules.reason.status === 401) {
+                $('#module-list').replaceChildren(loginPrompt('Log in to see and manage modules.'));
+            } else {
+                toast(modules.reason.message, 'error');
             }
-            toast(e.message, 'error');
         }
     }
 
@@ -638,12 +681,9 @@
     $('#logout-btn').addEventListener('click', () => {
         storage.remove(TOKEN_KEY);
         updateAuthUi();
-        state.modules = [];
-        state.graph = null;
-        state.loaded = false;
-        renderModules();
-        renderGraph();
-        loadAll();
+        showLoginPrompt();
+        // Views that need no login (the graph in development mode) come back.
+        if (state.info && state.info.mode === 'development') loadAll();
     });
     $('#upload-input').addEventListener('change', (e) => upload(e.target.files[0]));
     const zone = $('#dropzone');

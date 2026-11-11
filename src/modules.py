@@ -34,6 +34,7 @@ from src.chacc_dependency_manager import (
 from src.constants import (
     API_PREFIX,
     BASE_DIR,
+    DEVELOPMENT_MODE,
     MAX_MODULE_UNCOMPRESSED_SIZE,
     MAX_MODULE_UPLOAD_SIZE,
     MODULE_UPLOAD_CHUNK_SIZE,
@@ -118,6 +119,21 @@ async def get_current_user_optional(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def get_current_user_in_production(
+    request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
+) -> object | None:
+    """
+    Like :func:`get_current_user_optional`, but open in development mode.
+
+    For read-only views (the dependency graph) that developers should see
+    without logging in. In production a login is required when the
+    authentication module is loaded.
+    """
+    if DEVELOPMENT_MODE:
+        return None
+    return await get_current_user_optional(request, credentials)
 
 
 class ModuleUploadSizeLimitMiddleware:
@@ -456,12 +472,15 @@ async def get_modules_endpoint(
 @modules_router.get("/modules/graph")
 async def get_module_graph_endpoint(
     db: Session = Depends(get_db),
-    current_user: object | None = Depends(get_current_user_optional),
+    current_user: object | None = Depends(get_current_user_in_production),
 ):
     """
     Module dependency graph for the current mode: installed archives in
     production, the plugins directory in dev mode. Shows which modules are
     blocked, disabled, or missing, plus the order modules load in.
+
+    Open in development mode. In production it requires a login when the
+    authentication module is loaded.
     """
     return graph_payload(db)
 

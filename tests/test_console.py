@@ -114,8 +114,29 @@ def test_restart_open_without_auth_module(client, monkeypatch):
     assert client.post("/api/system/restart").status_code == 409
 
 
-def test_graph_requires_login_when_auth_module_loaded(client, with_auth):
+def test_graph_requires_login_in_production_when_auth_module_loaded(client, with_auth, monkeypatch):
+    from src import modules
+
+    monkeypatch.setattr(modules, "DEVELOPMENT_MODE", False)
     assert client.get("/api/modules/graph").status_code == 401
+    ok = client.get("/api/modules/graph", headers={"Authorization": "Bearer good-token"})
+    assert ok.status_code == 200
+
+
+def test_graph_is_open_in_development_mode(client, with_auth, monkeypatch):
+    from src import modules
+
+    monkeypatch.setattr(modules, "DEVELOPMENT_MODE", True)
+    assert client.get("/api/modules/graph").status_code == 200
+    # Managing modules still needs a login.
+    assert client.get("/api/modules/").status_code == 401
+
+
+def test_graph_is_open_without_auth_module(client, monkeypatch):
+    from src import modules
+
+    monkeypatch.setattr(modules, "DEVELOPMENT_MODE", False)
+    assert client.get("/api/modules/graph").status_code == 200
 
 
 # ---------- Graph ----------
