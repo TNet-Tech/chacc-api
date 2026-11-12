@@ -1,23 +1,44 @@
 # Changelog
 
 
-## Unreleased
+## 1.0.0-beta6
+
+> Feature release: module dependencies, a web console for modules, and automatic restarts. Read **Before you upgrade** first.
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api==1.0.0-b6
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-beta6
+```
+
+### Before you upgrade
+
+- **Rebuild modules that depend on other modules.** Add `module_dependencies` to their `module_meta.json`, rebuild the `.chacc`, and deploy the modules they require first. See [Module dependencies](modules.md#module-dependencies).
+- Deploying a module whose required modules are not installed is now refused with `409`.
+- At startup, a module whose required modules are missing is skipped and listed in the log instead of crashing the server. While a module is skipped, `MIGRATION_MODE=full` runs as `auto` so its tables are kept.
+- `POST /api/system/restart` is refused in development mode, where the server already reloads when files change.
 
 ## Added
 
+- **Module dependencies** – Modules list required and optional modules in `module_meta.json` (`module_dependencies`). Modules load after the modules they depend on. `chacc install`, `chacc deploy` and the API check them, and missing optional modules only produce a warning. New modules created with `chacc create` include an empty list. See [Module dependencies](modules.md#module-dependencies).
+- **Module console** – `/console` lists modules, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It asks for a login when the authentication module protects the API. In development mode the dependency graph needs no login.
+- **Dependency graph API** – `GET /api/modules/graph` returns the modules, their dependencies, which ones are blocked or missing, and the load order.
 - **Automatic restarts** – `POST /api/system/restart` restarts the server gracefully, and `chacc run server` brings it back on its own. `chacc deploy --restart` deploys a module and makes it live in one step. See [Automatic Restarts](server-restarts.md).
 - **Login prompt in `chacc deploy`** – When the server answers `401`, the CLI asks for a username and password, uploads with the token and revokes the session afterwards. `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` cover CI.
-- **Configurable API prefix** – `API_PREFIX` (default `/api`). Every core and module route is mounted under it. Clients discover it at `GET /.well-known/chacc`.
+- **Configurable API prefix** – `API_PREFIX` (default `/api`). Every core and module route is mounted under it. Clients discover it, and whether a login is needed, at `GET /.well-known/chacc`.
 - **Large module uploads** – Uploads stream to disk in chunks. Packages up to 10 MB are accepted (`MAX_MODULE_UPLOAD_SIZE`), with a guard against zip bombs (`MAX_MODULE_UNCOMPRESSED_SIZE`).
-- **Live landing page** – The status next to the logo keeps listening and shows when the server restarts.
-- **Module console** – `/console` lists modules, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It shows a login dialog when the authentication module protects the API. The landing page links to it.
-- **Module dependencies** – Modules list required and optional modules in `module_meta.json` (`module_dependencies`). Installing a module whose required modules are missing is refused, and the server skips such modules at startup and lists them in the log. Modules load after the modules they depend on. See [Module dependencies](modules.md#module-dependencies).
 
 ## Changed
 
+- **New landing page** – Links to the module console and shows a live server status that follows restarts.
 - `chacc deploy` waits up to 600 s for the server response by default (`CHACC_DEPLOY_TIMEOUT`) and exits with status `1` on failure.
 - `chacc run server` now exits with the server's exit code when it crashes.
-- Landing page uses solid colours instead of gradients.
+- Requests to `/.well-known/chacc` are no longer written to the access log.
 
 ## Fixed
 
