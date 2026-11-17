@@ -173,9 +173,9 @@ def discover_and_import_models(
                     if not spec or not spec.loader:
                         logger.warning(f"Could not create spec for {file_path}")
                         continue
+                    # spec.parent is the enclosing package already, so relative
+                    # imports work from __spec__ (Python 3.15 ignores __package__).
                     mod = importlib.util.module_from_spec(spec)
-                    mod.__package__ = enclosing
-                    mod.__name__ = mod_name
                     sys.modules[mod_name] = mod
                     spec.loader.exec_module(mod)
                     logger.info(f"Scanned for models in: {mod_name}")
@@ -205,13 +205,17 @@ def discover_and_import_models(
                     continue
 
                 try:
-                    spec = importlib.util.spec_from_file_location(mod_name, file_path)
+                    # A package: give the spec its search location, so spec.parent is
+                    # the package itself and relative imports resolve from __spec__.
+                    spec = importlib.util.spec_from_file_location(
+                        mod_name,
+                        file_path,
+                        submodule_search_locations=[os.path.dirname(file_path)],
+                    )
                     if not spec or not spec.loader:
                         logger.warning(f"Could not create spec for {file_path}")
                         continue
                     mod = importlib.util.module_from_spec(spec)
-                    mod.__package__ = mod_name
-                    mod.__name__ = mod_name
                     sys.modules[mod_name] = mod
                     spec.loader.exec_module(mod)
                     logger.info(f"Scanned for models in: {mod_name}")

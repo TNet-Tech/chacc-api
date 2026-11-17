@@ -185,10 +185,10 @@ chacc-api/
 │   ├── modules.py             # REST routes: install / list / enable / disable / uninstall modules
 │   ├── rate_limiter.py        # SlowAPI rate-limiting setup
 │   ├── redis_service.py       # Async Redis client wrapper
-│   ├── chacc_dependency_manager.py  # ChaCC-specific integration with chacc-dependency-manager
+│   ├── module_packages.py     # Module Python packages: packages dir, core constraints, boot check
 │   │
 │   ├── module_loader/         # Production module loading pipeline
-│   │   ├── loader.py          # Orchestrates: scan → resolve deps → extract → migrate → mount
+│   │   ├── loader.py          # Orchestrates: scan → check packages → extract → migrate → mount
 │   │   ├── discovery.py       # Recursive Python-file import for @register_model discovery
 │   │   ├── archive.py         # .chacc file inspection, mtime-based re-unzip decisions
 │   │   └── metadata.py        # DB↔filesystem sync: remove records for deleted modules

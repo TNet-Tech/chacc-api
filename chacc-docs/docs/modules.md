@@ -152,13 +152,22 @@ verifier = context.get_service("token_verifier")
 
 ## Dependencies
 
-Put Python dependencies in `requirements.txt`. ChaCC resolves dependencies before
-extracting or enabling modules.
+Put Python dependencies in `requirements.txt`. ChaCC resolves and installs them
+when the module is uploaded or enabled, before the module is saved, so a failure
+changes nothing.
 
 ```text
 requests
-pydantic==2.7.0
+qrcode>=7.4
 ```
+
+- Core packages (FastAPI, SQLAlchemy, Pydantic and the rest of ChaCC's own
+  dependencies) can't be changed by a module. Requirements that only fit another
+  core version are refused.
+- In production, packages are installed into `.chacc_packages/` and stay there
+  across restarts. See [Running without network](deployment.md#running-without-network).
+- Upload or enable errors: `409` conflicting requirements, `422` requirements that
+  can't be resolved, `503` the package index can't be reached.
 
 ## Module dependencies
 

@@ -35,8 +35,10 @@ reloads by itself when files change. Servers started with bare `uvicorn` return
 
 The restart happens inside the container, so the container keeps running.
 
-- If a module fails with an import error after a restart, run
-  `docker restart chacc-api` to install its packages.
+- Restarts never resolve or download packages: modules' packages were installed
+  when they were uploaded, and are kept in `.chacc_packages/`. If some are
+  missing, run `docker exec -u chacc chacc-api chacc deps sync`. See
+  [Running without network](deployment.md#running-without-network).
 - With plain `docker run`, pass `--stop-timeout 40` so requests can finish on
   `docker stop`. The Compose file already sets this.
 - With several replicas, restart them through your orchestrator. The endpoint

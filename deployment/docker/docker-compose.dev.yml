@@ -13,7 +13,7 @@ services:
     ports:
       - "8085:8085"
     environment:
-      - DEVELOPMENT_MODE=True
+      - CHACC_DEV_MODE=true
       - ENABLE_PLUGIN_HOT_RELOAD=True
       - ENABLE_PLUGIN_DEPENDENCY_RESOLUTION=True
       - PLUGIN_AUTO_DISCOVERY=True

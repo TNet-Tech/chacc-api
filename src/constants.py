@@ -37,6 +37,17 @@ DEPENDENCY_CACHE_DIR = os.path.join(
 )
 BACKBONE_REQUIREMENTS_LOCK_FILE = f"{DEPENDENCY_CACHE_DIR}/compiled_requirements.lock"
 DEPENDENCY_CACHE_FILE = f"{DEPENDENCY_CACHE_DIR}/dependency_cache.json"
+# Production: Python packages that modules need are installed here (a volume in Docker),
+# so they survive restarts and recreated containers. Core packages always take precedence.
+MODULE_PACKAGES_DIR = os.path.join(
+    BASE_DIR, config("MODULE_PACKAGES_DIR", default=".chacc_packages", cast=str)
+)
+# What boot may do about module packages that are missing:
+#   "missing" - one quick attempt to resolve/install only what is missing (needs network)
+#   "never"   - never call pip at boot; modules with missing packages are not loaded
+CHACC_BOOT_INSTALL = config("CHACC_BOOT_INSTALL", default="missing", cast=str).strip().lower()
+# Upper bound (seconds) for each boot-time resolve or install attempt.
+CHACC_BOOT_INSTALL_TIMEOUT = config("CHACC_BOOT_INSTALL_TIMEOUT", default=120, cast=int)
 
 MIGRATION_MODE = config("MIGRATION_MODE", default="auto", cast=str)
 MIGRATION_BACKUP = config("MIGRATION_BACKUP", default=False, cast=bool)
@@ -98,5 +109,6 @@ os.makedirs(MODULES_INSTALLED_DIR, exist_ok=True)
 os.makedirs(MODULES_LOADED_DIR, exist_ok=True)
 os.makedirs(MODULES_UPLOAD_DIR, exist_ok=True)
 os.makedirs(DEPENDENCY_CACHE_DIR, exist_ok=True)
+os.makedirs(MODULE_PACKAGES_DIR, exist_ok=True)
 os.makedirs(PLUGINS_DIR, exist_ok=True)
 os.makedirs(MIGRATION_BACKUP_DIR, exist_ok=True)

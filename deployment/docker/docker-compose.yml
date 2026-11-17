@@ -23,6 +23,9 @@ services:
       - chacc_modules:/app/.modules_installed
       - chacc_plugins:/app/plugins
       - chacc_cache:/app/.chacc_cache
+      # Python packages that modules need. Keeps them across recreated containers,
+      # so the server never needs network to start.
+      - chacc_packages:/app/.chacc_packages
     restart: unless-stopped
     # Seconds `docker stop` waits before SIGKILL; keep above CHACC_GRACEFUL_SHUTDOWN_TIMEOUT.
     stop_grace_period: 40s
@@ -64,6 +67,8 @@ volumes:
   chacc_plugins:
     driver: local
   chacc_cache:
+    driver: local
+  chacc_packages:
     driver: local
 
 networks:

@@ -31,46 +31,42 @@ htmlcov/
 .git/
 .gitignore
 
-# Local config
+# Environment and secrets
 .env
 .env.local
-*.db
 
-# Logs
+# Databases and logs
+*.db
 *.log
 logs/
+*.sqlite
+*.sqlite3
 
-# OS
+# OS and temporary files
 .DS_Store
 Thumbs.db
-
-# Temporary files
 *.tmp
 *.temp
 tmp/
 temp/
 
-# Database
-*.sqlite
-*.sqlite3
-
-# Modules cache
-.chacc_cache/
+# Runtime state of a local server. Never ship it: a new named volume is seeded from the
+# image, so anything here would appear as installed modules in a production container.
+.modules_installed/
 .modules_loaded/
-modules_installed/
+.modules_upload/
+.chacc_packages/
+.chacc_cache/
+.dependency_cache/
+backups/
+*.chacc
 
-# Test modules
+# Not needed in the image
 tests/
-
-# Deployment
 deployment/
-
-# Exception: always include the entrypoint script
 !deployment/docker/docker-entrypoint.sh
-
-# Documentation
 docs/
 chacc-docs/
-
-# CI
+plans/
+.kilo/
 .github/

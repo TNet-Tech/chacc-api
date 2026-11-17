@@ -51,14 +51,19 @@ def graph_payload(db=None, dev: bool | None = None) -> dict:
     Node states: ``ok``, ``blocked``, ``disabled``, ``missing``.
     """
     dev = DEVELOPMENT_MODE if dev is None else dev
+    preblocked: dict[str, str] = {}
     if dev:
         all_metas = available_module_metas(dev=True)
         enabled = dict(all_metas)
     else:
+        from src.module_packages import read_status
+
         all_metas = archive_metas(MODULES_INSTALLED_DIR)
         enabled = available_module_metas(db, dev=False)
+        # Modules the last boot could not load because Python packages are missing.
+        preblocked = read_status().get("blocked") or {}
 
-    report = check_graph(enabled)
+    report = check_graph(enabled, preblocked=preblocked)
     nodes: dict[str, dict] = {}
     edges: list[dict] = []
 

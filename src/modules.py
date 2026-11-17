@@ -25,15 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from chacc_cli.commands import validate_module_name
-from src.chacc_dependency_manager import (
-    invalidate_module_cache,
-)
-from src.chacc_dependency_manager import (
-    resolve_chacc_dependencies as re_resolve_dependencies,
-)
+from src import module_packages
 from src.constants import (
     API_PREFIX,
-    BASE_DIR,
     DEVELOPMENT_MODE,
     MAX_MODULE_UNCOMPRESSED_SIZE,
     MAX_MODULE_UPLOAD_SIZE,
@@ -52,6 +46,7 @@ from src.module_graph import (
 )
 from src.module_loader.archive import (
     get_chacc_filepath,
+    read_archive_requirements,
     safe_extract,
 )
 from src.module_loader.dependencies import available_module_metas, graph_payload
@@ -284,13 +279,68 @@ def _read_module_archive(archive_path: str) -> tuple[str, dict[str, str], dict]:
             )
 
         module_requirements = {}
-        try:
-            with zip_ref.open("requirements.txt") as req_file:
-                module_requirements[module_name] = req_file.read().decode("utf-8")
-        except KeyError:
-            pass
+        content = read_archive_requirements(zip_ref, meta_data)
+        if content is not None:
+            module_requirements[module_name] = content
 
     return module_name, module_requirements, meta_data
+
+
+async def _install_module_packages(
+    module_name: str, requirements: dict[str, str], is_new: bool
+) -> list[str]:
+    """
+    Resolve and install a module's Python packages. Returns warnings.
+
+    Nothing is installed when resolution fails. Raises HTTPException:
+    409 for a conflict, 422 when the requirements can't be resolved, 503 when the
+    package index can't be reached.
+    """
+    from chacc import ResolutionError
+
+    if not requirements:
+        # The module has no requirements (any more): unregister it, no network needed.
+        await run_in_threadpool(module_packages.forget_module, module_name, chacc_logger)
+        return []
+
+    chacc_logger.info(f"Resolving Python packages for module '{module_name}'...")
+    try:
+        result = await module_packages.resolve_and_install(requirements, chacc_logger)
+    except (ResolutionError, module_packages.PackageInstallError) as exc:
+        if is_new:
+            await run_in_threadpool(module_packages.forget_module, module_name, chacc_logger)
+        raise _package_error(module_name, exc)
+    chacc_logger.info(f"Python packages for module '{module_name}' are installed.")
+    return result.warnings
+
+
+def _package_error(module_name: str, exc: Exception) -> HTTPException:
+    from chacc import ResolutionError
+
+    text = str(exc).strip()
+    if getattr(exc, "network", False) or module_packages.looks_like_network_error(text):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                f"Could not reach the package index to install the Python packages of "
+                f"'{module_name}'. Nothing was changed. Connect the server to the network and "
+                "try again."
+            ),
+        )
+    if isinstance(exc, ResolutionError) and exc.conflicts:
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"The Python requirements of '{module_name}' conflict: {text}",
+        )
+    if isinstance(exc, ResolutionError):
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"The Python requirements of '{module_name}' can't be resolved: {text}",
+        )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"Installing the Python packages of '{module_name}' failed: {text}",
+    )
 
 
 def _check_module_dependencies(
@@ -403,22 +453,12 @@ async def install_chacc_module_endpoint(
             return conflict
         warnings = [_optional_warning(module_name, missing_optional)] if missing_optional else []
 
-        backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
-        if os.path.exists(backbone_req_path):
-            with open(backbone_req_path, "r") as f:
-                module_requirements["backbone"] = f.read()
-
-        if module_requirements:
-            chacc_logger.info(
-                f"Resolving dependencies for module '{module_name}' before installation..."
-            )
-            from .chacc_dependency_manager import ChaCCDependencyManager
-
-            dm = ChaCCDependencyManager(logger=chacc_logger)
-            await dm.dm.resolve_dependencies(module_requirements)
-            chacc_logger.info("Dependencies resolved successfully.")
-
         target_chacc_path = os.path.join(MODULES_INSTALLED_DIR, f"{module_name}.chacc")
+        # Packages are installed BEFORE the archive is saved, so a failure changes nothing.
+        warnings += await _install_module_packages(
+            module_name, module_requirements, is_new=not os.path.exists(target_chacc_path)
+        )
+
         # shutil.move is an atomic rename on the same filesystem, copy+delete otherwise.
         await run_in_threadpool(shutil.move, tmp_path, target_chacc_path)
         tmp_path = None
@@ -426,12 +466,11 @@ async def install_chacc_module_endpoint(
 
         await run_in_threadpool(_extract_module_archive, module_name, target_chacc_path)
 
-        invalidate_module_cache(module_name)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "message": f"Module '{module_name}' installed/updated successfully. "
-                "Dependencies resolved. Restart the server to apply changes "
+                "Restart the server to apply changes "
                 f"(POST {API_PREFIX}/system/restart).",
                 "warnings": warnings,
             },
@@ -559,12 +598,9 @@ async def enable_module_endpoint(
     module_requirements = {}
     try:
         with zipfile.ZipFile(chacc_filepath, "r") as zip_ref:
-            try:
-                with zip_ref.open("requirements.txt") as req_file:
-                    req_content = req_file.read().decode("utf-8")
-                    module_requirements[actual_module_name] = req_content
-            except KeyError:
-                pass
+            content = read_archive_requirements(zip_ref, meta_data)
+            if content is not None:
+                module_requirements[actual_module_name] = content
     except (zipfile.BadZipFile, OSError) as e:
         chacc_logger.error(f"Could not read requirements from {module_name}: {e}")
         raise HTTPException(
@@ -572,27 +608,10 @@ async def enable_module_endpoint(
             detail=f"Could not read module requirements: {e}",
         )
 
-    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
-    if os.path.exists(backbone_req_path):
-        with open(backbone_req_path, "r") as f:
-            module_requirements["backbone"] = f.read()
-
-    if module_requirements:
-        chacc_logger.info(
-            f"Resolving dependencies for module '{actual_module_name}' before enabling..."
-        )
-        try:
-            from .chacc_dependency_manager import ChaCCDependencyManager
-
-            dm = ChaCCDependencyManager(logger=chacc_logger)
-            await dm.resolve_dependencies()
-            chacc_logger.info("Dependencies resolved successfully.")
-        except Exception as e:  # noqa: BLE001
-            chacc_logger.error(f"Dependency resolution failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Dependency resolution failed: {e}",
-            )
+    # The module being enabled is resolved with the ones already registered.
+    warnings += await _install_module_packages(
+        actual_module_name, module_requirements, is_new=False
+    )
 
     loaded_module_dir = os.path.join(MODULES_LOADED_DIR, actual_module_name)
     shutil.rmtree(loaded_module_dir, ignore_errors=True)
@@ -616,13 +635,11 @@ async def enable_module_endpoint(
         f"Module '{actual_module_name}' marked as enabled in DB. Please restart the API server to activate."
     )
 
-    invalidate_module_cache(module_name)
-
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
             "message": f"Module '{actual_module_name}' enabled. "
-            f"Dependencies resolved. Please restart the server for changes to take effect.",
+            "Please restart the server for changes to take effect.",
             "warnings": warnings,
         },
     )
@@ -659,9 +676,7 @@ async def disable_module_endpoint(
     chacc_logger.info(
         f"Module '{actual_module_name}' marked as disabled in DB. Please restart the API server to deactivate."
     )
-
-    invalidate_module_cache(module_name)
-    await re_resolve_dependencies()
+    # Its packages stay installed and registered, so enabling it again works offline.
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -708,8 +723,11 @@ async def uninstall_module_endpoint(
         db.commit()
         chacc_logger.info(f"Module '{actual_module_name}' record deleted from database.")
 
-        invalidate_module_cache(module_name)
-        await re_resolve_dependencies()
+        # Unregister its requirements (no network). Its packages stay installed.
+        try:
+            await run_in_threadpool(module_packages.forget_module, actual_module_name, chacc_logger)
+        except Exception:
+            chacc_logger.exception(f"Could not unregister '{actual_module_name}' requirements.")
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={

@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.15.2-slim
 
 WORKDIR /app
 
@@ -10,12 +10,10 @@ RUN groupadd -r chacc && useradd -r -g chacc -d /app chacc
 
 RUN mkdir -p /app/plugins /app/.modules_loaded
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
-
 COPY . /app/
 
-RUN pip install --no-cache-dir -e ".[dev]"
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -c requirements.lock -e ".[dev]"
 
 RUN chown -R chacc:chacc /app
 
@@ -23,7 +21,7 @@ USER chacc
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    DEVELOPMENT_MODE=True \
+    CHACC_DEV_MODE=true \
     ENABLE_PLUGIN_HOT_RELOAD=True \
     PLUGIN_AUTO_DISCOVERY=True \
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION=True
@@ -33,4 +31,4 @@ EXPOSE 8085
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import os, urllib.request; p = '/' + os.environ.get('API_PREFIX', '/api').strip('/'); urllib.request.urlopen('http://localhost:8085' + p.rstrip('/') + '/health')" || exit 1
 
-CMD ["chacc", "run", "server"]
+CMD ["chacc", "run", "server", "--dev"]

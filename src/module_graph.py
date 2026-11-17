@@ -122,17 +122,19 @@ class GraphReport:
         return lines
 
 
-def check_graph(modules: dict[str, dict]) -> GraphReport:
+def check_graph(modules: dict[str, dict], preblocked: dict[str, str] | None = None) -> GraphReport:
     """
     Check modules (name -> module_meta dict) against each other.
 
     A module is blocked when a required module is missing, is itself blocked,
     has an invalid declaration, or is part of a required-dependency cycle.
+    ``preblocked`` (module -> reason) blocks modules for outside reasons, such as
+    missing Python packages; modules that require them are blocked too.
     Everything else is returned in an order where each module comes after the
     modules it depends on (required and available optional ones).
     """
     deps: dict[str, tuple[list[str], list[str]]] = {}
-    blocked: dict[str, str] = {}
+    blocked: dict[str, str] = {n: why for n, why in (preblocked or {}).items() if n in modules}
     invalid: dict[str, str] = {}
     for name, meta in modules.items():
         try:

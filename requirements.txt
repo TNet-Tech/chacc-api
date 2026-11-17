@@ -13,5 +13,5 @@ argon2-cffi
 python-multipart
 email-validator
 colorlog
-chacc-dependency-manager
+chacc-dependency-manager>=1.4.0
 redis

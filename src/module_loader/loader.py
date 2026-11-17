@@ -5,6 +5,7 @@ validating and resolving Python dependencies, extracting archives,
 synchronising the database, and mounting enabled modules into the FastAPI application.
 """
 
+import asyncio
 import importlib
 import inspect
 import json
@@ -15,8 +16,6 @@ from fastapi import APIRouter, FastAPI
 
 from src.constants import (
     API_PREFIX,
-    DEPENDENCY_CACHE_DIR,
-    ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
     MIGRATION_MODE,
     MODULES_INSTALLED_DIR,
     MODULES_LOADED_DIR,
@@ -30,6 +29,7 @@ from src.database import (
 )
 from src.logger import configure_logging, get_default_log_level
 from src.module_graph import GraphReport, check_graph
+from src.module_packages import boot_check
 
 from .archive import (
     collect_module_requirements,
@@ -234,8 +234,6 @@ async def load_modules(
 
         existing_records = {record.name: record for record in db.query(ModuleRecord).all()}
 
-        modules_requirements = await collect_module_requirements()
-
         chacc_to_module_name = extract_module_names_from_chacc_files(installed_chacc_files)
 
         modules_to_process = process_module_archives(
@@ -248,27 +246,14 @@ async def load_modules(
 
         db.commit()
 
-        enabled_modules = [r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()]
+        enabled_modules = {r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()}
 
-        enabled_requirements = {}
-        for mod_name, reqs in modules_requirements.items():
-            if mod_name in enabled_modules or mod_name == "backbone":
-                enabled_requirements[mod_name] = reqs
-
-        if ENABLE_PLUGIN_DEPENDENCY_RESOLUTION and enabled_requirements:
-            chacc_logger.info("Ensuring dependencies are resolved for all enabled modules...")
-            try:
-                from chacc import DependencyManager
-
-                dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
-                await dm.resolve_dependencies(enabled_requirements)
-
-                importlib.invalidate_caches()
-                chacc_logger.info("Python import cache refreshed after dependency resolution.")
-            except Exception as e:  # noqa: BLE001
-                chacc_logger.error(f"Dependency resolution failed: {e}")
-                chacc_logger.error("Aborting module loading to prevent inconsistent state.")
-                raise RuntimeError(f"Dependency resolution failed: {e}")
+        # Python packages: check, never re-resolve what is resolved. Modules whose
+        # packages are still missing are not loaded; everything else is.
+        chacc_logger.info("Checking Python packages of enabled modules...")
+        enabled_requirements = collect_module_requirements(enabled_modules)
+        deps_report = await asyncio.to_thread(boot_check, enabled_requirements, chacc_logger)
+        importlib.invalidate_caches()
 
         module_found = db.query(ModuleRecord).first()
         if module_found:
@@ -282,7 +267,7 @@ async def load_modules(
         # Dependencies are checked against every enabled module, before any
         # models are imported: a module whose required module is missing is
         # skipped entirely (its models would reference tables nobody defines).
-        report = check_graph(record_metas)
+        report = check_graph(record_metas, preblocked=deps_report.blocked)
         log_report(report, chacc_logger, dev=False)
 
         if exclude_modules:

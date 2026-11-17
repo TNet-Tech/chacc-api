@@ -3,7 +3,7 @@
 
 ## 1.0.0-beta6
 
-> Feature release: module dependencies, a web console for modules, and automatic restarts. Read **Before you upgrade** first.
+> Feature release: module dependencies, a web console for modules, automatic restarts, and production servers that start without network. Read **Before you upgrade** first.
 
 **Update now:**
 > PyPi Package:
@@ -22,6 +22,10 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - Deploying a module whose required modules are not installed is now refused with `409`.
 - At startup, a module whose required modules are missing is skipped and listed in the log instead of crashing the server. While a module is skipped, `MIGRATION_MODE=full` runs as `auto` so its tables are kept.
 - `POST /api/system/restart` is refused in development mode, where the server already reloads when files change.
+- **Docker: add the `chacc_packages` volume** (`/app/.chacc_packages`) if you don't use the provided compose file. Module packages now live there.
+- **Keep network available for the first start after upgrading.** Existing module packages were in the old container, so the first start installs them into the new volume. After that, starts need no network. Without network the affected modules are skipped until you run `chacc deps sync`.
+- The images now use **Python 3.15** and pinned core package versions (`requirements.lock`).
+- Requires `chacc-dependency-manager` 1.4.0 or newer.
 
 ## Added
 
@@ -32,6 +36,8 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Login prompt in `chacc deploy`** – When the server answers `401`, the CLI asks for a username and password, uploads with the token and revokes the session afterwards. `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` cover CI.
 - **Configurable API prefix** – `API_PREFIX` (default `/api`). Every core and module route is mounted under it. Clients discover it, and whether a login is needed, at `GET /.well-known/chacc`.
 - **Large module uploads** – Uploads stream to disk in chunks. Packages up to 10 MB are accepted (`MAX_MODULE_UPLOAD_SIZE`), with a guard against zip bombs (`MAX_MODULE_UNCOMPRESSED_SIZE`).
+- **Start without network** – In production, module packages are installed into `.chacc_packages/` (`MODULE_PACKAGES_DIR`, a volume in Docker) when a module is uploaded or enabled. Restarts and recreated containers reuse them. At startup the server only checks them; if some are missing it tries once (`CHACC_BOOT_INSTALL`) and otherwise skips just the modules that need them. See [Running without network](deployment.md#running-without-network).
+- **`chacc deps check` and `chacc deps sync`** – Check the enabled modules' packages, or install what is missing.
 
 ## Changed
 
@@ -39,12 +45,22 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - `chacc deploy` waits up to 600 s for the server response by default (`CHACC_DEPLOY_TIMEOUT`) and exits with status `1` on failure.
 - `chacc run server` now exits with the server's exit code when it crashes.
 - Requests to `/.well-known/chacc` are no longer written to the access log.
+- **Modules can't change core packages.** ChaCC's own installed versions are applied as constraints whenever module requirements are resolved, and the backbone is no longer resolved at runtime. Conflicts are refused at upload (`409`), unresolvable requirements return `422`, and an unreachable package index returns `503`. Nothing is installed or saved when this happens.
+- The Docker entrypoint no longer resolves dependencies as root, and pip can't fall back to a per-user install that was lost when the container was recreated.
+- Docker images use Python 3.15 and install core packages at the versions in `requirements.lock`.
+- Disabling or uninstalling a module no longer contacts the package index.
 
 ## Fixed
 
 - `docker stop` now shuts the server down gracefully.
 - Docker health checks follow `API_PREFIX`.
 - A `.chacc` file that is not a valid zip now returns `400` instead of `500`.
+- Enabling a module now installs its own Python packages. They were skipped before.
+- Docker images no longer contain module archives from the machine that built them.
+- A failed dependency resolution is no longer remembered as a success (`chacc-dependency-manager` 1.4.0).
+- Module discovery works with Python 3.15, which no longer uses `__package__` for imports.
+- The development Docker image starts in development mode and builds again. The Docker files and `.env.example` used `DEVELOPMENT_MODE`, which ChaCC never read; the setting is `CHACC_DEV_MODE`. Rename it in your own `.env` if you copied it.
+- `deploy.sh` (standalone Linux) works again: it started the service from the wrong folder with a command that doesn't exist, and the service could not write to most of its data folders. Running it again no longer replaces `.env` and its secrets.
 
 ## 1.0.0-beta5.3
 

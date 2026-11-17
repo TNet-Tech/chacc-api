@@ -224,6 +224,18 @@ is `1` when something must be fixed, so it can gate deployments.
 
 `chacc --version` prints the installed version.
 
+## Module packages (`chacc deps`)
+
+```bash
+chacc deps check   # are the enabled modules' Python packages installed? No network.
+chacc deps sync    # resolve what changed and install what is missing (needs network)
+```
+
+Use `sync` after changing the Python version, or to install packages for modules
+copied into `.modules_installed/` by hand. Both exit with status `1` while a
+module can't be loaded. In Docker, run them as the server's user:
+`docker exec -u chacc chacc-api chacc deps sync`.
+
 ## Run the server
 
 Development server:

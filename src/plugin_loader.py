@@ -12,8 +12,6 @@ import os
 from fastapi import FastAPI
 
 from src.constants import (
-    BASE_DIR,
-    DEPENDENCY_CACHE_DIR,
     DEVELOPMENT_MODE,
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
     ENABLE_PLUGIN_HOT_RELOAD,
@@ -118,33 +116,29 @@ async def resolve_dependencies(modules: dict[str, dict], enabled_modules: list[s
     if not ENABLE_PLUGIN_DEPENDENCY_RESOLUTION:
         return
 
-    requirements = {}
-
-    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
-    if os.path.exists(backbone_req_path):
-        with open(backbone_req_path, "r") as f:
-            requirements["backbone"] = f.read()
-
+    # The backbone is not resolved: it is installed with ChaCC, and its versions
+    # are passed as constraints so plugins cannot change them.
+    enabled_requirements = {}
     for module_name, module_info in modules.items():
-        module_path = module_info["module_path"]
-        req_path = os.path.join(module_path, "requirements.txt")
+        if module_name not in enabled_modules:
+            continue
+        meta = module_info.get("meta") or {}
+        req_file = meta.get("dependencies_file") or "requirements.txt"
+        req_path = os.path.join(module_info["module_path"], req_file)
         if os.path.exists(req_path):
             with open(req_path, "r") as f:
-                requirements[module_name] = f.read()
-
-    enabled_requirements = {
-        k: v for k, v in requirements.items() if k in enabled_modules or k == "backbone"
-    }
+                enabled_requirements[module_name] = f.read()
 
     if enabled_requirements:
         try:
-            from chacc import DependencyManager
+            from src.module_packages import resolve_and_install
 
-            dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
-            await dm.resolve_dependencies(enabled_requirements)
+            result = await resolve_and_install(enabled_requirements, chacc_logger)
+            for line in result.warnings:
+                chacc_logger.warning(line)
             importlib.invalidate_caches()
             chacc_logger.info("Module dependencies resolved")
-        except (ImportError, RuntimeError) as e:
+        except Exception as e:  # noqa: BLE001 - dev server keeps starting
             chacc_logger.warning(f"Dependency resolution failed: {e}")
 
 

@@ -44,6 +44,9 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | `MODULES_LOADED_DIR` | `.modules_loaded` | Directory where archives are extracted. |
 | `MODULES_UPLOAD_DIR` | `.modules_upload` | Temporary upload staging directory. |
 | `DEPENDENCY_CACHE_DIR` | `.chacc_cache` | Dependency resolution cache. |
+| `MODULE_PACKAGES_DIR` | `.chacc_packages` | Production: where Python packages that modules need are installed. Keep it on a volume. |
+| `CHACC_BOOT_INSTALL` | `missing` | What startup may do about missing module packages: `missing` tries once to install them (needs network), `never` never calls pip. Modules whose packages are still missing are not loaded. |
+| `CHACC_BOOT_INSTALL_TIMEOUT` | `120` | Seconds for that startup attempt. |
 
 ## Development settings
 
@@ -52,7 +55,7 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | `CHACC_DEV_MODE` | `false` | Enables development-mode module loading. |
 | `ENABLE_PLUGIN_HOT_RELOAD` | `false` | Reloads plugin modules when Python files change. |
 | `PLUGIN_AUTO_DISCOVERY` | `false` | Automatically discover plugins. |
-| `ENABLE_PLUGIN_DEPENDENCY_RESOLUTION` | `false` | Resolve module dependencies during development. |
+| `ENABLE_PLUGIN_DEPENDENCY_RESOLUTION` | `false` | Development only: resolve and install plugin requirements into the active environment at startup. Production ignores it. |
 
 ## Migration settings
 

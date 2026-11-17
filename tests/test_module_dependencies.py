@@ -183,16 +183,13 @@ def test_upload_refused_when_required_module_missing(client, monkeypatch, tmp_pa
 
 
 def test_upload_with_missing_optional_succeeds_with_warning(client, monkeypatch, tmp_path):
-    import src.chacc_dependency_manager as dm_mod
+    from src import module_packages
 
-    class FakeDM:
-        def __init__(self, *a, **k):
-            self.dm = self
+    async def fake_resolve(requirements, logger):
+        return module_packages.ResolveResult({}, [])
 
-        async def resolve_dependencies(self, *a, **k):
-            return None
-
-    monkeypatch.setattr(dm_mod, "ChaCCDependencyManager", FakeDM)
+    monkeypatch.setattr(module_packages, "resolve_and_install", fake_resolve)
+    monkeypatch.setattr(module_packages, "forget_module", lambda name, logger: None)
     set_available(monkeypatch, ["auth"])
     response = client.post(
         "/api/modules/",

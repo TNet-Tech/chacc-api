@@ -97,7 +97,8 @@ Response:
 
 ```json
 {
-  "message": "Module 'billing' installed/updated successfully. Dependencies resolved. Please restart the API server to apply changes."
+  "message": "Module 'billing' installed/updated successfully. Restart the server to apply changes (POST /api/system/restart).",
+  "warnings": []
 }
 ```
 
@@ -106,7 +107,9 @@ Validation:
 - File name must end with `.chacc`.
 - Archive must contain `module_meta.json`.
 - `module_meta.json` must contain `name`.
-- Dependencies are resolved before extraction.
+- The module's Python packages are installed into the packages folder before the
+  archive is saved. If that fails nothing changes: `409` conflicting requirements,
+  `422` requirements that can't be resolved, `503` package index unreachable.
 - A server restart is required to activate the new module.
 
 ### List modules
@@ -137,8 +140,8 @@ GET /api/modules/
 POST /api/modules/{module_name}/enable
 ```
 
-Marks a module enabled in the database, resolves dependencies, extracts the
-archive, and requires a restart to mount it.
+Marks a module enabled in the database, installs its Python packages (same errors
+as upload), and requires a restart to mount it.
 
 ### Disable a module
 

@@ -17,7 +17,6 @@ def _color(text: str, ansi: str) -> str:
     return f"{ansi}{text}{_RESET}" if sys.stdout.isatty() else text
 
 
-# Exit statuses that mean "stopped on purpose" (clean exit, SIGINT, SIGTERM).
 _CLEAN_EXITS = (0, -2, -15, 130, 143)
 
 
@@ -200,6 +199,16 @@ def main():
         "--auto-reload", action="store_true", help="Enable auto-reload for development."
     )
 
+    deps_parser = subparsers.add_parser(
+        "deps", help="Check or install the Python packages of installed modules."
+    )
+    deps_parser.add_argument(
+        "deps_action",
+        choices=["check", "sync"],
+        help="check: report what is installed (no network). "
+        "sync: resolve and install what is missing (needs network).",
+    )
+
     run_parser = subparsers.add_parser("run", help="Run the ChaCC server.")
     run_subparsers = run_parser.add_subparsers(dest="run_subcommand", help="Run subcommands")
 
@@ -250,6 +259,11 @@ def main():
                 port=args.port,
             )
         )
+
+    if args.command == "deps":
+        from .deps import run_deps
+
+        sys.exit(run_deps(args.deps_action))
 
     from .commands import (
         build_install_parser,
