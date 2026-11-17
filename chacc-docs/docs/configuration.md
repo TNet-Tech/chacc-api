@@ -99,7 +99,8 @@ With `memory://` and several servers, each one allows the full limit, so clients
 get several times the limit in total. `RATE_LIMIT_STORAGE_URI` is separate from the
 `REDIS_*` settings, which don't configure it. If Redis can't be reached, the server
 counts in memory and logs a warning, so requests keep working; it goes back to Redis
-when it is reachable again.
+when it is reachable again. With Docker Compose, see
+[Redis (optional)](deployment.md#redis-optional).
 
 **Behind a reverse proxy**
 

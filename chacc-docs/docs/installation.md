@@ -83,7 +83,9 @@ docker compose -f deployment/docker/docker-compose.yml up -d
 ```
 
 The compose file includes a ChaCC API service, a PostgreSQL service, health
-checks, and persistent volumes for PostgreSQL and module storage.
+checks, persistent volumes for PostgreSQL and module storage, and an optional
+Redis service (`--profile redis`). For development, use
+`deployment/docker/docker-compose.dev.yml`. See [Deployment](deployment.md#docker-compose).
 
 ## Development checklist
 

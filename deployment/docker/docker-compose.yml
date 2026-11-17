@@ -1,9 +1,15 @@
 # ChaCC API - Docker Compose for Production
-# 
+#
 # Usage:
-#   Pull from Docker Hub: docker-compose up -d
+#   docker compose up -d                    # API + PostgreSQL
+#   docker compose --profile redis up -d    # API + PostgreSQL + Redis
+#
+# Redis is optional. Use it to share rate-limit counts between containers and keep
+# them across restarts, or for modules that use Redis. With the redis profile, set in .env:
+#   REDIS_ENABLED=true
+#   REDIS_HOST=redis
+#   RATE_LIMIT_STORAGE_URI=redis://redis:6379/0
 
-version: '3.8'
 
 services:
   chacc:
@@ -19,6 +25,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+        required: false   # only waited for when the redis profile is on
     volumes:
       - chacc_modules:/app/.modules_installed
       - chacc_plugins:/app/plugins
@@ -56,6 +65,27 @@ services:
     expose:
       - "5432"
 
+  redis:
+    image: redis:7-alpine
+    container_name: chacc-redis
+    profiles: ["redis"]
+    # Counts and module data survive restarts (append-only file).
+    # To require a password: add --requirepass <password> here, and use
+    # REDIS_PASSWORD=<password> and redis://:<password>@redis:6379/0 in .env.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chacc-network
+    expose:
+      - "6379"
+
 volumes:
   postgres_data:
     driver: local
@@ -66,6 +96,8 @@ volumes:
   chacc_cache:
     driver: local
   chacc_packages:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

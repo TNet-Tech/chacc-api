@@ -28,8 +28,8 @@ within a few seconds.
 
 Start the server with `chacc run server`. The production Docker image already
 does. Restart is disabled in development mode (`--dev`), where the server
-reloads by itself when files change. Servers started with bare `uvicorn` return
-`409`, including `docker-compose.dev.yml`.
+reloads by itself when files change; this includes `docker-compose.dev.yml`.
+Servers started with bare `uvicorn` also return `409`.
 
 ## Docker
 

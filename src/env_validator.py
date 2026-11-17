@@ -166,14 +166,21 @@ class EnvironmentValidator:
             chacc_logger.warning(f"ENV VALIDATION: {warning}")
 
         for error in self.errors:
-            chacc_logger.error(f"ENV VALIDATION: {error}")
+            if DEVELOPMENT_MODE:
+                chacc_logger.warning(f"ENV VALIDATION: {error} (not allowed in production)")
+            else:
+                chacc_logger.error(f"ENV VALIDATION: {error}")
 
         is_valid = secret_valid and db_valid and prod_valid
 
         if not is_valid:
-            chacc_logger.error("Environment validation FAILED")
-
-            if not DEVELOPMENT_MODE:
+            if DEVELOPMENT_MODE:
+                chacc_logger.warning(
+                    "Environment validation: fine for development, but the settings above "
+                    "would stop the server in production"
+                )
+            else:
+                chacc_logger.error("Environment validation FAILED")
                 error_summary = "; ".join(self.errors)
                 raise ValidationError(f"Production environment validation failed: {error_summary}")
         else:

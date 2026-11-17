@@ -1,14 +1,27 @@
 # ChaCC API - Docker Compose for Development
-# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-
-version: '3.8'
+#
+# Usage (from the repository root):
+#   docker compose -f deployment/docker/docker-compose.dev.yml up --build
+#
+# The server runs as your user so it can read the mounted files. If your user ID
+# isn't 1000 (check with `id -u`), build with:
+#   CHACC_UID=$(id -u) CHACC_GID=$(id -g) docker compose -f deployment/docker/docker-compose.dev.yml up --build
+#
+# Runs `chacc run server --dev` with SQLite and your working copy mounted:
+#   - src/ changes reload the server automatically;
+#   - chacc_api/ and chacc_cli/ changes apply after `docker compose restart`;
+#   - modules are loaded from plugins/ (hot reload is on).
+# Restarting through the API or console is disabled in development mode.
 
 services:
   chacc:
     build:
       context: ../..
       dockerfile: deployment/docker/Dockerfile.dev
-    image: chacc-api:local
+      args:
+        UID: ${CHACC_UID:-1000}
+        GID: ${CHACC_GID:-1000}
+    image: chacc-api:dev
     container_name: chacc-api-dev
     ports:
       - "8085:8085"
@@ -24,12 +37,11 @@ services:
       - LOG_LEVEL=DEBUG
     volumes:
       - ../../src:/app/src
-      - ../../plugins:/app/plugins
+      - ../../chacc_api:/app/chacc_api
       - ../../chacc_cli:/app/chacc_cli
-      - ../../main.py:/app/main.py
-      - ../../start_server.py:/app/start_server.py
+      - ../../plugins:/app/plugins
     restart: "no"
-    command: ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8085", "--reload"]
+    command: ["chacc", "run", "server", "--dev", "--host", "0.0.0.0", "--port", "8085"]
     networks:
       - chacc-network
 

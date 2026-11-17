@@ -27,11 +27,43 @@ docker compose -f deployment/docker/docker-compose.yml up -d
 
 The compose stack includes:
 
-- ChaCC API on port `8085` using `chacc-api:latest` from Docker Hub.
-- PostgreSQL 15.
+- ChaCC API on port `8085`.
+- PostgreSQL 16.
 - Persistent PostgreSQL data volume.
 - Persistent module storage volumes.
 - Health checks for API and database readiness.
+- Redis, optional (see below).
+
+### Redis (optional)
+
+ChaCC runs without Redis. Add it when:
+
+- you run more than one ChaCC container, so rate limits are counted together
+  instead of once per container;
+- rate-limit counts should survive restarts;
+- a module uses Redis (for example the outbound module's send limits).
+
+The compose file includes a Redis service that only starts with the `redis`
+profile. Set in `.env`:
+
+```bash
+REDIS_ENABLED=true
+REDIS_HOST=redis
+RATE_LIMIT_STORAGE_URI=redis://redis:6379/0
+```
+
+and start with:
+
+```bash
+docker compose -f deployment/docker/docker-compose.yml --profile redis up -d
+```
+
+ChaCC then waits for Redis before it starts. Redis data is kept in the
+`redis_data` volume. To use a password, add `--requirepass <password>` to the
+Redis `command` and use `REDIS_PASSWORD=<password>` and
+`redis://:<password>@redis:6379/0`. To use a Redis you already run, skip the
+profile and point `REDIS_HOST` and `RATE_LIMIT_STORAGE_URI` at it. See
+[Rate limiting](configuration.md#rate-limiting) for what each setting does.
 
 Health check calls:
 
@@ -46,6 +78,23 @@ DB_PASSWORD=change-me
 SECRET_KEY=replace-with-a-strong-random-secret
 ADMIN_PASSWORD=replace-with-a-strong-admin-password
 ```
+
+### Development
+
+`docker-compose.dev.yml` runs `chacc run server --dev` with SQLite and your
+working copy mounted. It works on its own:
+
+```bash
+docker compose -f deployment/docker/docker-compose.dev.yml up --build
+```
+
+Changes in `src/` reload the server. Changes in `chacc_api/` or `chacc_cli/` apply
+after `docker compose -f deployment/docker/docker-compose.dev.yml restart`.
+Modules are loaded from `plugins/`.
+
+The server runs as your user (ID 1000 by default) so it can read the mounted
+files. If `id -u` shows another ID, build with
+`CHACC_UID=$(id -u) CHACC_GID=$(id -g) docker compose -f deployment/docker/docker-compose.dev.yml up --build`.
 
 ## Standalone Linux deployment
 

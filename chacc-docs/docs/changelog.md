@@ -40,6 +40,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **`chacc deps check` and `chacc deps sync`** – Check the enabled modules' packages, or install what is missing.
 - **Database helpers in `chacc_api.database`** – Route dependencies (`get_async_db`, `get_db`), blocks (`async with async_session()`, `with session()`) and decorators for functions and service classes (`@with_async_session`, `@with_session`). Each closes its session when the work ends. See [Database sessions](modules.md#database-sessions).
 - **Rate limiting in `chacc_api.rate_limit`** – `rate_limit` for a route (with `key`, `cost`, `exempt_when`, `error_message` and `methods` options), `shared_rate_limit` for several routes sharing one limit, and `check_rate_limit` for things that aren't routes, such as login attempts. Routes can be limited where they are defined and don't need a `request` parameter. `RATE_LIMIT_ENABLED` and `RATE_LIMIT_STORAGE_URI` (memory or Redis) configure it. See [Rate limiting](modules.md#rate-limiting).
+- **Optional Redis in Docker Compose** – `docker compose --profile redis up -d` adds a Redis container; ChaCC waits for it before starting. See [Redis (optional)](deployment.md#redis-optional).
 
 ## Changed
 
@@ -51,6 +52,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - The Docker entrypoint no longer resolves dependencies as root, and pip can't fall back to a per-user install that was lost when the container was recreated.
 - Docker images use Python 3.15 and install core packages at the versions in `requirements.lock`.
 - Disabling or uninstalling a module no longer contacts the package index.
+- In development mode, settings that aren't allowed in production (such as an insecure `SECRET_KEY`) are logged as warnings instead of errors, since they don't stop the server there. Production still refuses to start.
 
 ## Deprecated
 
@@ -73,6 +75,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - The rate-limiting example in the docs crashed at import: SlowAPI routes need a `request` parameter. `rate_limit` doesn't.
 - A rate-limited route defined again (module hot reload) counted every request twice.
 - Modules made with `chacc create` now use `chacc_api.database` for sessions, so they don't log deprecation warnings.
+- `docker-compose.dev.yml` runs `chacc run server --dev` like the development image, works on its own, and mounts `chacc_api/`. It ran bare `uvicorn` and mounted files the server doesn't use. The development image runs as your user, so it can read mounted modules whose folders only you can open.
 
 ## 1.0.0-beta5.3
 
