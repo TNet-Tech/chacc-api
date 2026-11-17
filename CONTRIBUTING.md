@@ -372,8 +372,8 @@ Every module's `setup_plugin(backbone_context)` function receives a
 # The FastAPI app (to register routes manually if needed)
 backbone_context.app
 
-# Rate limiter
-backbone_context.limiter
+# Rate limiting comes from chacc_api.rate_limit (backbone_context.limiter is deprecated)
+from chacc_api.rate_limit import rate_limit
 
 # Logger
 backbone_context.logger

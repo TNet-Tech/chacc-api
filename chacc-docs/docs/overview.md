@@ -49,7 +49,7 @@ It exposes shared services:
 | Context member | Purpose |
 | --- | --- |
 | `context.app` | Main FastAPI application. |
-| `context.limiter` | The server's SlowAPI limiter. For route limits use `rate_limit` from `chacc_api.rate_limit` (see [Rate limiting](modules.md#rate-limiting)). |
+| `context.limiter` | Deprecated; use `chacc_api.rate_limit` (see [Rate limiting](modules.md#rate-limiting)). |
 | `context.logger` | Centralized logger. |
 | `context.get_db` / `context.get_db_async` | Deprecated; use `chacc_api.database` (see [Database sessions](modules.md#database-sessions)). |
 | `context.register_service()` | Register a named service for other modules. |

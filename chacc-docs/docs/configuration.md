@@ -78,11 +78,36 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 
 ## Rate limiting
 
+These apply to every limit set with `chacc_api.rate_limit` (see
+[Rate limiting](modules.md#rate-limiting)). Changes take effect after a restart.
+
 | Variable | Default | Description |
 | --- | --- | --- |
-| `RATE_LIMIT_ENABLED` | `true` | `false` turns off every route's limit. |
-| `RATE_LIMIT_STORAGE_URI` | `memory://` | Where request counts are kept. `memory://` counts per server process and resets on restart. `redis://[:password@]host:6379/0` is shared by all processes and survives restarts. If Redis can't be reached, counting falls back to memory. |
-| `FORWARDED_ALLOW_IPS` | `127.0.0.1,::1` | Read by uvicorn. Proxies whose `X-Forwarded-For` header is trusted for the client IP. Behind a reverse proxy on another host or in Docker, set it to the proxy's address, or every client shares the proxy's limit. Never `*` when clients can reach the server directly: they could fake their IP. |
+| `RATE_LIMIT_ENABLED` | `true` | `false` turns every limit off: no route answers `429`, and `check_rate_limit()` always allows. For load tests or debugging; keep `true` in production. |
+| `RATE_LIMIT_STORAGE_URI` | `memory://` | Where request counts are kept. See below. |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1,::1` | Read by uvicorn. Addresses of reverse proxies whose `X-Forwarded-For` header gives the client IP. |
+
+**Choosing the storage**
+
+| Value | Counts are | Use when |
+| --- | --- | --- |
+| `memory://` | Kept in the server process, lost on restart. | One server. |
+| `redis://[:password@]host:6379/0` | Shared by all servers, kept across restarts. | More than one server or container, or limits must survive restarts. |
+| `rediss://[:password@]host:6380/0` | Same, over TLS. | Redis needs TLS. |
+
+With `memory://` and several servers, each one allows the full limit, so clients
+get several times the limit in total. `RATE_LIMIT_STORAGE_URI` is separate from the
+`REDIS_*` settings, which don't configure it. If Redis can't be reached, the server
+counts in memory and logs a warning, so requests keep working; it goes back to Redis
+when it is reachable again.
+
+**Behind a reverse proxy**
+
+Clients are counted by IP. Behind nginx, a load balancer or another proxy, the
+server only sees the proxy's address, so every client shares one limit. Set
+`FORWARDED_ALLOW_IPS` to the proxy's address (or several, comma-separated) and the
+client IP is read from `X-Forwarded-For`. Don't use `*` when clients can also reach
+the server directly: they could send their own `X-Forwarded-For` and pick any IP.
 
 ## CORS
 

@@ -47,7 +47,11 @@ class BackboneContext:
 
     @property
     def limiter(self) -> Limiter:
-        """The main SlowAPI Limiter instance."""
+        """
+        Deprecated: use ``rate_limit`` (or ``limiter``) from ``chacc_api.rate_limit``.
+        Still works in this release.
+        """
+        _deprecated("context.limiter", "chacc_api.rate_limit", self._logger)
         return self._limiter
 
     @property

@@ -170,8 +170,11 @@ from their own `context_factory.py`; they are the same functions.
 
 ## Rate limiting
 
-Limit how often a route can be called with `rate_limit`, placed **under** the
-route decorator:
+Everything comes from `chacc_api.rate_limit`. Routes without a limit are not
+limited.
+
+**One route**: put `rate_limit` **under** the route decorator. The route doesn't
+need a `request` parameter.
 
 ```python
 from chacc_api.rate_limit import rate_limit
@@ -183,17 +186,55 @@ async def status():
     return {"status": "ok"}
 ```
 
-- Limits look like `"10/minute"`, `"5/second"` or several at once:
-  `"5/second;100/hour"`. Stacked decorators all apply.
-- Clients are counted by IP. To count by something else, pass a function of the
-  request: `@rate_limit("100/hour", key=lambda request: request.headers["x-api-key"])`.
-- Over the limit, the client gets `429` with a `Retry-After` header.
-- The route doesn't need a `request` parameter.
-- Routes without `rate_limit` are not limited.
+Limits look like `"10/minute"`, `"5/second"` or several at once:
+`"5/second;100/hour"`. Stacked decorators all apply. Over the limit, the client
+gets `429` with a `Retry-After` header.
 
-Counting is set up for the whole server (in memory or Redis, see
-[Configuration](configuration.md#rate-limiting)). `context.limiter` is the same
-limiter, for SlowAPI features such as shared limits.
+| Option | Use |
+| --- | --- |
+| `key=lambda request: ...` | What to count by. Default: the client IP. Example: `request.headers["x-api-key"]`. |
+| `cost=5` or `cost=lambda request: ...` | How many requests one call counts as, for expensive routes. |
+| `exempt_when=lambda request: ...` | Don't count the call when it returns `True`, for example for internal callers. |
+| `error_message="..."` | The `detail` text of the 429 response. |
+| `methods=["POST"]` | Only limit these HTTP methods. |
+| `per_method=True` | Count each HTTP method separately. |
+
+**Several routes sharing one limit**: calls to any of them count together.
+
+```python
+from chacc_api.rate_limit import shared_rate_limit
+
+search_limit = shared_rate_limit("60/minute", scope="search")
+
+
+@router.get("/search/items")
+@search_limit
+async def search_items(): ...
+
+
+@router.get("/search/users")
+@search_limit
+async def search_users(): ...
+```
+
+**Something that isn't a route**, such as login attempts per username:
+
+```python
+from chacc_api.rate_limit import check_rate_limit
+
+if not check_rate_limit("5/minute", "login", username):
+    raise HTTPException(429, "Too many attempts, try again later.")
+```
+
+A `scope` or `check_rate_limit` name only needs to be unique within your module:
+ChaCC prefixes it with your module's package, so two modules both using
+`"search"` get separate counters. Counting is set up for the whole server (in memory
+or Redis, see [Configuration](configuration.md#rate-limiting)). For anything else,
+`limiter` is the server's SlowAPI limiter.
+
+!!! note "Deprecated: `context.limiter`"
+    It still works in this release but logs a deprecation warning. Use
+    `rate_limit`, `shared_rate_limit` or `limiter` from `chacc_api.rate_limit`.
 
 ## Services
 

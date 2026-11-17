@@ -200,13 +200,15 @@ authentication module is loaded. See [Automatic Restarts](server-restarts.md).
 
 ## Rate limiting
 
-Routes are limited only when they use `rate_limit` from `chacc_api.rate_limit`
+Routes are limited only when they use `rate_limit` or `shared_rate_limit` from `chacc_api.rate_limit`
 (see [Rate limiting](modules.md#rate-limiting)). Over the limit, the client gets
 `429` with a `Retry-After` header:
 
 ```json
 {"detail": "Too many requests. You have exceeded the rate limit of 10 per 1 minute."}
 ```
+
+A route's `error_message` replaces the `detail` text.
 
 Clients are counted by IP. Counts are kept in memory unless
 `RATE_LIMIT_STORAGE_URI` points to Redis. See [Configuration](configuration.md#rate-limiting).

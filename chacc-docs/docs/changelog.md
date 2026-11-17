@@ -39,7 +39,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Start without network** – In production, module packages are installed into `.chacc_packages/` (`MODULE_PACKAGES_DIR`, a volume in Docker) when a module is uploaded or enabled. Restarts and recreated containers reuse them. At startup the server only checks them; if some are missing it tries once (`CHACC_BOOT_INSTALL`) and otherwise skips just the modules that need them. See [Running without network](deployment.md#running-without-network).
 - **`chacc deps check` and `chacc deps sync`** – Check the enabled modules' packages, or install what is missing.
 - **Database helpers in `chacc_api.database`** – Route dependencies (`get_async_db`, `get_db`), blocks (`async with async_session()`, `with session()`) and decorators for functions and service classes (`@with_async_session`, `@with_session`). Each closes its session when the work ends. See [Database sessions](modules.md#database-sessions).
-- **`rate_limit` decorator** (`chacc_api.rate_limit`) – Works on routes defined at import time and doesn't need a `request` parameter. `RATE_LIMIT_ENABLED` and `RATE_LIMIT_STORAGE_URI` (memory or Redis) configure it. See [Rate limiting](modules.md#rate-limiting).
+- **Rate limiting in `chacc_api.rate_limit`** – `rate_limit` for a route (with `key`, `cost`, `exempt_when`, `error_message` and `methods` options), `shared_rate_limit` for several routes sharing one limit, and `check_rate_limit` for things that aren't routes, such as login attempts. Routes can be limited where they are defined and don't need a `request` parameter. `RATE_LIMIT_ENABLED` and `RATE_LIMIT_STORAGE_URI` (memory or Redis) configure it. See [Rate limiting](modules.md#rate-limiting).
 
 ## Changed
 
@@ -55,6 +55,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 ## Deprecated
 
 - `context.get_db` and `context.get_db_async` – Use `get_db` and `get_async_db` from `chacc_api.database`. They still work in this release and log a warning once.
+- `context.limiter` – Use `chacc_api.rate_limit`. It still works in this release and logs a warning once.
 
 ## Fixed
 
