@@ -23,8 +23,8 @@ from src.constants import (
 from src.core_services import BackboneContext
 from src.database import (
     ModuleRecord,
+    SessionLocal,
     apply_deferred_schema_changes,
-    get_db,
     initialize_database_models,
 )
 from src.logger import configure_logging, get_default_log_level
@@ -213,7 +213,7 @@ async def load_modules(
     """
     chacc_logger.info("Starting module discovery and database synchronization...")
 
-    db = await anext(get_db())
+    db = SessionLocal()  # closed in the finally block below
 
     try:
         if MODULES_LOADED_DIR not in sys.path:

@@ -49,10 +49,9 @@ It exposes shared services:
 | Context member | Purpose |
 | --- | --- |
 | `context.app` | Main FastAPI application. |
-| `context.limiter` | SlowAPI limiter for route-level throttling. |
+| `context.limiter` | The server's SlowAPI limiter. For route limits use `rate_limit` from `chacc_api.rate_limit` (see [Rate limiting](modules.md#rate-limiting)). |
 | `context.logger` | Centralized logger. |
-| `context.get_db` | Database session dependency. It is a synchronous session and should be treated as such. |
-| `context.get_db_async` | Async database session dependency. Use this for non-blocking database access; works with `AsyncSession`. |
+| `context.get_db` / `context.get_db_async` | Deprecated; use `chacc_api.database` (see [Database sessions](modules.md#database-sessions)). |
 | `context.register_service()` | Register a named service for other modules. |
 | `context.get_service()` | Retrieve a named service. |
 | `context.get_module_config()` | Read module-specific environment configuration. |

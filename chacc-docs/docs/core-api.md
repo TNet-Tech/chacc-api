@@ -200,14 +200,13 @@ authentication module is loaded. See [Automatic Restarts](server-restarts.md).
 
 ## Rate limiting
 
-The backbone installs a SlowAPI limiter and a custom handler for
-`RateLimitExceeded`. Module routes can use `context.limiter` for throttling.
+Routes are limited only when they use `rate_limit` from `chacc_api.rate_limit`
+(see [Rate limiting](modules.md#rate-limiting)). Over the limit, the client gets
+`429` with a `Retry-After` header:
 
-Example:
-
-```python
-@router.get("/status")
-@context.limiter.limit("10/minute")
-async def status():
-    return {"status": "ok"}
+```json
+{"detail": "Too many requests. You have exceeded the rate limit of 10 per 1 minute."}
 ```
+
+Clients are counted by IP. Counts are kept in memory unless
+`RATE_LIMIT_STORAGE_URI` points to Redis. See [Configuration](configuration.md#rate-limiting).

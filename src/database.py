@@ -1,4 +1,8 @@
+import functools
+import inspect
 import uuid
+from collections.abc import AsyncGenerator, Generator
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 
 from sqlalchemy import (
@@ -17,7 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.types import TypeDecorator
 
 from .constants import ASYNC_DATABASE_URL, DATABASE_ENGINE, DATABASE_URL
@@ -209,7 +213,40 @@ def _all_declarative_subclasses(cls):
         yield from _all_declarative_subclasses(subclass)
 
 
-async def get_db():
+@asynccontextmanager
+async def async_session() -> AsyncGenerator[AsyncSession]:
+    """
+    An async session, closed when the block ends (rolled back first on errors):
+
+        async with async_session() as db:
+            items = (await db.execute(select(Item))).scalars().all()
+
+    Do all the work inside the block and don't return the session.
+    """
+    db = AsyncSessionLocal()
+    try:
+        yield db
+    except Exception:
+        try:
+            await db.rollback()
+        except Exception:  # noqa: BLE001
+            chacc_logger.warning("Database Session rollback failed!")
+        raise
+    finally:
+        try:
+            await db.close()
+        except Exception as e:  # noqa: BLE001
+            chacc_logger.warning(f"CLOSE FAILED: {e}")
+
+
+@contextmanager
+def session() -> Generator[Session]:
+    """
+    A synchronous session, closed when the block ends (rolled back first on errors):
+
+        with session() as db:
+            items = db.query(Item).all()
+    """
     db = SessionLocal()
     try:
         yield db
@@ -220,19 +257,67 @@ async def get_db():
         db.close()
 
 
-async def get_async_db():
-    session = AsyncSessionLocal()
+async def get_db():
+    """Route dependency: ``db: Session = Depends(get_db)``. FastAPI closes it."""
+    with session() as db:
+        yield db
 
-    try:
-        yield session
-    except Exception:
-        try:
-            await session.rollback()
-        except Exception:  # noqa: BLE001
-            chacc_logger.warning("Database Session rollback failed!")
-        raise
-    finally:
-        try:
-            await session.close()
-        except Exception as e:  # noqa: BLE001
-            chacc_logger.warning(f"CLOSE FAILED: {e}")
+
+async def get_async_db():
+    """Route dependency: ``db: AsyncSession = Depends(get_async_db)``. FastAPI closes it."""
+    async with async_session() as db:
+        yield db
+
+
+def with_async_session(func):
+    """
+    Give an async function or method its own async session as ``db``, closed when
+    it returns or raises. Callers don't pass a session:
+
+        class ItemService:
+            @with_async_session
+            async def names(self, *, db):
+                return [i.name for i in (await db.execute(select(Item))).scalars()]
+
+        await ItemService().names()
+
+    Pass ``db=`` to reuse a session you already have (for example to run several
+    calls in one transaction); that session is then left open.
+    """
+    if not inspect.iscoroutinefunction(func):
+        raise TypeError("@with_async_session needs an async function; use @with_session.")
+
+    @functools.wraps(func)
+    async def wrapper(*args, db=None, **kwargs):
+        if db is not None:
+            return await func(*args, db=db, **kwargs)
+        async with async_session() as new_db:
+            return await func(*args, db=new_db, **kwargs)
+
+    return wrapper
+
+
+def with_session(func):
+    """
+    Same as ``with_async_session`` for the synchronous session. Works on both
+    sync and async functions.
+    """
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(*args, db=None, **kwargs):
+            if db is not None:
+                return await func(*args, db=db, **kwargs)
+            with session() as new_db:
+                return await func(*args, db=new_db, **kwargs)
+
+        return async_wrapper
+
+    @functools.wraps(func)
+    def wrapper(*args, db=None, **kwargs):
+        if db is not None:
+            return func(*args, db=db, **kwargs)
+        with session() as new_db:
+            return func(*args, db=new_db, **kwargs)
+
+    return wrapper

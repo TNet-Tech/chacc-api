@@ -378,10 +378,11 @@ backbone_context.limiter
 # Logger
 backbone_context.logger
 
-# Database session factory (usable as FastAPI Depends)
+# Database sessions come from chacc_api.database (backbone_context.get_db is deprecated)
 from fastapi import Depends
+from chacc_api.database import get_async_db
 
-db: Session = Depends(backbone_context.get_db)
+db: AsyncSession = Depends(get_async_db)
 
 # Register a named service for other modules to consume
 backbone_context.register_service("my_service", my_callable)

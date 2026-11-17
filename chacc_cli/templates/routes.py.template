@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from .context_factory import get_async_db, get_db
+from chacc_api.database import get_async_db
+from chacc_api.rate_limit import rate_limit
 
 router = APIRouter()
 
@@ -10,6 +11,7 @@ router = APIRouter()
 
 # Example: Add your module endpoints here
 # @router.post("/", response_model={{module_name_pascal}}Response)
+# @rate_limit("30/minute")  # optional, always under the route decorator
 # async def create_item(item: {{module_name_pascal}}Create, db: AsyncSession = Depends(get_async_db)):
 #     # Implementation here
 #     pass

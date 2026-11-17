@@ -76,6 +76,14 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | `REDIS_DB` | `0` | Redis database number. |
 | `REDIS_PASSWORD` | empty | Redis password. |
 
+## Rate limiting
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `RATE_LIMIT_ENABLED` | `true` | `false` turns off every route's limit. |
+| `RATE_LIMIT_STORAGE_URI` | `memory://` | Where request counts are kept. `memory://` counts per server process and resets on restart. `redis://[:password@]host:6379/0` is shared by all processes and survives restarts. If Redis can't be reached, counting falls back to memory. |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1,::1` | Read by uvicorn. Proxies whose `X-Forwarded-For` header is trusted for the client IP. Behind a reverse proxy on another host or in Docker, set it to the proxy's address, or every client shares the proxy's limit. Never `*` when clients can reach the server directly: they could fake their IP. |
+
 ## CORS
 
 | Variable | Default | Description |

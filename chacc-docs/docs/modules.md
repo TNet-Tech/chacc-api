@@ -34,6 +34,7 @@ my_module/
 | `author` | No | Author or organization. |
 | `description` | No | Module description. |
 | `entry_point` | Yes | Python path to setup function, for example `my_module_src.main:setup_plugin`. |
+| `test_entry_point` | No | Python path to the module's test runner, set by `chacc create`. |
 | `base_path_prefix` | No | Module path, for example `/billing`. Always mounted under the server's `API_PREFIX` (default `/api`), so `/billing` is served at `/api/billing`. |
 | `tags` | No | FastAPI documentation tags. |
 | `dependencies_file` | No | Requirements file name, usually `requirements.txt`. |
@@ -90,45 +91,109 @@ class Item(ChaCCBaseModel):
 | `updated_at` | `DateTime` | Last update timestamp. |
 | `deleted_at` | `DateTime` | Soft-delete timestamp. |
 
-## Routes
+## Database sessions
 
-Use a database dependency to work with the database in your routes. ChaCC
-provides both a synchronous and an asynchronous session. For new modules,
-prefer the **async** session (`AsyncSession`) because it does not block the
-server while it waits for the database to respond.
+All database helpers come from `chacc_api.database`. Prefer the async session
+(`AsyncSession`): it doesn't block the server while it waits for the database.
+Each helper has a synchronous twin (`get_db`, `session`, `with_session`).
 
-Get the dependency from your module's `context_factory.py`, which the
-`chacc create` command generates for you:
+The rule: the code that opens a session closes it, when its work ends. The
+helpers do that for you, also on errors.
+
+**In routes**, use the dependency. FastAPI closes the session after the response:
 
 ```python
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from .context_factory import get_async_db
+from chacc_api.database import get_async_db
 
 router = APIRouter()
 
 
 @router.get("/items")
 async def list_items(db: AsyncSession = Depends(get_async_db)):
-    # `db` is an async SQLAlchemy session.
-    # Example: result = await db.execute(select(Item))
-    return {"items": []}
+    items = (await db.execute(select(Item))).scalars().all()
+    return [item.name for item in items]
 ```
 
-If you need a traditional synchronous session, use `get_db` instead:
+**In a block of code** (startup, background tasks):
 
 ```python
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from .context_factory import get_db
+from chacc_api.database import async_session
 
-router = APIRouter()
-
-
-@router.get("/ping")
-async def ping(db: Session = Depends(get_db)):
-    return {"ok": True}
+async with async_session() as db:
+    items = (await db.execute(select(Item))).scalars().all()
 ```
+
+**In functions and service classes**, decorate with `with_async_session`. Each
+call gets its own session as the keyword argument `db`; callers don't pass one:
+
+```python
+from chacc_api.database import with_async_session
+
+
+class ItemService:
+    @with_async_session
+    async def rename(self, item_id, name, *, db):
+        item = await db.get(Item, item_id)
+        item.name = name
+        await db.commit()
+
+
+await ItemService().rename(1, "new")
+```
+
+To run several calls in one transaction, pass your session: `await
+service.rename(1, "new", db=db)`. That session is then left open for you to close.
+
+**A class may keep a session it receives** (for example a repository built per
+request), as long as it doesn't outlive the request or block that opened it and
+doesn't close it itself.
+
+Avoid:
+
+- Returning a session, or storing one on a long-lived service (created in
+  `setup_plugin` or registered with `context.register_service()`). An
+  `AsyncSession` can't be shared by concurrent requests.
+- `db = await anext(get_async_db())`. Nothing closes that session except the
+  garbage collector, sometimes in the middle of a query (`CLOSE FAILED ...
+  _connection_for_bind() is already in progress`), and the connection pool runs
+  out under load.
+
+Modules made with `chacc create` can also import `get_async_db` and `get_db`
+from their own `context_factory.py`; they are the same functions.
+
+!!! note "Deprecated: `context.get_db` and `context.get_db_async`"
+    They still work in this release but log a deprecation warning. Replace
+    `Depends(context.get_db_async)` with `Depends(get_async_db)` and
+    `Depends(context.get_db)` with `Depends(get_db)` from `chacc_api.database`.
+
+## Rate limiting
+
+Limit how often a route can be called with `rate_limit`, placed **under** the
+route decorator:
+
+```python
+from chacc_api.rate_limit import rate_limit
+
+
+@router.get("/status")
+@rate_limit("10/minute")
+async def status():
+    return {"status": "ok"}
+```
+
+- Limits look like `"10/minute"`, `"5/second"` or several at once:
+  `"5/second;100/hour"`. Stacked decorators all apply.
+- Clients are counted by IP. To count by something else, pass a function of the
+  request: `@rate_limit("100/hour", key=lambda request: request.headers["x-api-key"])`.
+- Over the limit, the client gets `429` with a `Retry-After` header.
+- The route doesn't need a `request` parameter.
+- Routes without `rate_limit` are not limited.
+
+Counting is set up for the whole server (in memory or Redis, see
+[Configuration](configuration.md#rate-limiting)). `context.limiter` is the same
+limiter, for SlowAPI features such as shared limits.
 
 ## Services
 

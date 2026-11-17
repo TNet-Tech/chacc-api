@@ -69,6 +69,11 @@ REDIS_PORT = config("REDIS_PORT", default=6379, cast=int)
 REDIS_DB = config("REDIS_DB", default=0, cast=int)
 REDIS_PASSWORD = config("REDIS_PASSWORD", default=None, cast=str)
 
+RATE_LIMIT_ENABLED = config("RATE_LIMIT_ENABLED", default=True, cast=bool)
+# Where request counts are kept: "memory://" (per process, reset on restart) or
+# "redis://[:password@]host:port/db" (shared by all processes, survives restarts).
+RATE_LIMIT_STORAGE_URI = config("RATE_LIMIT_STORAGE_URI", default="memory://", cast=str)
+
 DATABASE_ENGINE = config("DATABASE_ENGINE", default="sqlite", cast=str)
 DATABASE_NAME = config("DATABASE_NAME", default="chaccapidb")
 DATABASE_USER = config("DATABASE_USER", default="chacc")

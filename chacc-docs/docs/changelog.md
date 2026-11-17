@@ -38,6 +38,8 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Large module uploads** – Uploads stream to disk in chunks. Packages up to 10 MB are accepted (`MAX_MODULE_UPLOAD_SIZE`), with a guard against zip bombs (`MAX_MODULE_UNCOMPRESSED_SIZE`).
 - **Start without network** – In production, module packages are installed into `.chacc_packages/` (`MODULE_PACKAGES_DIR`, a volume in Docker) when a module is uploaded or enabled. Restarts and recreated containers reuse them. At startup the server only checks them; if some are missing it tries once (`CHACC_BOOT_INSTALL`) and otherwise skips just the modules that need them. See [Running without network](deployment.md#running-without-network).
 - **`chacc deps check` and `chacc deps sync`** – Check the enabled modules' packages, or install what is missing.
+- **Database helpers in `chacc_api.database`** – Route dependencies (`get_async_db`, `get_db`), blocks (`async with async_session()`, `with session()`) and decorators for functions and service classes (`@with_async_session`, `@with_session`). Each closes its session when the work ends. See [Database sessions](modules.md#database-sessions).
+- **`rate_limit` decorator** (`chacc_api.rate_limit`) – Works on routes defined at import time and doesn't need a `request` parameter. `RATE_LIMIT_ENABLED` and `RATE_LIMIT_STORAGE_URI` (memory or Redis) configure it. See [Rate limiting](modules.md#rate-limiting).
 
 ## Changed
 
@@ -50,6 +52,10 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - Docker images use Python 3.15 and install core packages at the versions in `requirements.lock`.
 - Disabling or uninstalling a module no longer contacts the package index.
 
+## Deprecated
+
+- `context.get_db` and `context.get_db_async` – Use `get_db` and `get_async_db` from `chacc_api.database`. They still work in this release and log a warning once.
+
 ## Fixed
 
 - `docker stop` now shuts the server down gracefully.
@@ -61,6 +67,11 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - Module discovery works with Python 3.15, which no longer uses `__package__` for imports.
 - The development Docker image starts in development mode and builds again. The Docker files and `.env.example` used `DEVELOPMENT_MODE`, which ChaCC never read; the setting is `CHACC_DEV_MODE`. Rename it in your own `.env` if you copied it.
 - `deploy.sh` (standalone Linux) works again: it started the service from the wrong folder with a command that doesn't exist, and the service could not write to most of its data folders. Running it again no longer replaces `.env` and its secrets.
+- Module discovery at startup no longer leaves its database session to be closed by the garbage collector.
+- `import chacc_api.database` and `import chacc_api.core` failed with `ImportError`.
+- The rate-limiting example in the docs crashed at import: SlowAPI routes need a `request` parameter. `rate_limit` doesn't.
+- A rate-limited route defined again (module hot reload) counted every request twice.
+- Modules made with `chacc create` now use `chacc_api.database` for sessions, so they don't log deprecation warnings.
 
 ## 1.0.0-beta5.3
 
