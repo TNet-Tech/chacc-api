@@ -368,6 +368,8 @@
       
         
       
+        
+      
     
     
     
@@ -484,6 +486,34 @@
     
   
     Core API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web Console
   
 
     
@@ -2074,7 +2104,7 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Module dependencies</strong> – Modules list required and optional modules in <code>module_meta.json</code> (<code>module_dependencies</code>). Modules load after the modules they depend on. <code>chacc install</code>, <code>chacc deploy</code> and the API check them, and missing optional modules only produce a warning. New modules created with <code>chacc create</code> include an empty list. See <a href="../modules/#module-dependencies">Module dependencies</a>.</li>
-<li><strong>Module console</strong> – <code>/console</code> lists modules with their author, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It asks for a login when the authentication module protects the API. In development mode the dependency graph needs no login.</li>
+<li><strong>Web console</strong> – <code>/console</code> lists modules with their author, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It asks for a login when the authentication module protects the API. In development mode the dependency graph needs no login.</li>
 <li><strong>Dependency graph API</strong> – <code>GET /api/modules/graph</code> returns the modules, their dependencies, which ones are blocked or missing, and the load order.</li>
 <li><strong>Automatic restarts</strong> – <code>POST /api/system/restart</code> restarts the server gracefully, and <code>chacc run server</code> brings it back on its own. <code>chacc deploy --restart</code> deploys a module and makes it live in one step. See <a href="../server-restarts/">Automatic Restarts</a>.</li>
 <li><strong>Login prompt in <code>chacc deploy</code></strong> – When the server answers <code>401</code>, the CLI asks for a username and password, uploads with the token and revokes the session afterwards. <code>CHACC_DEPLOY_USERNAME</code>/<code>CHACC_DEPLOY_PASSWORD</code> cover CI.</li>
@@ -2085,12 +2115,13 @@
 <li><strong>Database helpers in <code>chacc_api.database</code></strong> – Route dependencies (<code>get_async_db</code>, <code>get_db</code>), blocks (<code>async with async_session()</code>, <code>with session()</code>) and decorators for functions and service classes (<code>@with_async_session</code>, <code>@with_session</code>). Each closes its session when the work ends. See <a href="../modules/#database-sessions">Database sessions</a>.</li>
 <li><strong>Rate limiting in <code>chacc_api.rate_limit</code></strong> – <code>rate_limit</code> for a route (with <code>key</code>, <code>cost</code>, <code>exempt_when</code>, <code>error_message</code> and <code>methods</code> options), <code>shared_rate_limit</code> for several routes sharing one limit, and <code>check_rate_limit</code> for things that aren't routes, such as login attempts. Routes can be limited where they are defined and don't need a <code>request</code> parameter. <code>RATE_LIMIT_ENABLED</code> and <code>RATE_LIMIT_STORAGE_URI</code> (memory or Redis) configure it. See <a href="../modules/#rate-limiting">Rate limiting</a>.</li>
 <li><strong>Optional Redis in Docker Compose</strong> – <code>docker compose --profile redis up -d</code> adds a Redis container; ChaCC waits for it before starting. See <a href="../deployment/#redis-optional">Redis (optional)</a>.</li>
-<li><strong>Services tab in the console</strong> – Shows whether the database, Redis and rate limiting work, plus server details, checked every 30 seconds. The top bar shows when a service is down or degraded. Also available as <code>GET /api/system/services</code>. See <a href="../core-api/#service-status">Service status</a>.</li>
-<li><strong>Module details in the console</strong> – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows <strong>Failed to load</strong> with the reason, which is kept across restarts. Also available as <code>GET /api/modules/{name}</code>. See <a href="../core-api/#module-details">Module details</a>.</li>
+<li><strong>Services tab in the web console</strong> – Shows whether the database, Redis and rate limiting work, plus server details, checked every 30 seconds. The top bar shows when a service is down or degraded. Also available as <code>GET /api/system/services</code>. See <a href="../core-api/#service-status">Service status</a>.</li>
+<li><strong>Module details in the web console</strong> – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows <strong>Failed to load</strong> with the reason, which is kept across restarts. Also available as <code>GET /api/modules/{name}</code>. See <a href="../core-api/#module-details">Module details</a>.</li>
+<li><strong>Console guide</strong> – A new <a href="../console/">Console</a> page walks through the modules, module details, dependency graph, services and restarts, with screenshots.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>New landing page</strong> – Links to the module console and shows a live server status that follows restarts.</li>
+<li><strong>New landing page</strong> – Links to the web console and shows a live server status that follows restarts.</li>
 <li><code>chacc deploy</code> waits up to 600 s for the server response by default (<code>CHACC_DEPLOY_TIMEOUT</code>) and exits with status <code>1</code> on failure.</li>
 <li><code>chacc run server</code> now exits with the server's exit code when it crashes.</li>
 <li>Requests to <code>/.well-known/chacc</code> are no longer written to the access log.</li>

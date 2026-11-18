@@ -30,7 +30,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 ## Added
 
 - **Module dependencies** – Modules list required and optional modules in `module_meta.json` (`module_dependencies`). Modules load after the modules they depend on. `chacc install`, `chacc deploy` and the API check them, and missing optional modules only produce a warning. New modules created with `chacc create` include an empty list. See [Module dependencies](modules.md#module-dependencies).
-- **Module console** – `/console` lists modules with their author, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It asks for a login when the authentication module protects the API. In development mode the dependency graph needs no login.
+- **Web console** – `/console` lists modules with their author, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It asks for a login when the authentication module protects the API. In development mode the dependency graph needs no login.
 - **Dependency graph API** – `GET /api/modules/graph` returns the modules, their dependencies, which ones are blocked or missing, and the load order.
 - **Automatic restarts** – `POST /api/system/restart` restarts the server gracefully, and `chacc run server` brings it back on its own. `chacc deploy --restart` deploys a module and makes it live in one step. See [Automatic Restarts](server-restarts.md).
 - **Login prompt in `chacc deploy`** – When the server answers `401`, the CLI asks for a username and password, uploads with the token and revokes the session afterwards. `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` cover CI.
@@ -41,12 +41,13 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Database helpers in `chacc_api.database`** – Route dependencies (`get_async_db`, `get_db`), blocks (`async with async_session()`, `with session()`) and decorators for functions and service classes (`@with_async_session`, `@with_session`). Each closes its session when the work ends. See [Database sessions](modules.md#database-sessions).
 - **Rate limiting in `chacc_api.rate_limit`** – `rate_limit` for a route (with `key`, `cost`, `exempt_when`, `error_message` and `methods` options), `shared_rate_limit` for several routes sharing one limit, and `check_rate_limit` for things that aren't routes, such as login attempts. Routes can be limited where they are defined and don't need a `request` parameter. `RATE_LIMIT_ENABLED` and `RATE_LIMIT_STORAGE_URI` (memory or Redis) configure it. See [Rate limiting](modules.md#rate-limiting).
 - **Optional Redis in Docker Compose** – `docker compose --profile redis up -d` adds a Redis container; ChaCC waits for it before starting. See [Redis (optional)](deployment.md#redis-optional).
-- **Services tab in the console** – Shows whether the database, Redis and rate limiting work, plus server details, checked every 30 seconds. The top bar shows when a service is down or degraded. Also available as `GET /api/system/services`. See [Service status](core-api.md#service-status).
-- **Module details in the console** – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows **Failed to load** with the reason, which is kept across restarts. Also available as `GET /api/modules/{name}`. See [Module details](core-api.md#module-details).
+- **Services tab in the web console** – Shows whether the database, Redis and rate limiting work, plus server details, checked every 30 seconds. The top bar shows when a service is down or degraded. Also available as `GET /api/system/services`. See [Service status](core-api.md#service-status).
+- **Module details in the web console** – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows **Failed to load** with the reason, which is kept across restarts. Also available as `GET /api/modules/{name}`. See [Module details](core-api.md#module-details).
+- **Console guide** – A new [Console](console.md) page walks through the modules, module details, dependency graph, services and restarts, with screenshots.
 
 ## Changed
 
-- **New landing page** – Links to the module console and shows a live server status that follows restarts.
+- **New landing page** – Links to the web console and shows a live server status that follows restarts.
 - `chacc deploy` waits up to 600 s for the server response by default (`CHACC_DEPLOY_TIMEOUT`) and exits with status `1` on failure.
 - `chacc run server` now exits with the server's exit code when it crashes.
 - Requests to `/.well-known/chacc` are no longer written to the access log.

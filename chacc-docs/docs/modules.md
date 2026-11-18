@@ -24,7 +24,7 @@ my_module/
   .gitignore
 ```
 
-The console shows the module's `README.md` in its details, formatted as Markdown. Code blocks marked `mermaid` are drawn as diagrams. Images and links show only when they use full `https://` addresses; raw HTML tags are left out.
+The web console shows the module's `README.md` in its details, formatted as Markdown. Code blocks marked `mermaid` are drawn as diagrams. Images and links show only when they use full `https://` addresses; raw HTML tags are left out.
 
 ## `module_meta.json`
 
@@ -44,8 +44,8 @@ The console shows the module's `README.md` in its details, formatted as Markdown
 | `required_chacc_version` | No | Minimum ChaCC version. |
 | `license` | No | Module license. |
 | `homepage` | No | Module homepage. |
-| `repository` | No | Source code link, shown in the console. |
-| `support` | No | Where to get help (an issues page or contact), shown in the console. |
+| `repository` | No | Source code link, shown in the web console. |
+| `support` | No | Where to get help (an issues page or contact), shown in the web console. |
 
 ## Setup function
 

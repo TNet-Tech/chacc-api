@@ -201,19 +201,10 @@ Returns the modules the server would load (installed archives in production,
 `plugins/` in dev mode), the dependencies between them, which modules are
 blocked, disabled or not installed, and the load order.
 
-## Module console
+## Web console
 
-Open `/console` in a browser to install, enable, disable and uninstall modules,
-view the dependency graph, check the services and restart the server. When the
-authentication module is loaded, the console asks you to log in.
-
-Click a module's name, or choose **Details** in its menu, to see everything about
-it, including why it failed to load. The link `/console#module=<name>` opens a
-module's details directly.
-
-The **Services** tab shows the database, Redis, rate limiting and the server, and
-checks them again every 30 seconds while the console is open. When a service is
-down or degraded, the tab and the status in the top bar say so.
+Open `/console` in a browser to manage modules, see the dependency graph and the
+services, and restart the server. See [Web Console](console.md).
 
 ## Server discovery
 

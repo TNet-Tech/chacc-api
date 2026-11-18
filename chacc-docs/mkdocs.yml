@@ -13,6 +13,7 @@ nav:
     - Installation: installation.md
     - Configuration: configuration.md
     - Core API: core-api.md
+    - Web Console: console.md
     - Database and Migrations: database-migrations.md
     - CLI: cli.md
     - Deployment: deployment.md

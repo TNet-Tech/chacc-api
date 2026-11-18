@@ -18,7 +18,7 @@
         <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../database-migrations/">
+        <link rel="next" href="../console/">
       
       
         
@@ -372,6 +372,8 @@
       
         
       
+        
+      
     
     
     
@@ -695,10 +697,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#module-console" class="md-nav__link">
+  <a href="#web-console" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Module console
+        Web console
       
     </span>
   </a>
@@ -753,6 +755,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web Console
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1496,10 +1526,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#module-console" class="md-nav__link">
+  <a href="#web-console" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Module console
+        Web console
       
     </span>
   </a>
@@ -1735,16 +1765,9 @@ updated or uninstalled. The module list also reports it as <code>load_failure</c
 <p>Returns the modules the server would load (installed archives in production,
 <code>plugins/</code> in dev mode), the dependencies between them, which modules are
 blocked, disabled or not installed, and the load order.</p>
-<h2 id="module-console">Module console<a class="headerlink" href="#module-console" title="Permanent link">&para;</a></h2>
-<p>Open <code>/console</code> in a browser to install, enable, disable and uninstall modules,
-view the dependency graph, check the services and restart the server. When the
-authentication module is loaded, the console asks you to log in.</p>
-<p>Click a module's name, or choose <strong>Details</strong> in its menu, to see everything about
-it, including why it failed to load. The link <code>/console#module=&lt;name&gt;</code> opens a
-module's details directly.</p>
-<p>The <strong>Services</strong> tab shows the database, Redis, rate limiting and the server, and
-checks them again every 30 seconds while the console is open. When a service is
-down or degraded, the tab and the status in the top bar say so.</p>
+<h2 id="web-console">Web console<a class="headerlink" href="#web-console" title="Permanent link">&para;</a></h2>
+<p>Open <code>/console</code> in a browser to manage modules, see the dependency graph and the
+services, and restart the server. See <a href="../console/">Web Console</a>.</p>
 <h2 id="server-discovery">Server discovery<a class="headerlink" href="#server-discovery" title="Permanent link">&para;</a></h2>
 <p><code>GET /.well-known/chacc</code> is never prefixed. It returns the server's <code>api_prefix</code>,
 a <code>boot_id</code> that changes on every restart, and <code>auth</code> (whether core routes need a
@@ -1874,13 +1897,13 @@ authentication module is loaded. For load balancers and Kubernetes, keep using
         
         
           
-          <a href="../database-migrations/" class="md-footer__link md-footer__link--next" aria-label="Next: Database and Migrations">
+          <a href="../console/" class="md-footer__link md-footer__link--next" aria-label="Next: Web Console">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Database and Migrations
+                Web Console
               </div>
             </div>
             <div class="md-footer__button md-icon">
