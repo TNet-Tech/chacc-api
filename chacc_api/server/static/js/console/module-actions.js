@@ -29,6 +29,10 @@ function reportError(e) {
     if (e.status === 409 && missing && missing.required && missing.required.length) {
         message += '\nInstall first: ' + missing.required.join(', ');
     }
+    // ChaCC's own 413 has a detail; without one, a proxy in front of it refused the file.
+    if (e.status === 413 && !(e.data && e.data.detail)) {
+        message = 'The file is too large for the proxy in front of the server (for nginx, raise client_max_body_size).';
+    }
     toast(message, 'error');
 }
 

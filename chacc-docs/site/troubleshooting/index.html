@@ -1592,7 +1592,11 @@ without Redis.</p>
 </tr>
 <tr>
 <td>Deployment returns 413</td>
-<td>The package exceeds <code>MAX_MODULE_UPLOAD_SIZE</code> (10 MB by default) on the server.</td>
+<td>If the message names nginx or another proxy, raise its upload limit (nginx: <code>client_max_body_size</code>). See <a href="../deployment/#behind-a-reverse-proxy">Behind a reverse proxy</a>. Otherwise the package exceeds <code>MAX_MODULE_UPLOAD_SIZE</code> (10 MB by default).</td>
+</tr>
+<tr>
+<td>Upload returns <code>504</code> behind a proxy</td>
+<td>Raise the proxy's timeout (nginx: <code>proxy_read_timeout 600s</code>).</td>
 </tr>
 <tr>
 <td>Restart returns <code>409</code></td>

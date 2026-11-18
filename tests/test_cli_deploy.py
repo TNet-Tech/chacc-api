@@ -239,6 +239,26 @@ def test_server_error_surfaces_detail(chacc_file):
         deployer.deploy(chacc_file)
 
 
+def test_proxy_413_names_the_proxy_instead_of_printing_its_page(chacc_file):
+    class ProxyPage(FakeResponse):
+        def __init__(self):
+            super().__init__(413)
+            self.text = "<html><head><title>413 Request Entity Too Large</title></head></html>"
+            self.headers = {"Server": "nginx/1.31.8"}
+
+        def json(self):
+            raise ValueError("not JSON")
+
+    deployer, _ = make(
+        {("GET", "/api/modules/"): [FakeResponse(200)], ("POST", "/api/modules/"): [ProxyPage()]}
+    )
+    with pytest.raises(DeployError) as error:
+        deployer.deploy(chacc_file)
+    assert "rejected by nginx in front of ChaCC" in str(error.value)
+    assert "client_max_body_size" in str(error.value)
+    assert "<html>" not in str(error.value)
+
+
 # ---------- Restart ----------
 
 

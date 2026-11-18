@@ -99,7 +99,8 @@ REDIS_DB=0
 | Deployment times out | Increase `CHACC_DEPLOY_TIMEOUT`. |
 | Deployment returns 401 | Enter valid credentials when prompted, or set `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` (CI) or `CHACC_DEPLOY_API_KEY`. |
 | Deployment says "Login endpoint not found" | Set `CHACC_DEPLOY_AUTH_PATH` to the auth module's `base_path_prefix` (without the API prefix). |
-| Deployment returns 413 | The package exceeds `MAX_MODULE_UPLOAD_SIZE` (10 MB by default) on the server. |
+| Deployment returns 413 | If the message names nginx or another proxy, raise its upload limit (nginx: `client_max_body_size`). See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy). Otherwise the package exceeds `MAX_MODULE_UPLOAD_SIZE` (10 MB by default). |
+| Upload returns `504` behind a proxy | Raise the proxy's timeout (nginx: `proxy_read_timeout 600s`). |
 | Restart returns `409` | The server was not started with `chacc run server`. Start it that way, or restart manually. See [Automatic Restarts](server-restarts.md). |
 | `chacc deploy --restart` says the server did not come back | Check the server logs for startup errors. Increase `CHACC_DEPLOY_RESTART_TIMEOUT` if dependency installation is slow. |
 | Upload returns `503` | The server can't reach the package index to install the module's packages. Nothing was changed. |

@@ -84,6 +84,8 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - An unreachable Redis no longer slows the server down: each connection attempt took about 4.5 seconds because of retries. It now fails at once and is tried again at most every 10 seconds.
 - After an upgrade, the console and landing page could keep running the browser's old cached script and styles, so new features (such as the Services tab) stayed empty until a hard refresh. Their links now include a fingerprint of the file's contents, so a changed file is always fetched again.
 - In production, the console page was cached until a restart even when its files changed, so it could show headings that didn't match its script. It is now rebuilt when its files change.
+- In development mode, the server didn't start when a data folder such as `MODULES_INSTALLED_DIR` was outside the project folder ("Non-relative patterns are unsupported").
+- When nginx or another proxy refused a module as too large, `chacc deploy` printed the proxy's HTML error page. It now says the proxy refused it and which setting to raise. See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 
 ## 1.0.0-beta5.3
 

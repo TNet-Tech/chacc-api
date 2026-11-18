@@ -20,10 +20,24 @@ from chacc_api.utils import (
 
 
 def get_relative_path(abs_path):
-    """Convert absolute path to relative path from base directory."""
-    if abs_path.startswith(BASE_DIR):
-        return os.path.relpath(abs_path, BASE_DIR)
-    return abs_path
+    """
+    The path relative to the project, or None when it lies outside it.
+
+    Uvicorn accepts only relative reload patterns, and folders outside the
+    project (for example MODULES_INSTALLED_DIR=/srv/chacc/modules) aren't
+    watched anyway, so they need no exclude.
+    """
+    relative = os.path.relpath(abs_path, BASE_DIR)
+    return None if relative == ".." or relative.startswith(".." + os.sep) else relative
+
+
+def _excludes(*patterns):
+    return [p for p in patterns if p]
+
+
+def _dir(abs_path):
+    relative = get_relative_path(abs_path)
+    return f"{relative}/" if relative else None
 
 
 # Read host and port from environment variables (set by CLI --host / --port)
@@ -38,12 +52,12 @@ config = {
     # Seconds to let in-flight requests finish on shutdown/restart before forcing it.
     "timeout_graceful_shutdown": int(os.environ.get("CHACC_GRACEFUL_SHUTDOWN_TIMEOUT", "30")),
     "reload_dirs": ["src", "main.py"],
-    "reload_excludes": [
-        f"{get_relative_path(MODULES_LOADED_DIR)}/",
-        f"{get_relative_path(MODULES_UPLOAD_DIR)}/",
-        f"{get_relative_path(DEPENDENCY_CACHE_DIR)}/",
+    "reload_excludes": _excludes(
+        _dir(MODULES_LOADED_DIR),
+        _dir(MODULES_UPLOAD_DIR),
+        _dir(DEPENDENCY_CACHE_DIR),
         get_relative_path(BACKBONE_REQUIREMENTS_LOCK_FILE),
-        f"{get_relative_path(MODULES_INSTALLED_DIR)}/",
+        _dir(MODULES_INSTALLED_DIR),
         get_relative_path(DEPENDENCY_CACHE_FILE),
         "*.chacc",
         "__pycache__",
@@ -54,15 +68,15 @@ config = {
         "*.log",
         ".env",
         (
-            f"{get_relative_path(PLUGINS_DIR)}/"
-            if "/" in get_relative_path(PLUGINS_DIR)
+            _dir(PLUGINS_DIR)
+            if "/" in (get_relative_path(PLUGINS_DIR) or "")
             else (
                 get_relative_path(PLUGINS_DIR)
                 if not DEVELOPMENT_MODE and ENABLE_PLUGIN_HOT_RELOAD
-                else ""
+                else None
             )
         ),
-    ],
+    ),
 }
 
 if __name__ == "__main__":

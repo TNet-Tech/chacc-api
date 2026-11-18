@@ -200,6 +200,23 @@ class Deployer:
             pass
         return response.text.strip()[:500] or response.reason or "no details"
 
+    @staticmethod
+    def _too_large(response: requests.Response) -> str:
+        """
+        ChaCC's own 413 carries a JSON ``detail``. Anything else came from a
+        proxy in front of it (nginx answers with an HTML page), so say that
+        instead of printing the page.
+        """
+        data = _safe_json(response)
+        if isinstance(data, dict) and data.get("detail"):
+            return f"Package too large (413): {data['detail']}"
+        proxy = response.headers.get("Server", "").split("/")[0] or "a proxy"
+        return (
+            f"Package too large (413): rejected by {proxy} in front of ChaCC, not by ChaCC. "
+            "Raise the proxy's upload limit (nginx: client_max_body_size 11m;). "
+            "See https://chacc.dev/deployment/#behind-a-reverse-proxy"
+        )
+
     def _credentials(self, attempt: int) -> tuple[str, str]:
         s = self.settings
         if s.username and s.password and attempt == 1:
@@ -441,7 +458,7 @@ class Deployer:
             if response.status_code == 403:
                 raise DeployError(f"Permission denied (403): {self._detail(response)}")
             if response.status_code == 413:
-                raise DeployError(f"Package too large (413): {self._detail(response)}")
+                raise DeployError(self._too_large(response))
             raise DeployError(
                 f"Deployment failed with status {response.status_code}: {self._detail(response)}"
             )

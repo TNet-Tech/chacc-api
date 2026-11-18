@@ -726,6 +726,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#behind-a-reverse-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behind a reverse proxy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#health-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1349,6 +1360,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#behind-a-reverse-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behind a reverse proxy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#health-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1502,6 +1524,26 @@ move a data folder in <code>.env</code>, add it to <code>DATA_DIRS</code> in the
 <h2 id="restarting-after-module-changes">Restarting after module changes<a class="headerlink" href="#restarting-after-module-changes" title="Permanent link">&para;</a></h2>
 <p>Use <code>chacc deploy my_module.chacc --restart</code>. The container keeps running. See
 <a href="../server-restarts/#docker">Automatic Restarts</a>.</p>
+<h2 id="behind-a-reverse-proxy">Behind a reverse proxy<a class="headerlink" href="#behind-a-reverse-proxy" title="Permanent link">&para;</a></h2>
+<p>nginx and other proxies have their own limits, lower than ChaCC's:</p>
+<ul>
+<li><strong>Upload size.</strong> nginx accepts 1 MB by default, so larger modules fail with
+  <code>413 Request Entity Too Large</code>. Allow a little more than
+  <code>MAX_MODULE_UPLOAD_SIZE</code> (10 MB by default).</li>
+<li><strong>Response time.</strong> Uploading a module waits while its packages are installed.
+  nginx gives up after 60 seconds with <code>504 Gateway Time-out</code>.</li>
+</ul>
+<div class="language-nginx highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:8085</span><span class="p">;</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="kn">client_max_body_size</span><span class="w"> </span><span class="mi">11m</span><span class="p">;</span><span class="w">    </span><span class="c1"># MAX_MODULE_UPLOAD_SIZE + 1 MB</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="kn">proxy_read_timeout</span><span class="w"> </span><span class="s">600s</span><span class="p">;</span><span class="w">     </span><span class="c1"># matches CHACC_DEPLOY_TIMEOUT</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Host</span><span class="w"> </span><span class="nv">$host</span><span class="p">;</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-For</span><span class="w"> </span><span class="nv">$proxy_add_x_forwarded_for</span><span class="p">;</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-Proto</span><span class="w"> </span><span class="nv">$scheme</span><span class="p">;</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Reload nginx afterwards (<code>nginx -s reload</code>). For rate limits per client, also
+set <code>FORWARDED_ALLOW_IPS</code>; see <a href="../configuration/#rate-limiting">Behind a reverse proxy</a>.</p>
 <h2 id="health-checks">Health checks<a class="headerlink" href="#health-checks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1526,26 +1568,26 @@ move a data folder in <code>.env</code>, add it to <code>DATA_DIRS</code> in the
 </tbody>
 </table>
 <p>Container health checks can call:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import urllib.request; urllib.request.urlopen('http://localhost:8085/api/health')"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import urllib.request; urllib.request.urlopen('http://localhost:8085/api/health')"</span>
 </span></code></pre></div>
 <h2 id="production-environment">Production environment<a class="headerlink" href="#production-environment" title="Permanent link">&para;</a></h2>
 <p>Recommended production settings:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nv">CHACC_DEV_MODE</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nv">DATABASE_ENGINE</span><span class="o">=</span>postgresql
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nv">DATABASE_HOST</span><span class="o">=</span>localhost
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nv">DATABASE_PORT</span><span class="o">=</span><span class="m">5432</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nv">DATABASE_USER</span><span class="o">=</span>chacc
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="nv">DATABASE_NAME</span><span class="o">=</span>chacc
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="nv">DATABASE_PASSWORD</span><span class="o">=</span>&lt;strong-password&gt;
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;random-32-plus-character-secret&gt;
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nv">ENABLE_PLUGIN_HOT_RELOAD</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="nv">PLUGIN_AUTO_DISCOVERY</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="nv">ENABLE_PLUGIN_DEPENDENCY_RESOLUTION</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="nv">MIGRATION_MODE</span><span class="o">=</span>auto
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="nv">MIGRATION_BACKUP</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="nv">MIGRATION_BACKUP_DIR</span><span class="o">=</span>backups
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="nv">CHACC_VERBOSE</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="nv">CHACC_DEBUG</span><span class="o">=</span><span class="nb">false</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nv">CHACC_DEV_MODE</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nv">DATABASE_ENGINE</span><span class="o">=</span>postgresql
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nv">DATABASE_HOST</span><span class="o">=</span>localhost
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nv">DATABASE_PORT</span><span class="o">=</span><span class="m">5432</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nv">DATABASE_USER</span><span class="o">=</span>chacc
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nv">DATABASE_NAME</span><span class="o">=</span>chacc
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="nv">DATABASE_PASSWORD</span><span class="o">=</span>&lt;strong-password&gt;
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;random-32-plus-character-secret&gt;
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="nv">ENABLE_PLUGIN_HOT_RELOAD</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="nv">PLUGIN_AUTO_DISCOVERY</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="nv">ENABLE_PLUGIN_DEPENDENCY_RESOLUTION</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="nv">MIGRATION_MODE</span><span class="o">=</span>auto
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="nv">MIGRATION_BACKUP</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="nv">MIGRATION_BACKUP_DIR</span><span class="o">=</span>backups
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="nv">CHACC_VERBOSE</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="nv">CHACC_DEBUG</span><span class="o">=</span><span class="nb">false</span>
 </span></code></pre></div>
 <h2 id="module-persistence">Module persistence<a class="headerlink" href="#module-persistence" title="Permanent link">&para;</a></h2>
 <p>In containerized deployments, persist these directories if modules are installed
@@ -1589,10 +1631,10 @@ recreated.</p>
 paths are used as they are. The container creates the directories at startup and
 makes them writable only by the server's user, so mount your volume at the new
 path:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">environment</span><span class="p">:</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MODULE_PACKAGES_DIR=/srv/chacc/packages</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nt">volumes</span><span class="p">:</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chacc_packages:/srv/chacc/packages</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">environment</span><span class="p">:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MODULE_PACKAGES_DIR=/srv/chacc/packages</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nt">volumes</span><span class="p">:</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chacc_packages:/srv/chacc/packages</span>
 </span></code></pre></div>
 <h2 id="running-without-network">Running without network<a class="headerlink" href="#running-without-network" title="Permanent link">&para;</a></h2>
 <p>Module packages are installed once, when a module is uploaded or enabled. After
@@ -1612,8 +1654,8 @@ console's dependency graph shows why. Set <code>CHACC_BOOT_INSTALL=never</code> 
 calling pip.</p>
 <p>Check or repair the packages from the command line. In Docker, run it as the
 server's user:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-u<span class="w"> </span>chacc<span class="w"> </span>chacc-api<span class="w"> </span>chacc<span class="w"> </span>deps<span class="w"> </span>check<span class="w">   </span><span class="c1"># no network</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-u<span class="w"> </span>chacc<span class="w"> </span>chacc-api<span class="w"> </span>chacc<span class="w"> </span>deps<span class="w"> </span>sync<span class="w">    </span><span class="c1"># installs what is missing</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-u<span class="w"> </span>chacc<span class="w"> </span>chacc-api<span class="w"> </span>chacc<span class="w"> </span>deps<span class="w"> </span>check<span class="w">   </span><span class="c1"># no network</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-u<span class="w"> </span>chacc<span class="w"> </span>chacc-api<span class="w"> </span>chacc<span class="w"> </span>deps<span class="w"> </span>sync<span class="w">    </span><span class="c1"># installs what is missing</span>
 </span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Changing the Python version</p>

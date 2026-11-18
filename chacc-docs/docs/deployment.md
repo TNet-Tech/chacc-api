@@ -134,6 +134,30 @@ journalctl -u chacc-api -f
 Use `chacc deploy my_module.chacc --restart`. The container keeps running. See
 [Automatic Restarts](server-restarts.md#docker).
 
+## Behind a reverse proxy
+
+nginx and other proxies have their own limits, lower than ChaCC's:
+
+- **Upload size.** nginx accepts 1 MB by default, so larger modules fail with
+  `413 Request Entity Too Large`. Allow a little more than
+  `MAX_MODULE_UPLOAD_SIZE` (10 MB by default).
+- **Response time.** Uploading a module waits while its packages are installed.
+  nginx gives up after 60 seconds with `504 Gateway Time-out`.
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8085;
+    client_max_body_size 11m;    # MAX_MODULE_UPLOAD_SIZE + 1 MB
+    proxy_read_timeout 600s;     # matches CHACC_DEPLOY_TIMEOUT
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Reload nginx afterwards (`nginx -s reload`). For rate limits per client, also
+set `FORWARDED_ALLOW_IPS`; see [Behind a reverse proxy](configuration.md#rate-limiting).
+
 ## Health checks
 
 | Endpoint | Use |
