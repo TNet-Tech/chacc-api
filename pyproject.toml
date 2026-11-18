@@ -82,7 +82,7 @@ exclude = ["tests*", "deployment*"]
 
 [tool.setuptools.package-data]
 chacc_cli = ["templates/*.template"]
-chacc_api = [".env.sample", "assets/*", "server/static/css/*.css", "server/static/js/*.js", "server/static/img/*", "server/templates/*.html"]
+chacc_api = [".env.sample", "assets/*", "server/static/css/*.css", "server/static/js/*.js", "server/static/js/console/*.js", "server/static/js/vendor/*", "server/static/img/*", "server/templates/*.html"]
 
 [tool.ruff]
 line-length = 100

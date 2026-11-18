@@ -30,6 +30,9 @@ class FakeContext:
     def __init__(self, user):
         self.user = user
 
+    def has_service(self, name):
+        return name == "get_current_user"
+
     def get_service(self, name):
         if name != "get_current_user":
             return None
@@ -65,10 +68,45 @@ def _reset_restart_state(monkeypatch):
 def test_console_page_is_served(client):
     response = client.get("/console")
     assert response.status_code == 200
-    assert "/static/js/console.js" in response.text
+    assert '<script type="module" src="/static/js/console/main.js?v=' in response.text
     assert 'content="/api"' in response.text
-    for asset in ("/static/js/console.js", "/static/css/console.css"):
+    for asset in ("/static/js/console/main.js", "/static/css/console.css"):
         assert client.get(asset).status_code == 200
+
+
+def test_console_script_modules_import_existing_files(client):
+    """Every relative import in the console's scripts points to a served file."""
+    import re
+
+    from chacc_api.server.main import static_dir
+
+    folder = static_dir / "js" / "console"
+    for script in folder.glob("*.js"):
+        for target in re.findall(
+            r"^import .* from '(\./[\w-]+\.js)';$", script.read_text(), re.MULTILINE
+        ):
+            assert (folder / target).is_file(), f"{script.name} imports missing {target}"
+            assert client.get(f"/static/js/console/{target[2:]}").status_code == 200
+
+
+def test_static_files_are_revalidated_unless_fingerprinted(client):
+    """Script modules are imported without ?v=, so browsers must check them each time."""
+    plain = client.get("/static/js/console/api.js")
+    assert plain.headers["cache-control"] == "no-cache"
+    etag = plain.headers["etag"]
+    assert (
+        client.get("/static/js/console/api.js", headers={"If-None-Match": etag}).status_code == 304
+    )
+    pinned = client.get("/static/js/console/main.js?v=abc123")
+    assert pinned.headers["cache-control"] == "public, max-age=31536000, immutable"
+
+
+def test_readme_viewer_and_bundled_diagram_library_are_served(client):
+    script = client.get("/static/js/console/markdown.js").text
+    url = script.split("const MERMAID_URL = '", 1)[1].split("'", 1)[0]
+    library = client.get(url)
+    assert library.status_code == 200
+    assert 'globalThis["mermaid"]' in library.text
 
 
 def test_landing_page_links_to_console(client):
@@ -194,3 +232,45 @@ def test_graph_endpoint(client, installed):
     data = client.get("/api/modules/graph").json()
     assert data["load_order"] == ["auth", "menu"]
     assert {n["name"]: n["state"] for n in data["nodes"]} == {"auth": "ok", "menu": "ok"}
+
+
+def test_static_assets_are_versioned_by_content():
+    """A changed script or stylesheet gets a new URL, so browsers don't reuse an old copy."""
+    import hashlib
+    import re
+
+    from fastapi.testclient import TestClient
+
+    from chacc_api.server.main import app, static_dir
+
+    client = TestClient(app)
+    for page in ("/console", "/"):
+        html = client.get(page).text
+        links = re.findall(r'/static/([^"?]+\.(?:css|js))\?v=([0-9a-f]{12})"', html)
+        assert links, f"no versioned assets on {page}"
+        for path, version in links:
+            expected = hashlib.sha256((static_dir / path).read_bytes()).hexdigest()[:12]
+            assert version == expected
+            assert client.get(f"/static/{path}?v={version}").status_code == 200
+
+
+def test_production_page_cache_notices_changed_files(monkeypatch, tmp_path):
+    """A cached page is rebuilt when its template or a static file changes."""
+    import os
+
+    from chacc_api.server import main
+
+    template = tmp_path / "page.html"
+    template.write_text('<script src="/static/js/console/main.js"></script>v1', encoding="utf-8")
+    monkeypatch.setattr(main, "TEMPLATES_DIR", tmp_path)
+    monkeypatch.setattr(main, "DEVELOPMENT_MODE", False)
+    main._cached_template.cache_clear()
+
+    assert main._render_template("page.html").endswith("v1")
+    assert main._render_template("page.html").endswith("v1")  # served from the cache
+
+    template.write_text('<script src="/static/js/console/main.js"></script>v2', encoding="utf-8")
+    stamp = template.stat().st_mtime_ns + 1_000_000_000
+    os.utime(template, ns=(stamp, stamp))
+    assert main._render_template("page.html").endswith("v2")
+    main._cached_template.cache_clear()

@@ -1,9 +1,12 @@
+import hashlib
 import os
+import re
 from builtins import Exception
 from functools import lru_cache
 from html import escape
 from importlib.resources import files
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
@@ -79,19 +82,23 @@ async def onStartupLifespan(app: FastAPI):
         async_db_session_factory=get_async_db,
     )
 
-    try:
-        redis_client = await redis_service.get_client()
-        if redis_client:
-            backbone_context.register_service("redis", redis_service)
-            chacc_logger.info("Redis service registered in backbone context.")
-        elif redis_service.connection_error:
-            chacc_logger.warning(
-                f"Redis connection failed: {redis_service.connection_error}. Continuing without Redis."
-            )
-        else:
-            chacc_logger.info("Redis is disabled. Continuing without Redis.")
-    except Exception as e:  # noqa: BLE001
-        chacc_logger.warning(f"Failed to initialize Redis service: {e}. Continuing without Redis.")
+    # Registered whenever Redis is enabled, even if it is down now: get_client()
+    # reconnects when Redis comes back, so modules don't need a restart.
+    app.state.redis_service = redis_service
+    if redis_service.is_enabled:
+        backbone_context.register_service("redis", redis_service)
+        try:
+            if await redis_service.get_client():
+                chacc_logger.info("Redis service registered in backbone context.")
+            else:
+                chacc_logger.warning(
+                    f"Redis is not reachable yet ({redis_service.connection_error}). "
+                    "Continuing; it is used as soon as it comes back."
+                )
+        except Exception as e:  # noqa: BLE001
+            chacc_logger.warning(f"Redis is not reachable yet ({e}). Continuing.")
+    else:
+        chacc_logger.info("Redis is disabled. Continuing without Redis.")
 
     app.state.backbone_context = backbone_context
 
@@ -120,8 +127,7 @@ async def onStartupLifespan(app: FastAPI):
     yield
 
     try:
-        redis_service = backbone_context.get_service("redis")
-        if redis_service and redis_service.is_connected:
+        if redis_service.is_connected:
             await redis_service.close()
             chacc_logger.info("Redis connection closed gracefully.")
         else:
@@ -159,11 +165,33 @@ app.state.loaded_modules = {}
 app.state.mounted_routers = {}
 
 app.state.backbone_context = None
+app.state.redis_service = None
 
 static_dir = Path(__file__).resolve().parent / "static"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+class StaticAssets(StaticFiles):
+    """
+    Static files with explicit caching. A ``?v=<content hash>`` URL never changes
+    its content, so browsers may keep it. Any other URL (such as the console's
+    script modules, imported without a fingerprint) must be checked with the
+    server on each use; otherwise browsers guess a lifetime from the file date
+    and can mix old and new scripts after an upgrade. An unchanged file costs
+    a 304 answer.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code in (200, 304):
+            query = parse_qs(scope.get("query_string", b"").decode("latin-1"))
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if query.get("v") else "no-cache"
+            )
+        return response
+
+
+app.mount("/static", StaticAssets(directory=str(static_dir)), name="static")
 
 
 @app.get(
@@ -202,15 +230,53 @@ def _render_template(name: str) -> str:
     # a restart (uvicorn only reloads on .py changes).
     if DEVELOPMENT_MODE:
         return _read_template(name)
-    return _cached_template(name)
+    # Cached, but rebuilt when the template or a static file changes, so the page
+    # and its scripts always match (and their ?v= fingerprints stay right).
+    return _cached_template(name, _files_changed_at(name))
+
+
+def _files_changed_at(name: str) -> int:
+    stamps = [(TEMPLATES_DIR / name).stat().st_mtime_ns]
+    for folder in ("css", "js"):
+        stamps.extend(p.stat().st_mtime_ns for p in (static_dir / folder).rglob("*"))
+    return max(stamps)
+
+
+_STATIC_ASSET = re.compile(r'(["\'])/static/([^"\'?#]+\.(?:css|js))\1')
+
+
+def _asset_version(path: str) -> str:
+    """Short hash of a static file's contents ("" if it doesn't exist)."""
+    try:
+        return hashlib.sha256((static_dir / path).read_bytes()).hexdigest()[:12]
+    except OSError:
+        return ""
+
+
+def _versioned_assets(html: str) -> str:
+    """
+    Add ``?v=<content hash>`` to stylesheet and script links, so browsers fetch a
+    changed file instead of reusing an old cached copy after an upgrade.
+    """
+
+    def add_version(match: re.Match) -> str:
+        quote, path = match.group(1), match.group(2)
+        version = _asset_version(path)
+        url = f"/static/{path}" + (f"?v={version}" if version else "")
+        return f"{quote}{url}{quote}"
+
+    return _STATIC_ASSET.sub(add_version, html)
 
 
 def _read_template(name: str) -> str:
     html = (TEMPLATES_DIR / name).read_text(encoding="utf-8")
+    html = _versioned_assets(html)
     return html.replace("{{API_PREFIX}}", escape(API_PREFIX, quote=True))
 
 
-_cached_template = lru_cache(maxsize=4)(_read_template)
+@lru_cache(maxsize=8)
+def _cached_template(name: str, changed_at: int) -> str:  # changed_at: cache key only
+    return _read_template(name)
 
 
 def _login_paths(app_: FastAPI) -> list[str]:
@@ -231,7 +297,7 @@ def _login_paths(app_: FastAPI) -> list[str]:
 def _auth_info(request: Request) -> dict:
     """Whether core routes need a login, and where to log in."""
     context = getattr(request.app.state, "backbone_context", None)
-    enabled = bool(context and context.get_service("get_current_user"))
+    enabled = bool(context and context.has_service("get_current_user"))
     login_path = None
     if enabled:
         logins = _login_paths(request.app)

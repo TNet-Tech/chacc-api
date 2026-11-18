@@ -166,6 +166,31 @@ Removes:
 
 A restart is required to complete the uninstall.
 
+### Module details
+
+```text
+GET /api/modules/{name}
+```
+
+Everything about one module: what `module_meta.json` declares (license, links,
+required ChaCC version), its state, its routes, the modules it requires and the
+modules that use it, its Python packages with the installed versions, its archive
+(file, size, SHA-256) and its README. Returns `404` for an unknown module.
+
+`state.code` is one of:
+
+| Code | Meaning |
+| --- | --- |
+| `loaded` | Running now. |
+| `pending` | Enabled, loads after a restart. |
+| `stopping` | Disabled, still running until a restart. |
+| `disabled` | Disabled. |
+| `blocked` | Can't load: a required module or Python package is missing (`state.reason`). |
+| `failed` | Failed to load (`state.reason`). In production the module is turned off. |
+
+A failure is kept across restarts until the module loads, is enabled again,
+updated or uninstalled. The module list also reports it as `load_failure`.
+
 ### Dependency graph
 
 ```text
@@ -179,8 +204,16 @@ blocked, disabled or not installed, and the load order.
 ## Module console
 
 Open `/console` in a browser to install, enable, disable and uninstall modules,
-view the dependency graph and restart the server. When the authentication module
-is loaded, the console asks you to log in.
+view the dependency graph, check the services and restart the server. When the
+authentication module is loaded, the console asks you to log in.
+
+Click a module's name, or choose **Details** in its menu, to see everything about
+it, including why it failed to load. The link `/console#module=<name>` opens a
+module's details directly.
+
+The **Services** tab shows the database, Redis, rate limiting and the server, and
+checks them again every 30 seconds while the console is open. When a service is
+down or degraded, the tab and the status in the top bar say so.
 
 ## Server discovery
 
@@ -197,6 +230,51 @@ POST /api/system/restart
 Applies module changes. Returns `202`, or `409` if the server was not started
 with `chacc run server`. Like the module routes, it requires a login when the
 authentication module is loaded. See [Automatic Restarts](server-restarts.md).
+
+## Service status
+
+```http
+GET /api/system/services
+```
+
+Checks the services the server uses, all at once, each within 2 seconds:
+
+| Service | Shows |
+| --- | --- |
+| `database` | Engine and version, location. |
+| `redis` | Address, version, memory used. `disabled` unless `REDIS_ENABLED=true`. |
+| `rate_limit` | Storage and how many routes are limited. |
+| `server` | Mode, version, Python, API prefix, start time, whether a login is required and whether restarting from the console works. |
+
+Each has a `status`: `ok`, `degraded` (working with a fallback, for example
+rate limits counted in memory because Redis is down), `down`, or `disabled` (not
+set up). The top-level `status` is the worst of them, with `disabled` counting
+as `ok`. `message` says what is wrong, `hint` what to do, `description` what the
+service is for, and `error` holds the original error. Passwords are never returned.
+
+```json
+{
+  "status": "down",
+  "checked_at": 1763380000.0,
+  "services": [
+    {
+      "id": "redis",
+      "name": "Redis",
+      "status": "down",
+      "description": "Optional. A fast shared store: ...",
+      "message": "Nothing is answering at redis:6379.",
+      "hint": "ChaCC keeps running and reconnects when Redis is back.",
+      "error": "Error 111 connecting to redis:6379. Connection refused.",
+      "details": [{"label": "Server", "value": "redis:6379"}],
+      "latency_ms": null
+    }
+  ]
+}
+```
+
+It is open in development mode. In production it requires a login when the
+authentication module is loaded. For load balancers and Kubernetes, keep using
+[`/api/health/ready`](#readiness), which only depends on the database.
 
 ## Rate limiting
 

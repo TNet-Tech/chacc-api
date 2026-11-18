@@ -436,6 +436,33 @@ def unmet_requirements(content: str) -> list[str]:
     return unmet
 
 
+def requirement_report(content: str) -> list[dict]:
+    """
+    Each top-level requirement in ``content`` with the installed version:
+    ``{"requirement", "name", "installed", "ok"}``. ``installed`` is None when the
+    package isn't installed; ``ok`` says whether the installed version fits.
+    """
+    from packaging.requirements import InvalidRequirement, Requirement
+
+    installed = {**target_versions(), **site_versions()}
+    report = []
+    for raw in content.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line or line.startswith("-"):
+            continue
+        try:
+            req = Requirement(line)
+        except InvalidRequirement:
+            report.append({"requirement": line, "name": line, "installed": None, "ok": False})
+            continue
+        if req.marker is not None and not req.marker.evaluate():
+            continue
+        version = installed.get(_canonical(req.name))
+        ok = version is not None and (not req.specifier or req.specifier.contains(version, True))
+        report.append({"requirement": line, "name": req.name, "installed": version, "ok": ok})
+    return report
+
+
 @dataclass
 class BootReport:
     blocked: dict[str, str] = field(default_factory=dict)

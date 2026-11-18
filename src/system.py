@@ -33,13 +33,14 @@ import signal
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from src.constants import DEVELOPMENT_MODE
 from src.lifecycle import SERVER_ROOT_PID_ENV, request_restart, restart_supported
 from src.logger import configure_logging, get_default_log_level
-from src.modules import get_current_user_optional
+from src.modules import get_current_user_in_production, get_current_user_optional
+from src.service_status import collect
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -114,3 +115,22 @@ async def restart_server_endpoint(
         "message": "Restart scheduled. The server will be back shortly.",
         "boot_id": BOOT_ID,
     }
+
+
+@system_router.get("/system/services")
+async def services_status_endpoint(
+    request: Request,
+    current_user: object | None = Depends(get_current_user_in_production),
+):
+    """
+    Status of the services the server uses: database, Redis, rate limiting and
+    the server itself. Each is ``ok``, ``degraded`` (working with a fallback),
+    ``down`` or ``disabled``; ``status`` is the worst of them.
+
+    Open in development mode. In production it requires a login when the
+    authentication module is loaded. No passwords are returned.
+    """
+    context = getattr(request.app.state, "backbone_context", None)
+    login_required = bool(context and context.has_service("get_current_user"))
+    redis_service = getattr(request.app.state, "redis_service", None)
+    return await collect(redis_service, STARTED_AT, login_required)

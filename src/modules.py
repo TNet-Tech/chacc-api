@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from chacc_cli.commands import validate_module_name
-from src import module_packages
+from src import module_packages, module_status
 from src.constants import (
     API_PREFIX,
     DEVELOPMENT_MODE,
@@ -465,6 +465,7 @@ async def install_chacc_module_endpoint(
         chacc_logger.info(f"Module archive '{module_name}.chacc' saved to '{target_chacc_path}'.")
 
         await run_in_threadpool(_extract_module_archive, module_name, target_chacc_path)
+        module_status.clear_failure(module_name)  # new code: try again on the next start
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -524,6 +525,26 @@ async def get_module_graph_endpoint(
     return graph_payload(db)
 
 
+@modules_router.get("/modules/{module_name}")
+async def get_module_details_endpoint(
+    module_name: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: object | None = Depends(get_current_user_optional),
+):
+    """
+    Everything about one module: what it declares (license, homepage, required
+    ChaCC version, ...), whether it is running and why not, its routes, the
+    modules that use it, its Python packages, its archive and its README.
+    """
+    from src.module_details import module_details
+
+    record = db.query(ModuleRecord).filter(ModuleRecord.name == module_name).first()
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found.")
+    return await run_in_threadpool(module_details, record, db, request.app)
+
+
 def _module_summary(record: ModuleRecord, available: set[str]) -> dict:
     meta = record.meta_data or {}
     try:
@@ -538,6 +559,8 @@ def _module_summary(record: ModuleRecord, available: set[str]) -> dict:
         "author": record.author,
         "description": record.description,
         "is_enabled": record.is_enabled,
+        # Why it was turned off at startup, if it failed to load.
+        "load_failure": (module_status.failure(record.name) or {}).get("reason"),
         "base_path_prefix": record.base_path_prefix,
         "dependencies": {"required": required, "optional": optional},
         "missing_dependencies": {
@@ -631,6 +654,7 @@ async def enable_module_endpoint(
     module_record.is_enabled = True
     db.commit()
     db.refresh(module_record)
+    module_status.clear_failure(actual_module_name)
     chacc_logger.info(
         f"Module '{actual_module_name}' marked as enabled in DB. Please restart the API server to activate."
     )
@@ -721,6 +745,7 @@ async def uninstall_module_endpoint(
 
         db.delete(module_record)
         db.commit()
+        module_status.forget(actual_module_name)
         chacc_logger.info(f"Module '{actual_module_name}' record deleted from database.")
 
         # Unregister its requirements (no network). Its packages stay installed.

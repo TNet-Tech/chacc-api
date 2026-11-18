@@ -1,8 +1,10 @@
+import asyncio
 import functools
 import inspect
 import sys
 import time
 from collections.abc import Callable
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -247,3 +249,50 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": detail},
         headers={"Retry-After": str(get_retry_after_seconds(exc))},
     )
+
+
+def mask_uri(uri: str) -> str:
+    """The URI with any password replaced by ***, for display."""
+    parts = urlsplit(uri)
+    if parts.password is None:
+        return uri
+    netloc = parts.netloc.rsplit("@", 1)[1]
+    user = parts.username or ""
+    return urlunsplit(parts._replace(netloc=f"{user}:***@{netloc}"))
+
+
+async def storage_status(timeout: float = 2.0) -> dict:
+    """
+    Where rate-limit counts are kept and whether that storage works now:
+    ``{"enabled", "storage", "uri", "reachable", "fallback", "limited_routes", "error"}``.
+    """
+    uri = RATE_LIMIT_STORAGE_URI
+    in_memory = uri.startswith("memory://")
+    status = {
+        "enabled": bool(limiter.enabled),
+        "storage": "memory" if in_memory else uri.split("://", 1)[0],
+        "uri": mask_uri(uri),
+        "reachable": True,
+        "fallback": False,
+        "limited_routes": len(limiter._route_limits) + len(limiter._dynamic_route_limits),
+        "error": None,
+    }
+    if in_memory:
+        return status
+    try:
+        # check() talks to Redis synchronously; keep it off the event loop.
+        status["reachable"] = bool(
+            await asyncio.wait_for(asyncio.to_thread(limiter._storage.check), timeout)
+        )
+    except TimeoutError:
+        status.update(reachable=False, error=f"no answer within {timeout:g} s")
+    except Exception as e:  # noqa: BLE001
+        status.update(reachable=False, error=str(e) or type(e).__name__)
+    # Requests fall back to memory while the storage is down (route limits and
+    # check_rate_limit() each notice on their own).
+    status["fallback"] = (
+        not status["reachable"]
+        or bool(getattr(limiter, "_storage_dead", False))
+        or time.monotonic() < _storage_down_until
+    )
+    return status
