@@ -243,7 +243,7 @@ def test_boot_unresolved_module_uses_installed_packages_or_is_blocked(pkgdir, mo
 
 def test_boot_blocks_when_python_version_changed(pkgdir, monkeypatch):
     (pkgdir / mp.ENV_MARKER_NAME).write_text(
-        json.dumps({**mp.current_environment(), "python": "3.12"})
+        json.dumps({**mp.current_environment(), "python": "2.7"})  # never the running version
     )
     monkeypatch.setattr(mp, "CHACC_BOOT_INSTALL", "never")
     fake = FakeManager(cache_for({"menu": ("qrcode\n", {"qrcode": "==8.0"})}))
@@ -251,7 +251,7 @@ def test_boot_blocks_when_python_version_changed(pkgdir, monkeypatch):
     monkeypatch.setattr(mp, "site_versions", dict)
     monkeypatch.setattr(mp, "target_versions", lambda: {"qrcode": "8.0"})
     reason = mp.boot_check({"menu": "qrcode\n"}, log).blocked["menu"]
-    assert "Python 3.12" in reason and "chacc deps sync" in reason
+    assert "Python 2.7" in reason and "chacc deps sync" in reason
 
 
 def test_blocked_by_packages_propagates_to_dependents():
