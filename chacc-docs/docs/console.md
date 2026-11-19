@@ -8,7 +8,11 @@ example `http://localhost:8085/console`.
 When the [authentication module](official-modules/authentication.md) is loaded,
 the console shows only a login until you log in, and only users with the
 console privilege or `ALL` can use it. Other users see that their account can't
-manage the server. The login lasts until you close the browser tab.
+manage the server. The login is shared by all tabs in the browser. While the
+console is in use, it renews the login with the module's refresh token, so you
+log in again only after the refresh token expires (the authentication module's
+`REFRESH_TOKEN_EXPIRE_MINUTES`). Logging out ends the session on the server and
+in every tab.
 
 The console privilege is `MANAGE_WEB_CONSOLE`, or the name you set in
 `CHACC_ADMIN_PRIVILEGE`. ChaCC registers it with the authentication module the
@@ -30,7 +34,8 @@ Set a web console key on the server:
 CHACC_CONSOLE_KEY=<a long random string>
 ```
 
-The console then shows only a key prompt until you enter it, and the core
+The console then shows only a key prompt until you enter it (remembered by the
+browser until you log out), and the core
 routes need it in the `X-ChaCC-Key` header (as typed, or URL-encoded). For `chacc deploy`, set
 `CHACC_DEPLOY_KEY` to the same value, or type it when asked. The authentication
 module always wins: while it is loaded, the key isn't accepted.

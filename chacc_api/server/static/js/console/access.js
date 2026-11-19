@@ -62,7 +62,7 @@ export async function unlock() {
             break;
         } catch (e) {
             if (e.status === 401) {
-                logout();
+                // api() has already tried the refresh token.
                 if (method === 'key') await ask('Enter the web console key to continue.', 'Enter key', authenticate);
                 else await ask('Log in to use the web console.', 'Log in', authenticate);
             } else if (e.status === 403) {

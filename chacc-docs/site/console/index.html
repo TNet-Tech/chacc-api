@@ -1375,7 +1375,11 @@ example <code>http://localhost:8085/console</code>.</p>
 <p>When the <a href="../official-modules/authentication/">authentication module</a> is loaded,
 the console shows only a login until you log in, and only users with the
 console privilege or <code>ALL</code> can use it. Other users see that their account can't
-manage the server. The login lasts until you close the browser tab.</p>
+manage the server. The login is shared by all tabs in the browser. While the
+console is in use, it renews the login with the module's refresh token, so you
+log in again only after the refresh token expires (the authentication module's
+<code>REFRESH_TOKEN_EXPIRE_MINUTES</code>). Logging out ends the session on the server and
+in every tab.</p>
 <p>The console privilege is <code>MANAGE_WEB_CONSOLE</code>, or the name you set in
 <code>CHACC_ADMIN_PRIVILEGE</code>. ChaCC registers it with the authentication module the
 first time the console is opened, so you only need to give it to people. Use a
@@ -1389,7 +1393,8 @@ later, grant the new privilege: users with only the old one lose access.</p>
 <p>Set a web console key on the server:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">CHACC_CONSOLE_KEY</span><span class="o">=</span>&lt;a<span class="w"> </span>long<span class="w"> </span>random<span class="w"> </span>string&gt;
 </span></code></pre></div>
-<p>The console then shows only a key prompt until you enter it, and the core
+<p>The console then shows only a key prompt until you enter it (remembered by the
+browser until you log out), and the core
 routes need it in the <code>X-ChaCC-Key</code> header (as typed, or URL-encoded). For <code>chacc deploy</code>, set
 <code>CHACC_DEPLOY_KEY</code> to the same value, or type it when asked. The authentication
 module always wins: while it is loaded, the key isn't accepted.</p>

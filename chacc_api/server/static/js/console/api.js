@@ -2,12 +2,16 @@
  * Calls to the core API, and the login or key they may need.
  *
  * When the authentication module is loaded, protected routes return 401
- * without a token; the console then shows the login dialog, stores the token
- * for this browser tab only (sessionStorage) and retries the request.
+ * without a valid token. The console first renews the access token with the
+ * refresh token; only when that fails does it show the login dialog. Tokens
+ * are kept in localStorage, so every tab of this browser shares the login.
+ * The module rotates refresh tokens, so tabs take turns renewing (Web Locks)
+ * and reuse a token another tab just got.
+ *
  * Without the module, a server with CHACC_CONSOLE_KEY asks for that key
  * instead (sent as X-ChaCC-Key, kept the same way).
  */
-import { $, storage } from './dom.js';
+import { $, shared } from './dom.js';
 import { state } from './state.js';
 
 const API_PREFIX = (function () {
@@ -17,7 +21,9 @@ const API_PREFIX = (function () {
 })();
 
 const TOKEN_KEY = 'chacc_console_token';
+const REFRESH_KEY = 'chacc_console_refresh_token';
 const CONSOLE_KEY = 'chacc_console_key';
+const AUTH_KEYS = [TOKEN_KEY, REFRESH_KEY, CONSOLE_KEY];
 const KEY_HEADER = 'X-ChaCC-Key';
 
 class ApiError extends Error {
@@ -70,7 +76,7 @@ export function login() {
                 if (!res.ok || !data || !data.access_token) {
                     throw new Error(detailText(data, 'Login failed (' + res.status + ').'));
                 }
-                storage.set(TOKEN_KEY, data.access_token);
+                saveTokens(data);
                 cleanup();
                 dialog.close();
                 updateAuthUi();
@@ -131,7 +137,7 @@ export function enterKey() {
                 const res = await fetch(API_PREFIX + '/system/access', { cache: 'no-store', headers: { [KEY_HEADER]: encodeURIComponent(key) } });
                 if (res.status === 401) throw new Error('That key isn\'t right.');
                 if (!res.ok) throw new Error('Could not check the key (' + res.status + ').');
-                storage.set(CONSOLE_KEY, key);
+                shared.set(CONSOLE_KEY, key);
                 cleanup();
                 dialog.close();
                 updateAuthUi();
@@ -169,15 +175,90 @@ export function authenticate() {
     return authMethod() === 'key' ? enterKey() : login();
 }
 
+function saveTokens(data) {
+    shared.set(TOKEN_KEY, data.access_token);
+    if (data.refresh_token) shared.set(REFRESH_KEY, data.refresh_token);
+}
+
+// The authentication module's route next to its login, e.g. .../authentication/refresh.
+function authRoute(name) {
+    const loginPath = state.info && state.info.auth && state.info.auth.login_path;
+    return loginPath ? loginPath.replace(/\/login$/, '/' + name) : null;
+}
+
+let refreshPromise = null;
+
+/*
+ * Renews the access token with the refresh token. Resolves true when there is
+ * a new token. `failedToken` is the access token the server just refused: if
+ * another tab has already replaced it, that token is used instead.
+ */
+function refreshTokens(failedToken) {
+    if (refreshPromise) return refreshPromise;
+    async function renew() {
+        const current = shared.get(TOKEN_KEY);
+        if (current && current !== failedToken) return true;  // another tab renewed it
+        const refreshToken = shared.get(REFRESH_KEY);
+        const path = authRoute('refresh');
+        if (!refreshToken || !path) return false;
+        try {
+            const res = await fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken }),
+            });
+            const data = await res.json().catch(() => null);
+            if (res.ok && data && data.access_token) {
+                saveTokens(data);
+                return true;
+            }
+            // Refused: maybe another tab used this refresh token a moment ago.
+            return Boolean(shared.get(TOKEN_KEY)) && shared.get(TOKEN_KEY) !== failedToken;
+        } catch (e) {
+            return false;
+        }
+    }
+    const locks = navigator.locks;  // only on HTTPS and localhost
+    refreshPromise = (locks ? locks.request('chacc-console-refresh', renew) : renew())
+        .finally(() => { refreshPromise = null; });
+    return refreshPromise;
+}
+
+// Ends the session on the server too (best effort) and forgets it in every tab.
 export function logout() {
-    storage.remove(TOKEN_KEY);
-    storage.remove(CONSOLE_KEY);
+    const refreshToken = shared.get(REFRESH_KEY);
+    const path = authRoute('revoke');
+    if (refreshToken && path) {
+        fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+            keepalive: true,
+        }).catch(() => {});
+    }
+    forget();
+}
+
+// Forgets the stored login and key, without telling the server.
+function forget() {
+    for (const key of AUTH_KEYS) shared.remove(key);
     updateAuthUi();
 }
 
 export function updateAuthUi() {
-    $('#logout-btn').hidden = !(storage.get(TOKEN_KEY) || storage.get(CONSOLE_KEY));
+    $('#logout-btn').hidden = !(shared.get(TOKEN_KEY) || shared.get(CONSOLE_KEY));
 }
+
+/*
+ * Keeps tabs in step: logging out in one tab sends the others back to the
+ * login, and logging in on one tab unlocks the others waiting at it.
+ */
+window.addEventListener('storage', (event) => {
+    if (event.key !== null && !AUTH_KEYS.includes(event.key)) return;
+    const loggedOut = !shared.get(TOKEN_KEY) && !shared.get(CONSOLE_KEY);
+    const waiting = document.body.classList.contains('gated');
+    if ((loggedOut && !waiting) || (!loggedOut && waiting)) location.reload();
+});
 
 /*
  * Calls `API_PREFIX + path` and returns the JSON body. Throws ApiError.
@@ -186,20 +267,22 @@ export function updateAuthUi() {
 export async function api(path, options, retried) {
     const opts = Object.assign({ cache: 'no-store' }, options || {});
     const headers = new Headers(opts.headers || {});
-    const token = storage.get(TOKEN_KEY);
+    const token = shared.get(TOKEN_KEY);
     if (token) headers.set('Authorization', 'Bearer ' + token);
-    const key = storage.get(CONSOLE_KEY);
+    const key = shared.get(CONSOLE_KEY);
     // URL-encoded so keys with any characters fit in a header.
     if (key) headers.set(KEY_HEADER, encodeURIComponent(key));
     opts.headers = headers;
 
     const res = await fetch(API_PREFIX + path, opts);
-    if (res.status === 401 && !retried && !(options && options.noLoginPrompt)) {
-        storage.remove(TOKEN_KEY);
-        storage.remove(CONSOLE_KEY);
-        updateAuthUi();
-        await authenticate();
-        return api(path, options, true);
+    if (res.status === 401 && !retried) {
+        // An expired access token is renewed quietly; a login is the last resort.
+        if (token && await refreshTokens(token)) return api(path, options, true);
+        forget();  // the session (or key) is no longer valid, in any tab
+        if (!(options && options.noLoginPrompt)) {
+            await authenticate();
+            return api(path, options, true);
+        }
     }
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new ApiError(res.status, data, detailText(data, 'Request failed (' + res.status + ').'));

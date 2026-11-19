@@ -27,12 +27,18 @@ export function svg(tag, attrs, ...children) {
     return node;
 }
 
-// sessionStorage that never throws (private windows, blocked storage).
-export const storage = {
-    get(key) { try { return sessionStorage.getItem(key); } catch (e) { return null; } },
-    set(key, value) { try { sessionStorage.setItem(key, value); } catch (e) { /* ignore */ } },
-    remove(key) { try { sessionStorage.removeItem(key); } catch (e) { /* ignore */ } },
-};
+function safeStore(area) {
+    return {
+        get(key) { try { return area().getItem(key); } catch (e) { return null; } },
+        set(key, value) { try { area().setItem(key, value); } catch (e) { /* ignore */ } },
+        remove(key) { try { area().removeItem(key); } catch (e) { /* ignore */ } },
+    };
+}
+
+// sessionStorage (this tab) and localStorage (all tabs) that never throw
+// (private windows, blocked storage).
+export const storage = safeStore(() => sessionStorage);
+export const shared = safeStore(() => localStorage);
 
 export function toast(message, kind, ms) {
     const node = el('div', { class: 'toast' + (kind ? ' toast-' + kind : ''), role: kind === 'error' ? 'alert' : 'status' }, message);

@@ -117,7 +117,7 @@ export function renderGraph() {
     }
 
     $('#graph-intro').textContent = graph.mode === 'production'
-        ? 'Installed production modules (from ' + graph.source + '). Arrows point from a module to the modules it depends on.'
+        ? 'Installed production modules. Arrows point from a module to the modules it depends on.'
         : 'Development mode: modules in ' + graph.source + '. Arrows point from a module to the modules it depends on.';
 
     if (!graph.nodes.length) {
