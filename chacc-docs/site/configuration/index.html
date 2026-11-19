@@ -1521,6 +1521,11 @@ is retained as a backward-compatible no-op and should not be used in new code.</
 </thead>
 <tbody>
 <tr>
+<td><code>CHACC_CONSOLE_KEY</code></td>
+<td>empty</td>
+<td>Key for the web console and the core <code>/modules</code> and <code>/system</code> routes when the authentication module isn't loaded. Any characters; at least 8 recommended (shorter only logs a warning). Empty: they are open, with a warning. See <a href="../console/#without-the-authentication-module">Without the authentication module</a>.</td>
+</tr>
+<tr>
 <td><code>CHACC_ADMIN_PRIVILEGE</code></td>
 <td><code>MANAGE_WEB_CONSOLE</code></td>
 <td>Privilege for the web console and the core <code>/modules</code> and <code>/system</code> routes when the authentication module is loaded. Capital letters, digits and <code>_</code>; an empty or invalid value uses the default. <code>ALL</code> always has access. See <a href="../console/#who-can-use-it">Who can use it</a>.</td>
@@ -1873,6 +1878,11 @@ the server directly: they could send their own <code>X-Forwarded-For</code> and 
 <td><code>CHACC_DEPLOY_API_KEY</code></td>
 <td>empty</td>
 <td>Optional bearer token for deployment.</td>
+</tr>
+<tr>
+<td><code>CHACC_DEPLOY_KEY</code></td>
+<td>empty</td>
+<td>The server's <code>CHACC_CONSOLE_KEY</code>, for servers without the authentication module. Sent only when the server asks for it; prompted for when unset.</td>
 </tr>
 <tr>
 <td><code>CHACC_DEPLOY_USERNAME</code></td>

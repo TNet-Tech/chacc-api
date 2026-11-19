@@ -125,6 +125,27 @@
         </div>
     </div>
 
+    <div class="gate" id="gate" hidden>
+        <div class="overlay-card">
+            <svg viewBox="0 0 24 24" class="gate-icon" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+            <p id="gate-text"></p>
+            <button type="button" class="btn btn-primary" id="gate-btn"></button>
+        </div>
+    </div>
+
+    <dialog id="key-dialog" class="dialog">
+        <form method="dialog" id="key-form">
+            <h2>Web console key</h2>
+            <p class="dialog-sub">Enter the key set on the server.</p>
+            <label>Key<input name="key" type="password" class="input" autocomplete="current-password" required></label>
+            <p class="form-error" id="key-error" hidden></p>
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-ghost" value="cancel" id="key-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="key-submit">Continue</button>
+            </div>
+        </form>
+    </dialog>
+
     <dialog id="login-dialog" class="dialog">
         <form method="dialog" id="login-form">
             <h2>Log in</h2>

@@ -6,9 +6,9 @@ example `http://localhost:8085/console`.
 ## Who can use it
 
 When the [authentication module](official-modules/authentication.md) is loaded,
-the console asks you to log in, and only users with the console privilege or
-`ALL` can use it. Other users see that their account can't manage the server.
-The login lasts until you close the browser tab.
+the console shows only a login until you log in, and only users with the
+console privilege or `ALL` can use it. Other users see that their account can't
+manage the server. The login lasts until you close the browser tab.
 
 The console privilege is `MANAGE_WEB_CONSOLE`, or the name you set in
 `CHACC_ADMIN_PRIVILEGE`. ChaCC registers it with the authentication module the
@@ -22,8 +22,26 @@ To give someone access, give them a role with the console privilege
 (`PUT /rbac/users/{user_id}/roles`). If you change `CHACC_ADMIN_PRIVILEGE`
 later, grant the new privilege: users with only the old one lose access.
 
-Without the authentication module, the console is open to anyone who can reach
-the server. To also limit it by address, see
+### Without the authentication module
+
+Set a web console key on the server:
+
+```bash
+CHACC_CONSOLE_KEY=<a long random string>
+```
+
+The console then shows only a key prompt until you enter it, and the core
+routes need it in the `X-ChaCC-Key` header (as typed, or URL-encoded). For `chacc deploy`, set
+`CHACC_DEPLOY_KEY` to the same value, or type it when asked. The authentication
+module always wins: while it is loaded, the key isn't accepted.
+
+The key can contain any characters. Use at least 8: a shorter key still works,
+but the server log warns about it.
+
+With neither, the console is open to anyone who can reach the server. It shows
+a warning, and so do the server log and `chacc deploy`.
+
+To also limit the console by address, see
 [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 
 ## Modules

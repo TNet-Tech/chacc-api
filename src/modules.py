@@ -17,7 +17,7 @@ import shutil
 import tempfile
 import zipfile
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 
 from chacc_cli.commands import validate_module_name
 from src import module_packages, module_status
-from src.admin_access import require_admin
+from src.admin_access import require_admin, require_console_key
 from src.constants import (
     API_PREFIX,
     DEVELOPMENT_MODE,
@@ -60,25 +60,24 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user_optional(
-    request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
+    request: Request,
+    response: Response,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> object | None:
     """
-    Admin check for the core module and system routes (the web console's API).
+    Access check for the core module and system routes (the web console's API).
 
-    Without the authentication module the routes are open and this returns None.
-    With it, the caller must be logged in (401 otherwise) and hold
-    the console privilege or ``ALL`` (403 otherwise). See :mod:`src.admin_access`.
+    With the authentication module, the caller must be logged in (401 otherwise)
+    and hold the console privilege or ``ALL`` (403 otherwise). Without it, the
+    web console key is checked instead, if one is set. See :mod:`src.admin_access`.
     """
     backbone_context = getattr(request.app.state, "backbone_context", None)
-
-    if backbone_context is None:
-        chacc_logger.info("NO BACKBONE CONTEXT. ALLOW ACCESS TO CORE ROUTES")
-        return None
-
-    get_current_user = backbone_context.get_service("get_current_user")
+    get_current_user = (
+        backbone_context.get_service("get_current_user") if backbone_context else None
+    )
 
     if get_current_user is None:
-        chacc_logger.info("NO AUTHENTICATION MODULE, ALLOW ACCESS TO CORE ROUTES")
+        require_console_key(request, response)
         return None
 
     auth_header = request.headers.get("Authorization")
@@ -119,7 +118,9 @@ async def get_current_user_optional(
 
 
 async def get_current_user_in_production(
-    request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
+    request: Request,
+    response: Response,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> object | None:
     """
     Like :func:`get_current_user_optional`, but open in development mode.
@@ -130,7 +131,7 @@ async def get_current_user_in_production(
     """
     if DEVELOPMENT_MODE:
         return None
-    return await get_current_user_optional(request, credentials)
+    return await get_current_user_optional(request, response, credentials)
 
 
 class ModuleUploadSizeLimitMiddleware:

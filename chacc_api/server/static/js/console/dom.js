@@ -34,8 +34,8 @@ export const storage = {
     remove(key) { try { sessionStorage.removeItem(key); } catch (e) { /* ignore */ } },
 };
 
-export function toast(message, kind) {
+export function toast(message, kind, ms) {
     const node = el('div', { class: 'toast' + (kind ? ' toast-' + kind : ''), role: kind === 'error' ? 'alert' : 'status' }, message);
     $('#toasts').append(node);
-    setTimeout(() => node.remove(), kind === 'error' ? 9000 : 6000);
+    setTimeout(() => node.remove(), ms || (kind === 'error' ? 9000 : 6000));
 }

@@ -19,6 +19,7 @@ is retained as a backward-compatible no-op and should not be used in new code.
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `CHACC_CONSOLE_KEY` | empty | Key for the web console and the core `/modules` and `/system` routes when the authentication module isn't loaded. Any characters; at least 8 recommended (shorter only logs a warning). Empty: they are open, with a warning. See [Without the authentication module](console.md#without-the-authentication-module). |
 | `CHACC_ADMIN_PRIVILEGE` | `MANAGE_WEB_CONSOLE` | Privilege for the web console and the core `/modules` and `/system` routes when the authentication module is loaded. Capital letters, digits and `_`; an empty or invalid value uses the default. `ALL` always has access. See [Who can use it](console.md#who-can-use-it). |
 
 ## Database
@@ -131,6 +132,7 @@ the server directly: they could send their own `X-Forwarded-For` and pick any IP
 | --- | --- | --- |
 | `CHACC_DEPLOY_URL` | `http://localhost:8085` | Remote ChaCC API base URL for `chacc deploy`. |
 | `CHACC_DEPLOY_API_KEY` | empty | Optional bearer token for deployment. |
+| `CHACC_DEPLOY_KEY` | empty | The server's `CHACC_CONSOLE_KEY`, for servers without the authentication module. Sent only when the server asks for it; prompted for when unset. |
 | `CHACC_DEPLOY_USERNAME` | empty | Username for non-interactive login when the server returns 401. |
 | `CHACC_DEPLOY_PASSWORD` | empty | Password for non-interactive login when the server returns 401. |
 | `CHACC_DEPLOY_AUTH_PATH` | `/authentication` | Authentication module's `base_path_prefix` (the API prefix is added automatically). |

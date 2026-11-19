@@ -1,5 +1,5 @@
 // Loads the module list, the dependency graph and the services, and handles being logged out.
-import { api, login, logout } from './api.js';
+import { api, authenticate, login, logout } from './api.js';
 import { $, el, toast } from './dom.js';
 import { renderGraph } from './graph.js';
 import { renderModules } from './modules.js';
@@ -8,7 +8,7 @@ import { state } from './state.js';
 
 export function loginPrompt(text) {
     return el('div', { class: 'empty' }, text + ' ',
-        el('button', { type: 'button', class: 'btn btn-small btn-primary', onclick: () => login().then(loadAll, () => {}) }, 'Log in'));
+        el('button', { type: 'button', class: 'btn btn-small btn-primary', onclick: () => authenticate().then(loadAll, () => {}) }, 'Log in'));
 }
 
 // Logged in, but the account lacks the admin privilege (403).
@@ -26,21 +26,6 @@ function accessPrompt(error, text) {
     if (error.status === 401) return loginPrompt(text);
     if (error.status === 403) return noAccessPrompt();
     return null;
-}
-
-// Logged out on a protected server: the tabs ask for a login instead of looking empty.
-export function showLoginPrompt() {
-    state.modules = [];
-    state.graph = null;
-    state.loaded = false;
-    renderModules();
-    renderGraph();
-    $('#module-count').textContent = '';
-    $('#module-list').replaceChildren(loginPrompt('Log in to see and manage modules.'));
-    $('#graph-problems').replaceChildren(loginPrompt('Log in to see the dependency graph.'));
-    state.services = null;
-    state.servicesError = 'login';
-    renderServices();
 }
 
 // The graph and the module list load independently: in development mode the

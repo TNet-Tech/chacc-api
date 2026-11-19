@@ -209,14 +209,21 @@ services, and restart the server. See [Web Console](console.md).
 With the authentication module loaded, the `/modules` and `/system` routes need a
 user with the console privilege (`CHACC_ADMIN_PRIVILEGE`, default
 `MANAGE_WEB_CONSOLE`) or `ALL`. Without a login
-they return `401`; without the privilege, `403`. See
-[Who can use it](console.md#who-can-use-it).
+they return `401`; without the privilege, `403`.
+
+Without the authentication module, they need the web console key
+(`CHACC_CONSOLE_KEY`) in the `X-ChaCC-Key` header when one is set, and return
+`401` without it. With no key set they are open, and their responses carry an
+`X-ChaCC-Warning` header. See [Who can use it](console.md#who-can-use-it).
+
+`GET /system/access` returns `{"access": true}` when the caller may use the
+console, and `401` or `403` otherwise.
 
 ## Server discovery
 
 `GET /.well-known/chacc` is never prefixed. It returns the server's `api_prefix`,
-a `boot_id` that changes on every restart, and `auth` (whether core routes need a
-login, and the login path).
+a `boot_id` that changes on every restart, and `auth`: how core routes are
+protected (`method`: `login`, `key` or `none`) and the login path.
 
 ## Restart the server
 

@@ -58,6 +58,9 @@ def _base_env() -> dict[str, str]:
     env["PYTHONPATH"] = str(REPO_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
     env["SECRET_KEY"] = "e2e-" + "k9Qz7Lr2Vx5Mw8Np3Ts6Yb1Hc4Jf0Gd"
     env["PYTHONUNBUFFERED"] = "1"
+    # Not protected by a web console key, whatever the developer's .env says.
+    env["CHACC_CONSOLE_KEY"] = ""
+    env["CHACC_DEPLOY_KEY"] = ""
     return env
 
 

@@ -1829,12 +1829,16 @@ is reachable over the network. For local filesystem installs use
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">CHACC_DEPLOY_API_KEY</span><span class="o">=</span>optional-token<span class="w">      </span><span class="c1"># bearer token sent with every request</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">CHACC_DEPLOY_USERNAME</span><span class="o">=</span>admin<span class="w">              </span><span class="c1"># non-interactive login (e.g. CI)</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">CHACC_DEPLOY_PASSWORD</span><span class="o">=</span>secret
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">CHACC_DEPLOY_AUTH_PATH</span><span class="o">=</span>/authentication<span class="w">   </span><span class="c1"># auth module path (API prefix added automatically)</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nv">CHACC_DEPLOY_API_PREFIX</span><span class="o">=</span>/api<span class="w">             </span><span class="c1"># override; normally discovered from the server</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="nv">CHACC_DEPLOY_TIMEOUT</span><span class="o">=</span><span class="m">600</span><span class="w">                 </span><span class="c1"># seconds to wait for the server response</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">CHACC_DEPLOY_KEY</span><span class="o">=</span>server-console-key<span class="w">      </span><span class="c1"># server without the authentication module</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nv">CHACC_DEPLOY_AUTH_PATH</span><span class="o">=</span>/authentication<span class="w">   </span><span class="c1"># auth module path (API prefix added automatically)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="nv">CHACC_DEPLOY_API_PREFIX</span><span class="o">=</span>/api<span class="w">             </span><span class="c1"># override; normally discovered from the server</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nv">CHACC_DEPLOY_TIMEOUT</span><span class="o">=</span><span class="m">600</span><span class="w">                 </span><span class="c1"># seconds to wait for the server response</span>
 </span></code></pre></div>
 <p>If the server requires authentication, you are prompted for a username and
-password unless <code>CHACC_DEPLOY_USERNAME</code> and <code>CHACC_DEPLOY_PASSWORD</code> are set.</p>
+password unless <code>CHACC_DEPLOY_USERNAME</code> and <code>CHACC_DEPLOY_PASSWORD</code> are set. A
+server protected by a <a href="../console/#without-the-authentication-module">web console key</a>
+asks for that key instead, unless <code>CHACC_DEPLOY_KEY</code> is set. A server that isn't
+protected at all gets a warning.</p>
 <p>Packages are limited to 10 MB by default.</p>
 <p>If the module's required modules aren't installed on the server, the deploy is
 refused and the missing modules are listed. <code>chacc install</code> checks the same way.

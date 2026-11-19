@@ -1,6 +1,7 @@
 """Tests for ``chacc deploy`` prefix discovery, authentication and upload flow."""
 
 import pytest
+from requests.structures import CaseInsensitiveDict
 
 from chacc_cli.deploy import Deployer, DeployError, DeploySettings
 
@@ -9,9 +10,10 @@ DISCOVERY = ("GET", "/.well-known/chacc")
 
 
 class FakeResponse:
-    def __init__(self, status_code, data=None):
+    def __init__(self, status_code, data=None, headers=None):
         self.status_code = status_code
         self._data = data or {}
+        self.headers = CaseInsensitiveDict(headers or {})
         self.text = str(self._data)
         self.reason = ""
 
@@ -354,3 +356,88 @@ def test_server_warnings_are_kept(chacc_file):
     )
     deployer.deploy(chacc_file)
     assert deployer.warnings == ["Optional module(s) x"]
+
+
+# ---------- Web console key (server without the authentication module) ----------
+
+KEY_401 = FakeResponse(
+    401, {"detail": "The web console key is required."}, {"WWW-Authenticate": "ChaCC-Key"}
+)
+SERVER_KEY = "k" * 8 + "Q7v-server-console-key-0123456789"
+
+
+def key_server(*probe_after_key):
+    return {
+        ("GET", "/api/modules/"): [KEY_401, *probe_after_key],
+        ("POST", "/api/modules/"): [OK_UPLOAD],
+    }
+
+
+def test_key_from_env_is_sent_after_the_server_asks(chacc_file):
+    deployer, session = make(
+        key_server(FakeResponse(200)), interactive=False, console_key=SERVER_KEY
+    )
+    deployer.deploy(chacc_file)
+    probes = session.calls_to("GET", "/api/modules/")
+    assert "X-ChaCC-Key" not in probes[0][2]  # never sent before the server asks
+    assert probes[1][2]["X-ChaCC-Key"] == SERVER_KEY
+    assert session.calls_to("POST", "/api/modules/")[0][2]["X-ChaCC-Key"] == SERVER_KEY
+    assert not session.calls_to("POST", "/api/authentication/login")
+
+
+def test_key_with_any_characters_is_url_encoded(chacc_file):
+    deployer, session = make(
+        key_server(FakeResponse(200)), interactive=False, console_key="pä ss/你"
+    )
+    deployer.deploy(chacc_file)
+    sent = session.calls_to("POST", "/api/modules/")[0][2]["X-ChaCC-Key"]
+    assert sent == "p%C3%A4%20ss%2F%E4%BD%A0"
+
+
+def test_key_is_prompted_on_a_tty(chacc_file):
+    deployer, session = make(key_server(FakeResponse(200)), typed_password=SERVER_KEY)
+    deployer.deploy(chacc_file)
+    assert session.calls_to("POST", "/api/modules/")[0][2]["X-ChaCC-Key"] == SERVER_KEY
+
+
+def test_missing_key_non_interactive_fails_clearly(chacc_file):
+    deployer, session = make(key_server(), interactive=False)
+    with pytest.raises(DeployError, match="CHACC_DEPLOY_KEY"):
+        deployer.deploy(chacc_file)
+    assert not session.calls_to("POST", "/api/modules/")
+
+
+def test_wrong_key_is_rejected_without_trying_a_login(chacc_file):
+    deployer, session = make(key_server(KEY_401), interactive=False, console_key="wrong")
+    with pytest.raises(DeployError, match="rejected the web console key"):
+        deployer.deploy(chacc_file)
+    assert not session.calls_to("POST", "/api/modules/")
+    assert not session.calls_to("POST", "/api/authentication/login")
+
+
+def test_key_is_not_used_when_the_server_asks_for_a_login(chacc_file):
+    deployer, session = make(
+        {
+            ("GET", "/api/modules/"): [FakeResponse(401, headers={"WWW-Authenticate": "Bearer"})],
+            ("POST", "/api/authentication/login"): [LOGIN_OK],
+            ("POST", "/api/modules/"): [OK_UPLOAD],
+            ("POST", "/api/authentication/revoke"): [FakeResponse(200)],
+        },
+        console_key=SERVER_KEY,
+    )
+    deployer.deploy(chacc_file)
+    assert all("X-ChaCC-Key" not in call[2] for call in session.calls)
+
+
+def test_unprotected_server_is_warned_about(chacc_file, caplog):
+    deployer, _ = make(
+        {
+            ("GET", "/api/modules/"): [
+                FakeResponse(200, headers={"X-ChaCC-Warning": "The web console isn't protected"})
+            ],
+            ("POST", "/api/modules/"): [OK_UPLOAD],
+        }
+    )
+    with caplog.at_level("WARNING"):
+        deployer.deploy(chacc_file)
+    assert "is not protected" in caplog.text

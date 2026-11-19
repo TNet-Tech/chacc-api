@@ -118,7 +118,7 @@ def test_landing_page_links_to_console(client):
 
 def test_discovery_reports_no_auth_without_auth_module(client):
     data = client.get("/.well-known/chacc").json()
-    assert data["auth"] == {"required": False, "login_path": None}
+    assert data["auth"] == {"required": False, "method": "none", "login_path": None}
     assert data["mode"] in {"development", "production"}
 
 
@@ -175,6 +175,81 @@ def test_graph_is_open_without_auth_module(client, monkeypatch):
 
     monkeypatch.setattr(modules, "DEVELOPMENT_MODE", False)
     assert client.get("/api/modules/graph").status_code == 200
+
+
+# ---------- Web console key (no authentication module) ----------
+
+CONSOLE_KEY = "Zq8-console-key-for-the-tests-0123456789"
+
+
+@pytest.fixture
+def with_key(monkeypatch):
+    from src import admin_access
+
+    monkeypatch.setattr(admin_access, "CONSOLE_KEY", CONSOLE_KEY)
+
+
+def test_key_protects_core_routes_without_auth_module(client, with_key, monkeypatch):
+    monkeypatch.delenv(lifecycle.SUPERVISED_ENV, raising=False)
+    for method, path in [
+        ("get", "/api/modules/"),
+        ("get", "/api/system/access"),
+        ("post", "/api/system/restart"),
+    ]:
+        missing = getattr(client, method)(path)
+        assert missing.status_code == 401
+        assert missing.headers["www-authenticate"] == "ChaCC-Key"
+        wrong = getattr(client, method)(path, headers={"X-ChaCC-Key": "wrong"})
+        assert wrong.status_code == 401
+        assert wrong.json()["detail"] == "Wrong web console key."
+    assert client.get("/api/modules/", headers={"X-ChaCC-Key": CONSOLE_KEY}).status_code == 200
+    # Past the key check, refused only because the server isn't supervised.
+    restart = client.post("/api/system/restart", headers={"X-ChaCC-Key": CONSOLE_KEY})
+    assert restart.status_code == 409
+
+
+def test_key_with_any_characters_works_encoded_or_raw(client, monkeypatch):
+    from urllib.parse import quote
+
+    from src import admin_access
+
+    key = "pässwörd 你好 %41&+"
+    monkeypatch.setattr(admin_access, "CONSOLE_KEY", key)
+    encoded = client.get("/api/system/access", headers={"X-ChaCC-Key": quote(key, safe="")})
+    assert encoded.status_code == 200
+    raw = client.get("/api/system/access", headers={"X-ChaCC-Key": key.encode()})
+    assert raw.status_code == 200
+    assert (
+        client.get("/api/system/access", headers={"X-ChaCC-Key": "pässwörd".encode()}).status_code
+        == 401
+    )
+
+
+def test_discovery_says_a_key_is_needed_but_not_the_key(client, with_key):
+    data = client.get("/.well-known/chacc")
+    assert data.json()["auth"] == {"required": True, "method": "key", "login_path": None}
+    assert CONSOLE_KEY not in data.text
+
+
+def test_login_overrides_the_key(client, with_auth, with_key):
+    """With the authentication module loaded, the key gets nobody in."""
+    assert client.get("/api/modules/", headers={"X-ChaCC-Key": CONSOLE_KEY}).status_code == 401
+    ok = client.get("/api/modules/", headers={"Authorization": "Bearer good-token"})
+    assert ok.status_code == 200
+    assert client.get("/.well-known/chacc").json()["auth"]["method"] == "login"
+
+
+def test_unprotected_server_stays_open_with_a_warning(client):
+    response = client.get("/api/modules/")
+    assert response.status_code == 200
+    assert "isn't protected" in response.headers["x-chacc-warning"]
+    assert client.get("/api/system/access").json() == {"access": True}
+
+
+def test_console_has_the_access_gate(client):
+    page = client.get("/console").text
+    for element in ('id="gate"', 'id="key-dialog"', 'id="login-dialog"'):
+        assert element in page
 
 
 # ---------- Admin privilege ----------

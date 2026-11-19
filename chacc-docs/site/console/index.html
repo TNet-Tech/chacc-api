@@ -578,6 +578,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Who can use it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-the-authentication-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without the authentication module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1246,6 +1263,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Who can use it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-the-authentication-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without the authentication module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1339,9 +1373,9 @@
 example <code>http://localhost:8085/console</code>.</p>
 <h2 id="who-can-use-it">Who can use it<a class="headerlink" href="#who-can-use-it" title="Permanent link">&para;</a></h2>
 <p>When the <a href="../official-modules/authentication/">authentication module</a> is loaded,
-the console asks you to log in, and only users with the console privilege or
-<code>ALL</code> can use it. Other users see that their account can't manage the server.
-The login lasts until you close the browser tab.</p>
+the console shows only a login until you log in, and only users with the
+console privilege or <code>ALL</code> can use it. Other users see that their account can't
+manage the server. The login lasts until you close the browser tab.</p>
 <p>The console privilege is <code>MANAGE_WEB_CONSOLE</code>, or the name you set in
 <code>CHACC_ADMIN_PRIVILEGE</code>. ChaCC registers it with the authentication module the
 first time the console is opened, so you only need to give it to people. Use a
@@ -1351,8 +1385,19 @@ services and restart, and so <code>chacc deploy</code>.</p>
 <p>To give someone access, give them a role with the console privilege
 (<code>PUT /rbac/users/{user_id}/roles</code>). If you change <code>CHACC_ADMIN_PRIVILEGE</code>
 later, grant the new privilege: users with only the old one lose access.</p>
-<p>Without the authentication module, the console is open to anyone who can reach
-the server. To also limit it by address, see
+<h3 id="without-the-authentication-module">Without the authentication module<a class="headerlink" href="#without-the-authentication-module" title="Permanent link">&para;</a></h3>
+<p>Set a web console key on the server:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">CHACC_CONSOLE_KEY</span><span class="o">=</span>&lt;a<span class="w"> </span>long<span class="w"> </span>random<span class="w"> </span>string&gt;
+</span></code></pre></div>
+<p>The console then shows only a key prompt until you enter it, and the core
+routes need it in the <code>X-ChaCC-Key</code> header (as typed, or URL-encoded). For <code>chacc deploy</code>, set
+<code>CHACC_DEPLOY_KEY</code> to the same value, or type it when asked. The authentication
+module always wins: while it is loaded, the key isn't accepted.</p>
+<p>The key can contain any characters. Use at least 8: a shorter key still works,
+but the server log warns about it.</p>
+<p>With neither, the console is open to anyone who can reach the server. It shows
+a warning, and so do the server log and <code>chacc deploy</code>.</p>
+<p>To also limit the console by address, see
 <a href="../deployment/#behind-a-reverse-proxy">Behind a reverse proxy</a>.</p>
 <h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h2>
 <p><img alt="The Modules tab: install area, filter and the module list" src="../assets/img/console-modules.png" /></p>

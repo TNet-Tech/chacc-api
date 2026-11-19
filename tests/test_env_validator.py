@@ -46,3 +46,32 @@ def test_production_still_logs_errors_and_refuses(monkeypatch, records):
     errors = logged(records, logging.ERROR)
     assert any("'^dev-'" in e for e in errors)
     assert "Environment validation FAILED" in errors
+
+
+# ---------- Web console key ----------
+
+
+@pytest.mark.parametrize(
+    "key, warned",
+    [
+        ("", False),  # not set: the console is open, with a warning elsewhere
+        ("Short key 你好 !", False),  # any characters
+        ("12345678", False),
+        ("1234567", True),
+    ],
+)
+def test_console_key_only_warns_when_short(monkeypatch, key, warned):
+    monkeypatch.setattr(env_validator, "CONSOLE_KEY", key)
+    validator = EnvironmentValidator()
+    assert validator.validate_console_key() is True
+    assert validator.errors == []
+    assert bool(validator.warnings) is warned
+
+
+def test_short_console_key_never_stops_production(monkeypatch, records):
+    monkeypatch.setattr(env_validator, "SECRET_KEY", "Zq8-strong-secret-key-value-for-tests-0001")
+    monkeypatch.setattr(env_validator, "CONSOLE_KEY", "1234")
+    monkeypatch.setattr(env_validator, "DEVELOPMENT_MODE", False)
+    result = EnvironmentValidator().validate()
+    assert result["valid"] is True
+    assert any("CHACC_CONSOLE_KEY is short" in w for w in logged(records, logging.WARNING))

@@ -97,7 +97,7 @@ REDIS_DB=0
 | --- | --- |
 | `chacc deploy` cannot connect | Confirm `CHACC_DEPLOY_URL` points to a running API. |
 | Deployment times out | Increase `CHACC_DEPLOY_TIMEOUT`. |
-| Deployment returns 401 | Enter valid credentials when prompted, or set `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` (CI) or `CHACC_DEPLOY_API_KEY`. |
+| Deployment returns 401 | Enter valid credentials when prompted, or set `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` (CI) or `CHACC_DEPLOY_API_KEY`. A server without the authentication module may need its web console key: set `CHACC_DEPLOY_KEY` to its `CHACC_CONSOLE_KEY`. |
 | Deployment says "Login endpoint not found" | Set `CHACC_DEPLOY_AUTH_PATH` to the auth module's `base_path_prefix` (without the API prefix). |
 | Deployment returns 413 | If the message names nginx or another proxy, raise its upload limit (nginx: `client_max_body_size`). See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy). Otherwise the package exceeds `MAX_MODULE_UPLOAD_SIZE` (10 MB by default). |
 | Upload returns `504` behind a proxy | Raise the proxy's timeout (nginx: `proxy_read_timeout 600s`). |

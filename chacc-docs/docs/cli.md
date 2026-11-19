@@ -183,13 +183,17 @@ Optional environment variables:
 CHACC_DEPLOY_API_KEY=optional-token      # bearer token sent with every request
 CHACC_DEPLOY_USERNAME=admin              # non-interactive login (e.g. CI)
 CHACC_DEPLOY_PASSWORD=secret
+CHACC_DEPLOY_KEY=server-console-key      # server without the authentication module
 CHACC_DEPLOY_AUTH_PATH=/authentication   # auth module path (API prefix added automatically)
 CHACC_DEPLOY_API_PREFIX=/api             # override; normally discovered from the server
 CHACC_DEPLOY_TIMEOUT=600                 # seconds to wait for the server response
 ```
 
 If the server requires authentication, you are prompted for a username and
-password unless `CHACC_DEPLOY_USERNAME` and `CHACC_DEPLOY_PASSWORD` are set.
+password unless `CHACC_DEPLOY_USERNAME` and `CHACC_DEPLOY_PASSWORD` are set. A
+server protected by a [web console key](console.md#without-the-authentication-module)
+asks for that key instead, unless `CHACC_DEPLOY_KEY` is set. A server that isn't
+protected at all gets a warning.
 
 Packages are limited to 10 MB by default.
 

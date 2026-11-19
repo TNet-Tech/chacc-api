@@ -7,7 +7,11 @@ Flow:
 2. If the probe returns 401, authenticate against the
    ``chacc_authentication`` module (``POST <auth path>/login``) using
    ``CHACC_DEPLOY_USERNAME``/``CHACC_DEPLOY_PASSWORD`` or, on a TTY, by
-   prompting for a username and password.
+   prompting for a username and password. A server without that module may
+   ask for its web console key instead (401 with ``WWW-Authenticate: ChaCC-Key``):
+   ``CHACC_DEPLOY_KEY``, or a hidden prompt on a TTY. The key is only sent
+   after the server asks for it. A server that is not protected at all gets a
+   warning.
 3. Upload the package and wait for the server's response (dependency
    resolution can take a while), showing elapsed time on a TTY.
 4. If the token expires mid-flight (401 on upload), refresh it once and retry.
@@ -25,6 +29,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from urllib.parse import quote
 
 import requests
 from decouple import config
@@ -44,6 +49,9 @@ DEFAULT_TIMEOUT = 600
 CONNECT_TIMEOUT = 10
 PROBE_TIMEOUT = 30
 MAX_LOGIN_ATTEMPTS = 3
+KEY_HEADER = "X-ChaCC-Key"
+KEY_CHALLENGE = "chacc-key"
+WARNING_HEADER = "X-ChaCC-Warning"
 
 
 def normalize_prefix(value: str | None) -> str:
@@ -75,6 +83,8 @@ class DeploySettings:
     api_prefix: str | None = None
     username: str | None = None
     password: str | None = None
+    # The server's web console key (CHACC_CONSOLE_KEY there), when it has no authentication module.
+    console_key: str | None = None
 
     @classmethod
     def from_env(cls) -> DeploySettings:
@@ -103,6 +113,7 @@ class DeploySettings:
             api_prefix=None if api_prefix is None else normalize_prefix(api_prefix),
             username=config("CHACC_DEPLOY_USERNAME", default=None) or None,
             password=config("CHACC_DEPLOY_PASSWORD", default=None) or None,
+            console_key=config("CHACC_DEPLOY_KEY", default=None) or None,
         )
 
 
@@ -110,6 +121,7 @@ class DeploySettings:
 class _AuthState:
     access_token: str | None = None
     refresh_token: str | None = None
+    console_key: str | None = None
     logged_in: bool = False
     prompted: bool = False
 
@@ -169,9 +181,13 @@ class Deployer:
         self.warnings: list[str] = []
 
     def _headers(self) -> dict[str, str]:
+        headers = {}
         if self.auth.access_token:
-            return {"Authorization": f"Bearer {self.auth.access_token}"}
-        return {}
+            headers["Authorization"] = f"Bearer {self.auth.access_token}"
+        if self.auth.console_key:
+            # URL-encoded so keys with any characters fit in a header.
+            headers[KEY_HEADER] = quote(self.auth.console_key, safe="")
+        return headers
 
     def _request(self, method: str, path: str, timeout, **kwargs) -> requests.Response:
         url = f"{self.settings.url}{path}"
@@ -237,7 +253,42 @@ class Deployer:
             raise DeployError("Username and password are required.")
         return username, password
 
+    def _key(self, attempt: int) -> str:
+        if self.settings.console_key and attempt == 1:
+            return self.settings.console_key
+        if not self.interactive:
+            raise DeployError(
+                "The server requires its web console key. Set CHACC_DEPLOY_KEY to the "
+                "server's CHACC_CONSOLE_KEY to deploy non-interactively."
+            )
+        if attempt == 1 or (attempt == 2 and self.settings.console_key):
+            print(f"{self.settings.url} requires its web console key.", flush=True)
+        key = self.prompt_password("Web console key: ").strip()
+        if not key:
+            raise DeployError("The web console key is required.")
+        return key
+
+    def use_key(self) -> None:
+        """Send the web console key, for a server that asked for it."""
+        for attempt in range(1, MAX_LOGIN_ATTEMPTS + 1):
+            self.auth.console_key = self._key(attempt)
+            response = self._request(
+                "GET", self.modules_path, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT)
+            )
+            if response.status_code != 401:
+                return
+            if not self.interactive:
+                break
+            print("Wrong web console key.", flush=True)
+        self.auth.console_key = None
+        raise DeployError(
+            "The server rejected the web console key (401). Check CHACC_DEPLOY_KEY: it "
+            "must match the server's CHACC_CONSOLE_KEY."
+        )
+
     def login(self) -> None:
+        if self.auth.console_key:
+            raise DeployError("The server rejected the web console key (401).")
         if self.settings.api_key and self.auth.access_token == self.settings.api_key:
             cli_logger.warning("CHACC_DEPLOY_API_KEY was rejected by the server (401).")
         self.auth.access_token = None
@@ -354,10 +405,23 @@ class Deployer:
         return f"{self.resolve_prefix()}{self.settings.auth_path}"
 
     def ensure_authenticated(self) -> None:
-        """Probe the modules endpoint and log in only if the server answers 401."""
+        """
+        Probe the modules endpoint and log in (or send the web console key) only
+        if the server answers 401. Warn when the server isn't protected at all.
+        """
         response = self._request("GET", self.modules_path, timeout=(CONNECT_TIMEOUT, PROBE_TIMEOUT))
         if response.status_code == 401:
-            self.login()
+            challenge = response.headers.get("WWW-Authenticate", "").strip().lower()
+            if challenge.startswith(KEY_CHALLENGE):
+                self.use_key()
+            else:
+                self.login()
+        elif response.headers.get(WARNING_HEADER):
+            cli_logger.warning(
+                f"WARNING: {self.settings.url} is not protected: anyone who can reach it can "
+                "deploy and manage modules. Set CHACC_CONSOLE_KEY on the server or install "
+                "the authentication module."
+            )
 
     def upload(self, chacc_file_path: str) -> requests.Response:
         name = os.path.basename(chacc_file_path)

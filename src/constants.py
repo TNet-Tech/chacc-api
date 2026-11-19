@@ -96,6 +96,10 @@ SECRET_KEY = config("SECRET_KEY", default="", cast=str)
 # the authentication module is loaded. Checked and registered in src/admin_access.py.
 ADMIN_PRIVILEGE_SETTING = config("CHACC_ADMIN_PRIVILEGE", default="", cast=str)
 
+# Key for the web console and the core routes when the authentication module
+# isn't loaded. Empty: they are open (with a warning). See src/admin_access.py.
+CONSOLE_KEY = config("CHACC_CONSOLE_KEY", default="", cast=str)
+
 if "postgres" in DATABASE_ENGINE.lower():
     DATABASE_URL = f"postgresql+psycopg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
     ASYNC_DATABASE_URL = f"postgresql+psycopg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"

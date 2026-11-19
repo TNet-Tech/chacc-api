@@ -32,6 +32,9 @@ os.environ.update(
         "MIGRATION_BACKUP_DIR": os.path.join(_DATA, "backups"),
         "REDIS_ENABLED": "false",
         "RATE_LIMIT_STORAGE_URI": "memory://",
+        # Tests that need a web console key set it themselves.
+        "CHACC_CONSOLE_KEY": "",
+        "CHACC_DEPLOY_KEY": "",
     }
 )
 

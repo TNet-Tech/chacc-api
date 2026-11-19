@@ -76,6 +76,16 @@ def server_info() -> dict:
     }
 
 
+@system_router.get("/system/access")
+async def access_endpoint(current_user: object | None = Depends(get_current_user_optional)):
+    """
+    Whether the caller may use the web console. The console checks it before
+    showing anything: 401 asks for a login (or the web console key), 403 means
+    the account lacks the console privilege.
+    """
+    return {"access": True}
+
+
 @system_router.post("/system/restart", status_code=status.HTTP_202_ACCEPTED)
 async def restart_server_endpoint(
     current_user: object | None = Depends(get_current_user_optional),

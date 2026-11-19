@@ -4,7 +4,8 @@
  * Talks to the core API: GET/POST/DELETE {prefix}/modules..., GET {prefix}/modules/graph,
  * GET {prefix}/system/services and POST {prefix}/system/restart (see api.js for login).
  *
- *   api.js             API calls and login
+ *   api.js             API calls, login and the web console key
+ *   access.js          shows only the login (or key) until access is granted
  *   loader.js          loads modules, graph and services; logged-out views
  *   status.js          top bar, polling, pending changes, restart
  *   modules.js         Modules tab table (row-menu.js, module-actions.js)
@@ -13,15 +14,16 @@
  *   services.js        Services tab
  *   dom.js, state.js   shared helpers and state
  */
+import { unlock } from './access.js';
 import { logout, updateAuthUi } from './api.js';
 import { $ } from './dom.js';
-import { loadAll, showLoginPrompt } from './loader.js';
+import { loadAll } from './loader.js';
 import { upload } from './module-actions.js';
 import { openModuleDetails, setupModuleDialog } from './module-details.js';
 import { renderModules } from './modules.js';
 import { refreshServices, serviceProblems } from './services.js';
 import { state } from './state.js';
-import { dismissDevNote, fetchInfo, restart, setStatus, showInfo, startPolling } from './status.js';
+import { dismissDevNote, restart, startPolling } from './status.js';
 
 const TABS = ['modules', 'graph', 'services'];
 
@@ -52,11 +54,10 @@ $('.status').addEventListener('click', () => {
 });
 $('#dev-note-close').addEventListener('click', dismissDevNote);
 $('#filter').addEventListener('input', (e) => { state.filter = e.target.value; renderModules(); });
+// Logging out goes back to the gate: only the login (or key) dialog.
 $('#logout-btn').addEventListener('click', () => {
     logout();
-    showLoginPrompt();
-    // Views that need no login (the graph in development mode) come back.
-    if (state.info && state.info.mode === 'development') loadAll();
+    location.reload();
 });
 setupDropzone();
 setupModuleDialog();
@@ -67,12 +68,7 @@ selectTab(TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'modu
 updateAuthUi();
 
 (async function start() {
-    try {
-        state.info = await fetchInfo();
-        showInfo(state.info);
-    } catch (e) {
-        setStatus('error', 'Unreachable');
-    }
+    await unlock();
     startPolling();
     await loadAll();
     if (linkedModule) openModuleDetails(linkedModule);

@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
-from src.admin_access import ensure_admin_privilege
+from src.admin_access import access_method, ensure_admin_privilege, log_console_protection
 from src.constants import (
     API_PREFIX,
     CORS_ALLOW_CREDENTIALS,
@@ -121,6 +121,8 @@ async def onStartupLifespan(app: FastAPI):
         chacc_logger.info(f"PRODUCTION MODE: Loading modules from {MODULES_LOADED_DIR} directory")
         chacc_logger.info("=" * 65)
         await load_modules(app, backbone_context)
+
+    log_console_protection(backbone_context)
 
     # Copy .env.sample to .env if .env doesn't exist
     copy_sample_env()
@@ -293,15 +295,19 @@ def _login_paths(app_: FastAPI) -> list[str]:
 
 
 def _auth_info(request: Request) -> dict:
-    """Whether core routes need a login, and where to log in."""
+    """
+    How core routes are protected ("login", "key" or "none"), and where to log in.
+
+    Says that a key is needed, never anything about the key.
+    """
     context = getattr(request.app.state, "backbone_context", None)
-    enabled = bool(context and context.has_service("get_current_user"))
+    method = access_method(context)
     login_path = None
-    if enabled:
+    if method == "login":
         logins = _login_paths(request.app)
         preferred = f"{API_PREFIX}/authentication/login"
         login_path = preferred if preferred in logins else (logins[0] if logins else None)
-    return {"required": enabled, "login_path": login_path}
+    return {"required": method != "none", "method": method, "login_path": login_path}
 
 
 @app.get("/.well-known/chacc", include_in_schema=False)

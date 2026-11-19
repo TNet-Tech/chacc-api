@@ -8,6 +8,7 @@ import re
 from typing import Any, ClassVar
 
 from src.constants import (
+    CONSOLE_KEY,
     DATABASE_ENGINE,
     DATABASE_HOST,
     DATABASE_NAME,
@@ -93,6 +94,17 @@ class EnvironmentValidator:
 
         return True
 
+    def validate_console_key(self) -> bool:
+        """
+        Check CHACC_CONSOLE_KEY, when it is set: any characters, at least 8.
+
+        Only ever warns: a short key is still used, and the server still starts.
+        """
+        key = CONSOLE_KEY
+        if key and len(key) < 8:
+            self._add_warning(f"CHACC_CONSOLE_KEY is short ({len(key)} characters); use at least 8")
+        return True
+
     def validate_database_config(self) -> bool:
         """
         Validate database configuration.
@@ -159,6 +171,7 @@ class EnvironmentValidator:
         chacc_logger.info("Validating environment configuration...")
 
         secret_valid = self.validate_secret_key()
+        console_key_valid = self.validate_console_key()
         db_valid = self.validate_database_config()
         prod_valid = self.validate_production_settings()
 
@@ -171,7 +184,7 @@ class EnvironmentValidator:
             else:
                 chacc_logger.error(f"ENV VALIDATION: {error}")
 
-        is_valid = secret_valid and db_valid and prod_valid
+        is_valid = secret_valid and console_key_valid and db_valid and prod_valid
 
         if not is_valid:
             if DEVELOPMENT_MODE:

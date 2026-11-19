@@ -525,6 +525,17 @@ code { font-family: var(--mono); font-size: 0.9em; color: var(--chacc-text-muted
 .overlay-card { text-align: center; padding: 2rem 2.5rem; border-radius: 20px; background: var(--chacc-surface); border: 1px solid var(--chacc-border); }
 .overlay-card h2 { margin: 1rem 0 0.25rem; }
 .overlay-card p { color: var(--chacc-text-muted); }
+
+/* Access gate: until the server accepts the user, only the login (or key) shows. */
+body.gated .topbar-actions,
+body.gated .pending-banner,
+body.gated .main,
+body.gated .notice { display: none !important; }
+.gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 30; }
+.gate[hidden] { display: none; }
+.gate .overlay-card { max-width: 420px; }
+.gate .overlay-card p { margin: 0.75rem 0 1.25rem; }
+.gate-icon { width: 2rem; height: 2rem; fill: none; stroke: var(--chacc-text-muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .spinner { width: 38px; height: 38px; margin: 0 auto; border: 3px solid var(--chacc-border); border-top-color: var(--chacc-teal); border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
