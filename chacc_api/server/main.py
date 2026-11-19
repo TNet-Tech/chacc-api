@@ -17,6 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
+from src.admin_access import ensure_admin_privilege
 from src.constants import (
     API_PREFIX,
     CORS_ALLOW_CREDENTIALS,
@@ -213,8 +214,9 @@ async def read_root():
 
 
 @app.get("/console", include_in_schema=False)
-async def module_console():
+async def module_console(request: Request):
     """Web console: manage modules, view the dependency graph, restart the server."""
+    await ensure_admin_privilege(getattr(request.app.state, "backbone_context", None))
     return HTMLResponse(
         _render_template("console.html"),
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
@@ -226,12 +228,8 @@ def _render_index() -> str:
 
 
 def _render_template(name: str) -> str:
-    # In dev mode, read the template on every request so edits show up without
-    # a restart (uvicorn only reloads on .py changes).
     if DEVELOPMENT_MODE:
         return _read_template(name)
-    # Cached, but rebuilt when the template or a static file changes, so the page
-    # and its scripts always match (and their ?v= fingerprints stay right).
     return _cached_template(name, _files_changed_at(name))
 
 
@@ -288,7 +286,7 @@ def _login_paths(app_: FastAPI) -> list[str]:
     """
     try:
         paths = app_.openapi().get("paths", {})
-    except Exception:  # noqa: BLE001 - a broken schema must not break discovery
+    except Exception:  # noqa: BLE001
         chacc_logger.warning("Could not build the OpenAPI schema to find the login route.")
         return []
     return [path for path, ops in paths.items() if path.endswith("/login") and "post" in ops]

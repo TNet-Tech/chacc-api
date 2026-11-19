@@ -15,6 +15,12 @@ is retained as a backward-compatible no-op and should not be used in new code.
 | --- | --- |
 | `SECRET_KEY` | Required in production, at least 32 characters, and must not match common insecure patterns such as `dev-`, `test-`, `default`, or repeated characters. |
 
+## Access
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CHACC_ADMIN_PRIVILEGE` | `MANAGE_WEB_CONSOLE` | Privilege for the web console and the core `/modules` and `/system` routes when the authentication module is loaded. Capital letters, digits and `_`; an empty or invalid value uses the default. `ALL` always has access. See [Who can use it](console.md#who-can-use-it). |
+
 ## Database
 
 | Variable | Default | Description |
@@ -53,7 +59,7 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `CHACC_DEV_MODE` | `false` | Enables development-mode module loading. |
-| `ENABLE_PLUGIN_HOT_RELOAD` | `false` | Reloads plugin modules when Python files change. |
+| `ENABLE_PLUGIN_HOT_RELOAD` | `false` | Development mode: restarts the server when files in `plugins/` change, and creates and migrates the plugins' tables. Off: neither, and only `src/` changes restart the server. Must be off in production. |
 | `PLUGIN_AUTO_DISCOVERY` | `false` | Automatically discover plugins. |
 | `ENABLE_PLUGIN_DEPENDENCY_RESOLUTION` | `false` | Development only: resolve and install plugin requirements into the active environment at startup. Production ignores it. |
 

@@ -1768,6 +1768,11 @@ blocked, disabled or not installed, and the load order.</p>
 <h2 id="web-console">Web console<a class="headerlink" href="#web-console" title="Permanent link">&para;</a></h2>
 <p>Open <code>/console</code> in a browser to manage modules, see the dependency graph and the
 services, and restart the server. See <a href="../console/">Web Console</a>.</p>
+<p>With the authentication module loaded, the <code>/modules</code> and <code>/system</code> routes need a
+user with the console privilege (<code>CHACC_ADMIN_PRIVILEGE</code>, default
+<code>MANAGE_WEB_CONSOLE</code>) or <code>ALL</code>. Without a login
+they return <code>401</code>; without the privilege, <code>403</code>. See
+<a href="../console/#who-can-use-it">Who can use it</a>.</p>
 <h2 id="server-discovery">Server discovery<a class="headerlink" href="#server-discovery" title="Permanent link">&para;</a></h2>
 <p><code>GET /.well-known/chacc</code> is never prefixed. It returns the server's <code>api_prefix</code>,
 a <code>boot_id</code> that changes on every restart, and <code>auth</code> (whether core routes need a

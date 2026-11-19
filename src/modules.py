@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from chacc_cli.commands import validate_module_name
 from src import module_packages, module_status
+from src.admin_access import require_admin
 from src.constants import (
     API_PREFIX,
     DEVELOPMENT_MODE,
@@ -62,13 +63,11 @@ async def get_current_user_optional(
     request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
 ) -> object | None:
     """
-    Optional authentication dependency.
+    Admin check for the core module and system routes (the web console's API).
 
-    If the authentication module is loaded and get_current_user is registered,
-    it will require authentication. Otherwise, it returns None (allows access).
-
-    This allows core APIs to be open when authentication is not present,
-    but protected when the authentication module is loaded.
+    Without the authentication module the routes are open and this returns None.
+    With it, the caller must be logged in (401 otherwise) and hold
+    the console privilege or ``ALL`` (403 otherwise). See :mod:`src.admin_access`.
     """
     backbone_context = getattr(request.app.state, "backbone_context", None)
 
@@ -99,6 +98,9 @@ async def get_current_user_optional(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         credentials_obj = HTTPAuthorizationCredentials(scheme="Bearer", credentials=credentials)
+        admin = await require_admin(backbone_context, credentials_obj)
+        if admin is not None:
+            return admin
         current_user = await get_current_user(credentials_obj)
 
         if not current_user:

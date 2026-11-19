@@ -1,5 +1,5 @@
 // Loads the module list, the dependency graph and the services, and handles being logged out.
-import { api, login } from './api.js';
+import { api, login, logout } from './api.js';
 import { $, el, toast } from './dom.js';
 import { renderGraph } from './graph.js';
 import { renderModules } from './modules.js';
@@ -9,6 +9,23 @@ import { state } from './state.js';
 export function loginPrompt(text) {
     return el('div', { class: 'empty' }, text + ' ',
         el('button', { type: 'button', class: 'btn btn-small btn-primary', onclick: () => login().then(loadAll, () => {}) }, 'Log in'));
+}
+
+// Logged in, but the account lacks the admin privilege (403).
+export function noAccessPrompt() {
+    return el('div', { class: 'empty' }, 'Your account can\'t manage this server. ',
+        el('button', {
+            type: 'button',
+            class: 'btn btn-small btn-primary',
+            onclick: () => { logout(); login().then(loadAll, () => {}); },
+        }, 'Log in as someone else'));
+}
+
+// The prompt for a failed request, or null when it isn't about access.
+function accessPrompt(error, text) {
+    if (error.status === 401) return loginPrompt(text);
+    if (error.status === 403) return noAccessPrompt();
+    return null;
 }
 
 // Logged out on a protected server: the tabs ask for a login instead of looking empty.
@@ -43,8 +60,9 @@ export async function loadAll() {
     } else {
         state.graph = null;
         renderGraph();
-        if (graph.reason.status === 401) {
-            $('#graph-problems').replaceChildren(loginPrompt('Log in to see the dependency graph.'));
+        const prompt = accessPrompt(graph.reason, 'Log in to see the dependency graph.');
+        if (prompt) {
+            $('#graph-problems').replaceChildren(prompt);
         } else {
             toast(graph.reason.message, 'error');
         }
@@ -58,8 +76,9 @@ export async function loadAll() {
         state.modules = [];
         state.loaded = false;
         renderModules();
-        if (modules.reason.status === 401) {
-            $('#module-list').replaceChildren(loginPrompt('Log in to see and manage modules.'));
+        const prompt = accessPrompt(modules.reason, 'Log in to see and manage modules.');
+        if (prompt) {
+            $('#module-list').replaceChildren(prompt);
         } else {
             toast(modules.reason.message, 'error');
         }

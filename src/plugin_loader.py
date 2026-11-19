@@ -202,6 +202,15 @@ async def _load_modules(
 
     chacc_logger.info(f"Loading {len(modules_to_load)} modules from {source}: {modules_to_load}")
 
+    # By design, plugin hot reload also covers the plugins' models: with it off,
+    # their models aren't discovered, so their tables aren't created or migrated.
+    if not ENABLE_PLUGIN_HOT_RELOAD:
+        chacc_logger.warning(
+            "Plugin hot reload is off (ENABLE_PLUGIN_HOT_RELOAD=False): the server doesn't "
+            f"restart when {source}/ changes, and the modules' tables aren't created or "
+            "migrated. Set ENABLE_PLUGIN_HOT_RELOAD=True to turn both on."
+        )
+
     await resolve_dependencies(modules, modules_to_load)
 
     for module_name in modules_to_load:

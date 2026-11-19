@@ -1,7 +1,7 @@
 // The Services tab: database, Redis, rate limiting and the server.
 import { api } from './api.js';
 import { $, el } from './dom.js';
-import { loginPrompt } from './loader.js';
+import { loginPrompt, noAccessPrompt } from './loader.js';
 import { state } from './state.js';
 import { updateTopStatus } from './status.js';
 
@@ -59,6 +59,11 @@ export function renderServices() {
         list.replaceChildren(loginPrompt('Log in to see the services.'));
         return;
     }
+    if (state.servicesError === 'forbidden') {
+        $('#services-checked').textContent = '';
+        list.replaceChildren(noAccessPrompt());
+        return;
+    }
     if (!state.services) {
         list.replaceChildren(el('div', { class: 'empty' }, state.servicesError || 'Checking services…'));
         return;
@@ -88,7 +93,7 @@ export function loadServices() {
             state.servicesError = null;
         } catch (e) {
             state.services = null;
-            state.servicesError = e.status === 401 ? 'login' : 'Could not check the services: ' + e.message;
+            state.servicesError = e.status === 401 ? 'login' : e.status === 403 ? 'forbidden' : 'Could not check the services: ' + e.message;
         } finally {
             servicesLoading = null;
         }

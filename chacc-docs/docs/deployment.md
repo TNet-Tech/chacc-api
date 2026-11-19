@@ -155,6 +155,22 @@ location / {
 }
 ```
 
+To also allow the web console only from some addresses, for example your office
+or VPN, add before `location /`:
+
+```nginx
+location ~ ^/(console|api/modules|api/system)(/|$) {
+    allow 203.0.113.10;          # your address
+    deny all;
+    proxy_pass http://127.0.0.1:8085;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+`chacc deploy` uses `/api/modules` too, so run it from an allowed address.
+
 Reload nginx afterwards (`nginx -s reload`). For rate limits per client, also
 set `FORWARDED_ALLOW_IPS`; see [Behind a reverse proxy](configuration.md#rate-limiting).
 

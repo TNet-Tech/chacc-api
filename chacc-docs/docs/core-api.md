@@ -206,6 +206,12 @@ blocked, disabled or not installed, and the load order.
 Open `/console` in a browser to manage modules, see the dependency graph and the
 services, and restart the server. See [Web Console](console.md).
 
+With the authentication module loaded, the `/modules` and `/system` routes need a
+user with the console privilege (`CHACC_ADMIN_PRIVILEGE`, default
+`MANAGE_WEB_CONSOLE`) or `ALL`. Without a login
+they return `401`; without the privilege, `403`. See
+[Who can use it](console.md#who-can-use-it).
+
 ## Server discovery
 
 `GET /.well-known/chacc` is never prefixed. It returns the server's `api_prefix`,

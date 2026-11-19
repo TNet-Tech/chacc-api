@@ -21,6 +21,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Rebuild modules that depend on other modules.** Add `module_dependencies` to their `module_meta.json`, rebuild the `.chacc`, and deploy the modules they require first. See [Module dependencies](modules.md#module-dependencies).
 - Deploying a module whose required modules are not installed is now refused with `409`.
 - At startup, a module whose required modules are missing is skipped and listed in the log instead of crashing the server. While a module is skipped, `MIGRATION_MODE=full` runs as `auto` so its tables are kept.
+- **Only admins can use the web console.** With the authentication module loaded, the core `/modules` and `/system` routes, the web console and `chacc deploy` need the `MANAGE_WEB_CONSOLE` privilege (set another with `CHACC_ADMIN_PRIVILEGE`) or `ALL`. ChaCC registers it with the authentication module itself. Other logged-in users now get `403`. Give deploy accounts a role with `MANAGE_WEB_CONSOLE`. See [Who can use it](console.md#who-can-use-it).
 - `POST /api/system/restart` is refused in development mode, where the server already reloads when files change.
 - **Docker: add the `chacc_packages` volume** (`/app/.chacc_packages`) if you don't use the provided compose file. Module packages now live there.
 - **Keep network available for the first start after upgrading.** Existing module packages were in the old container, so the first start installs them into the new volume. After that, starts need no network. Without network the affected modules are skipped until you run `chacc deps sync`.
@@ -84,6 +85,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - An unreachable Redis no longer slows the server down: each connection attempt took about 4.5 seconds because of retries. It now fails at once and is tried again at most every 10 seconds.
 - After an upgrade, the console and landing page could keep running the browser's old cached script and styles, so new features (such as the Services tab) stayed empty until a hard refresh. Their links now include a fingerprint of the file's contents, so a changed file is always fetched again.
 - In production, the console page was cached until a restart even when its files changed, so it could show headings that didn't match its script. It is now rebuilt when its files change.
+- In development mode with `ENABLE_PLUGIN_HOT_RELOAD=True`, editing a module in `plugins/` restarts the server again. An earlier beta 6 change had limited the reload to `src/`.
 - In development mode, the server didn't start when a data folder such as `MODULES_INSTALLED_DIR` was outside the project folder ("Non-relative patterns are unsupported").
 - When nginx or another proxy refused a module as too large, `chacc deploy` printed the proxy's HTML error page. It now says the proxy refused it and which setting to raise. See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 

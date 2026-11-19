@@ -3,8 +3,28 @@
 The web console is a page for managing a running server. Open `/console`, for
 example `http://localhost:8085/console`.
 
-When the authentication module is loaded, the console asks you to log in. The
-login lasts until you close the browser tab.
+## Who can use it
+
+When the [authentication module](official-modules/authentication.md) is loaded,
+the console asks you to log in, and only users with the console privilege or
+`ALL` can use it. Other users see that their account can't manage the server.
+The login lasts until you close the browser tab.
+
+The console privilege is `MANAGE_WEB_CONSOLE`, or the name you set in
+`CHACC_ADMIN_PRIVILEGE`. ChaCC registers it with the authentication module the
+first time the console is opened, so you only need to give it to people. Use a
+privilege that only grants the console.
+
+The same rule protects what the console uses: the core module routes, the
+services and restart, and so `chacc deploy`.
+
+To give someone access, give them a role with the console privilege
+(`PUT /rbac/users/{user_id}/roles`). If you change `CHACC_ADMIN_PRIVILEGE`
+later, grant the new privilege: users with only the old one lose access.
+
+Without the authentication module, the console is open to anyone who can reach
+the server. To also limit it by address, see
+[Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 
 ## Modules
 

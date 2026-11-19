@@ -134,7 +134,7 @@ def test_auth_info_finds_login_route_in_nested_routers():
         module_app.include_router(router, prefix=prefix)
 
     request = SimpleNamespace(app=module_app)
-    assert _auth_info(request) == {"required": True, "login_path": "/api/authentication/login"}
+    assert _auth_info(request)["login_path"] == "/api/authentication/login"
 
 
 def test_restart_requires_login_when_auth_module_loaded(client, with_auth, monkeypatch):
@@ -175,6 +175,142 @@ def test_graph_is_open_without_auth_module(client, monkeypatch):
 
     monkeypatch.setattr(modules, "DEVELOPMENT_MODE", False)
     assert client.get("/api/modules/graph").status_code == 200
+
+
+# ---------- Admin privilege ----------
+
+
+class PrivilegeContext(FakeContext):
+    """An authentication module with RBAC: 'admin-token' holds the privilege, 'good-token' doesn't."""
+
+    def __init__(self):
+        super().__init__(user={"username": "someone"})
+        self.checked = []
+        self.registered = []
+        self.fail_registration = False
+        context = self
+
+        class PrivilegeService:
+            async def ensure(self, privileges):
+                if context.fail_registration:
+                    raise RuntimeError("database is locked")
+                context.registered.append(privileges)
+                return [{"name": name} for name, _, _ in privileges]
+
+        self.privilege_service = PrivilegeService()
+
+    def has_service(self, name):
+        return name in {"get_current_user", "has_privileges", "privilege_service"}
+
+    def get_service(self, name):
+        if name == "privilege_service":
+            return self.privilege_service
+        if name != "has_privileges":
+            return super().get_service(name)
+
+        async def has_privileges(credentials, privilege_names, *, require_all=False):
+            from fastapi import HTTPException
+
+            self.checked.append(list(privilege_names))
+            if credentials.credentials not in {"good-token", "admin-token"}:
+                raise HTTPException(status_code=401, detail="Not authenticated")
+            if credentials.credentials != "admin-token":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Missing required privilege(s): " + ", ".join(privilege_names),
+                )
+            return {"username": "admin"}
+
+        return has_privileges
+
+
+@pytest.fixture
+def with_rbac(monkeypatch):
+    from src import admin_access
+
+    monkeypatch.setattr(admin_access, "_registered", set())
+    previous = app.state.backbone_context
+    app.state.backbone_context = PrivilegeContext()
+    yield app.state.backbone_context
+    app.state.backbone_context = previous
+
+
+def bearer(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_only_admins_use_the_console_routes(client, with_rbac, monkeypatch):
+    monkeypatch.delenv(lifecycle.SUPERVISED_ENV, raising=False)
+    assert client.get("/api/modules/").status_code == 401
+    assert client.get("/api/modules/", headers=bearer("good-token")).status_code == 403
+    assert client.get("/api/system/services", headers=bearer("good-token")).status_code == 403
+    assert client.post("/api/system/restart", headers=bearer("good-token")).status_code == 403
+    assert client.get("/api/modules/", headers=bearer("admin-token")).status_code == 200
+    assert with_rbac.checked[-1] == ["MANAGE_WEB_CONSOLE", "ALL"]
+
+
+def test_opening_the_console_registers_the_privilege_once(client, with_rbac):
+    assert client.get("/console").status_code == 200
+    assert client.get("/console").status_code == 200
+    assert len(with_rbac.registered) == 1
+    name, _description, severity = with_rbac.registered[0][0]
+    assert (name, severity) == ("MANAGE_WEB_CONSOLE", "CRITICAL")
+
+
+def test_admin_check_registers_the_privilege_without_the_console(client, with_rbac):
+    """chacc deploy never opens the console page."""
+    client.get("/api/modules/", headers=bearer("admin-token"))
+    assert with_rbac.registered and with_rbac.registered[0][0][0] == "MANAGE_WEB_CONSOLE"
+
+
+def test_failed_registration_is_retried_and_never_breaks_the_page(client, with_rbac):
+    with_rbac.fail_registration = True
+    assert client.get("/console").status_code == 200
+    assert client.get("/api/modules/", headers=bearer("admin-token")).status_code == 200
+    with_rbac.fail_registration = False
+    client.get("/console")
+    assert len(with_rbac.registered) == 1
+
+
+def test_refusal_does_not_reveal_the_privilege(client, with_rbac):
+    response = client.get("/api/modules/", headers=bearer("good-token"))
+    assert response.status_code == 403
+    assert "MANAGE_WEB_CONSOLE" not in response.text
+    assert response.json()["detail"] == "You don't have access to manage this server."
+
+
+def test_configured_privilege_is_checked_and_registered(client, with_rbac, monkeypatch):
+    from src import admin_access
+
+    monkeypatch.setattr(admin_access, "ADMIN_PRIVILEGE", "CONSOLE_ACCESS")
+    client.get("/api/modules/", headers=bearer("admin-token"))
+    assert with_rbac.checked[-1] == ["CONSOLE_ACCESS", "ALL"]
+    assert with_rbac.registered[-1][0][0] == "CONSOLE_ACCESS"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("", "MANAGE_WEB_CONSOLE"),
+        ("  ", "MANAGE_WEB_CONSOLE"),
+        ("CONSOLE_ACCESS", "CONSOLE_ACCESS"),
+        (" OPS_2 ", "OPS_2"),
+        ("console access", "MANAGE_WEB_CONSOLE"),
+        ("lower", "MANAGE_WEB_CONSOLE"),
+        ("ALL", "MANAGE_WEB_CONSOLE"),
+    ],
+)
+def test_privilege_setting_never_weakens_access(value, expected):
+    from src.admin_access import resolve_admin_privilege
+
+    assert resolve_admin_privilege(value) == expected
+
+
+def test_no_registration_without_auth_module(client):
+    from src import admin_access
+
+    assert client.get("/console").status_code == 200
+    assert not admin_access._registered
 
 
 # ---------- Graph ----------
