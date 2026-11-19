@@ -1554,6 +1554,10 @@ module.</p>
 <td>Migration tracker table missing</td>
 <td>The runner creates it on startup.</td>
 </tr>
+<tr>
+<td><code>QueuePool limit ... reached, connection timed out</code>, or <code>CLOSE FAILED ... _connection_for_bind() is already in progress</code> in the log</td>
+<td>A module opens database sessions it never closes, often with <code>await anext(get_async_db())</code>. Update it to the patterns in <a href="../modules/#database-sessions">Database sessions</a>. Restart the server to free the connections already taken.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="redis-issues">Redis issues<a class="headerlink" href="#redis-issues" title="Permanent link">&para;</a></h2>

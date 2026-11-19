@@ -76,6 +76,7 @@ MIGRATION_MODE=preview chacc run server
 | PostgreSQL connection refused | Confirm host, port, user, password, and database. |
 | Readiness check reports database error | Check database credentials and network access. |
 | Migration tracker table missing | The runner creates it on startup. |
+| `QueuePool limit ... reached, connection timed out`, or `CLOSE FAILED ... _connection_for_bind() is already in progress` in the log | A module opens database sessions it never closes, often with `await anext(get_async_db())`. Update it to the patterns in [Database sessions](modules.md#database-sessions). Restart the server to free the connections already taken. |
 
 ## Redis issues
 
