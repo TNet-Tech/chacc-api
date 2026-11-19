@@ -3,35 +3,55 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="chacc-api-prefix" content="{{API_PREFIX}}" />
     <title>ChaCC API</title>
     <link rel="icon" type="image/x-icon" href="/static/img/chacc-icon.ico" />
     <link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <header class="header">
             <div class="logo-wrapper">
                 <img src="/static/img/chacc-icon.ico" alt="ChaCC Logo" class="logo">
-                <span class="status-badge">
-                    <!-- small circle -->
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
-                        <circle cx="4" cy="4" r="3" />
-                    </svg>
-                    <span class="status-text">Running</span>
-                </span>
             </div>
+            <span class="status" data-state="loading" aria-live="polite">
+                <span class="status-dot" aria-hidden="true"></span>
+                <span class="status-text">Checking…</span>
+            </span>
             <h1><span>ChaCC</span> API</h1>
             <p class="subtitle">Modular FastAPI backbone for extensible APIs</p>
-            <div class="version-tag">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                </svg>
-                Version <strong class="version-text">Loading…</strong>
+            <div class="meta-row">
+                <span class="version-tag">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                    Version <strong class="version-text">Loading…</strong>
+                </span>
             </div>
-        </div>
+        </header>
 
         <div class="cards">
+            <a href="/console" class="card card-primary">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                        <path d="M17.5 14v7M14 17.5h7"></path>
+                    </svg>
+                </div>
+                <h2>Web Console</h2>
+                <p>Install, enable, disable and uninstall modules, see the dependency graph, and restart the server.</p>
+                <span class="badge">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                    /console
+                </span>
+            </a>
+
             <a href="/docs" class="card">
                 <div class="icon">
                     <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -40,7 +60,7 @@
                     </svg>
                 </div>
                 <h2>Swagger UI</h2>
-                <p>Interactive API explorer with request/response inspection, schema browsing, and direct endpoint execution.</p>
+                <p>Explore every endpoint, inspect schemas and send requests from the browser.</p>
                 <span class="badge">
                     <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -60,7 +80,7 @@
                     </svg>
                 </div>
                 <h2>ReDoc</h2>
-                <p>Clean three‑panel documentation with detailed schemas, examples, and a structured reading experience.</p>
+                <p>Read the API reference as clean three-panel documentation.</p>
                 <span class="badge">
                     <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -79,7 +99,7 @@
                     </svg>
                 </div>
                 <h2>Documentation</h2>
-                <p>Comprehensive guides, architecture overviews, and module authoring references on chacc.dev.</p>
+                <p>Guides, architecture and module authoring on chacc.dev.</p>
                 <span class="badge">
                     <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -91,7 +111,7 @@
             </a>
         </div>
 
-        <div class="footer">
+        <footer class="footer">
             Built with
             <span class="heart">
                 <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -100,7 +120,7 @@
             </span>
             by the ChaCC team &mdash;
             <a href="https://chacc.dev" target="_blank" rel="noopener">chacc.dev</a>
-        </div>
+        </footer>
 
         <script src="/static/js/index.js"></script>
     </div>

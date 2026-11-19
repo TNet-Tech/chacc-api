@@ -14,6 +14,9 @@ os.environ["CHACC_DEV_MODE"] = "false"
 
 chacc_logger = configure_logging()
 
+# Seconds to let in-flight requests finish on shutdown/restart before forcing it.
+GRACEFUL_SHUTDOWN_TIMEOUT = int(os.environ.get("CHACC_GRACEFUL_SHUTDOWN_TIMEOUT", "30"))
+
 
 def start_server(_logger=None):
     """Start the server without auto-reload, honouring CLI flags via env vars."""
@@ -29,7 +32,17 @@ def start_server(_logger=None):
     try:
         import uvicorn
 
-        uvicorn.run("main:app", host=host, port=port, reload=False)
+        from src.lifecycle import run_server
+
+        run_server(
+            lambda: uvicorn.run(
+                "main:app",
+                host=host,
+                port=port,
+                reload=False,
+                timeout_graceful_shutdown=GRACEFUL_SHUTDOWN_TIMEOUT,
+            )
+        )
     except Exception as e:  # noqa: BLE001
         _log.error(f"❌ Error starting server: {e}")
         sys.exit(1)

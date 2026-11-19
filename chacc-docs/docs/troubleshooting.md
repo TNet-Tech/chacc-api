@@ -36,6 +36,10 @@ Common causes:
 | Setup function returns wrong type | Return a FastAPI `APIRouter`. |
 | Relative import issue | Import from the module package, not from sibling paths. |
 | Dependency resolution failed | Add required packages to `requirements.txt`. |
+| `will not be loaded: Python packages not installed` in the log | The server had no network to install them. Connect it and restart, or run `chacc deps sync`. Other modules keep working. |
+| `will not be loaded: ... installed for Python 3.x` | The image's Python version changed. Run `chacc deps sync` with network. |
+| `NOT LOADED - missing required module(s)` in the log | Install the listed modules, then restart. See [Module dependencies](modules.md#module-dependencies). |
+| `Foreign key ... could not find table 'users'` | A module uses another module's tables without declaring it. Add it to `module_dependencies.required` and install it. |
 | Module discover-loading mismatch with `PLUGIN_AUTO_DISCOVERY=False` | Ensure module metadata, entry points, and base paths are correctly stored in the `modules` table when skipping filesystem discovery. |
 
 Restart the backbone after installing, enabling, disabling, or uninstalling a
@@ -72,6 +76,7 @@ MIGRATION_MODE=preview chacc run server
 | PostgreSQL connection refused | Confirm host, port, user, password, and database. |
 | Readiness check reports database error | Check database credentials and network access. |
 | Migration tracker table missing | The runner creates it on startup. |
+| `QueuePool limit ... reached, connection timed out`, or `CLOSE FAILED ... _connection_for_bind() is already in progress` in the log | A module opens database sessions it never closes, often with `await anext(get_async_db())`. Update it to the patterns in [Database sessions](modules.md#database-sessions). Restart the server to free the connections already taken. |
 
 ## Redis issues
 
@@ -93,7 +98,13 @@ REDIS_DB=0
 | --- | --- |
 | `chacc deploy` cannot connect | Confirm `CHACC_DEPLOY_URL` points to a running API. |
 | Deployment times out | Increase `CHACC_DEPLOY_TIMEOUT`. |
-| Deployment returns 401 | Set `CHACC_DEPLOY_API_KEY` to a valid bearer token. |
+| Deployment returns 401 | Enter valid credentials when prompted, or set `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` (CI) or `CHACC_DEPLOY_API_KEY`. A server without the authentication module may need its web console key: set `CHACC_DEPLOY_KEY` to its `CHACC_CONSOLE_KEY`. |
+| Deployment says "Login endpoint not found" | Set `CHACC_DEPLOY_AUTH_PATH` to the auth module's `base_path_prefix` (without the API prefix). |
+| Deployment returns 413 | If the message names nginx or another proxy, raise its upload limit (nginx: `client_max_body_size`). See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy). Otherwise the package exceeds `MAX_MODULE_UPLOAD_SIZE` (10 MB by default). |
+| Upload returns `504` behind a proxy | Raise the proxy's timeout (nginx: `proxy_read_timeout 600s`). |
+| Restart returns `409` | The server was not started with `chacc run server`. Start it that way, or restart manually. See [Automatic Restarts](server-restarts.md). |
+| `chacc deploy --restart` says the server did not come back | Check the server logs for startup errors. Increase `CHACC_DEPLOY_RESTART_TIMEOUT` if dependency installation is slow. |
+| Upload returns `503` | The server can't reach the package index to install the module's packages. Nothing was changed. |
 | Module installed but not active | Restart the remote ChaCC API server. |
 | Docker health check fails | Confirm container and host port mapping use `8085` and health endpoint is `/api/health`. |
 

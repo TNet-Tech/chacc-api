@@ -97,7 +97,6 @@ def get_module_info():
                     spec = importlib.util.spec_from_file_location(module_name_in_package, file_path)
                     if spec:
                         module = importlib.util.module_from_spec(spec)
-                        module.__package__ = f"{module_name}.module"
                         sys.modules[module_name_in_package] = module
 
                         if module_name_in_package != f"{module_name}.module.main":
@@ -110,9 +109,10 @@ def get_module_info():
                                 )
 
             main_file_path = os.path.join(plugin_code_dir, "main.py")
-            spec = importlib.util.spec_from_file_location("main", main_file_path)
+            spec = importlib.util.spec_from_file_location(
+                f"{module_name}.module.main", main_file_path
+            )
             main_module = importlib.util.module_from_spec(spec)
-            main_module.__package__ = f"{module_name}.module"
 
             spec.loader.exec_module(main_module)
             print("✓ Successfully executed main module")

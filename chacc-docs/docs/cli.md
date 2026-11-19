@@ -177,12 +177,38 @@ Required environment variable:
 CHACC_DEPLOY_URL=http://localhost:8085
 ```
 
-Optional environment variables (still under development):
+Optional environment variables:
 
 ```bash
-CHACC_DEPLOY_API_KEY=optional-token
-CHACC_DEPLOY_TIMEOUT=30
+CHACC_DEPLOY_API_KEY=optional-token      # bearer token sent with every request
+CHACC_DEPLOY_USERNAME=admin              # non-interactive login (e.g. CI)
+CHACC_DEPLOY_PASSWORD=secret
+CHACC_DEPLOY_KEY=server-console-key      # server without the authentication module
+CHACC_DEPLOY_AUTH_PATH=/authentication   # auth module path (API prefix added automatically)
+CHACC_DEPLOY_API_PREFIX=/api             # override; normally discovered from the server
+CHACC_DEPLOY_TIMEOUT=600                 # seconds to wait for the server response
 ```
+
+If the server requires authentication, you are prompted for a username and
+password unless `CHACC_DEPLOY_USERNAME` and `CHACC_DEPLOY_PASSWORD` are set. A
+server protected by a [web console key](console.md#without-the-authentication-module)
+asks for that key instead, unless `CHACC_DEPLOY_KEY` is set. A server that isn't
+protected at all gets a warning.
+
+Packages are limited to 10 MB by default.
+
+If the module's required modules aren't installed on the server, the deploy is
+refused and the missing modules are listed. `chacc install` checks the same way.
+See [Module dependencies](modules.md#module-dependencies).
+
+Add `--restart` to activate the module right away. See
+[Automatic Restarts](server-restarts.md).
+
+```bash
+chacc deploy my_module.chacc --restart
+```
+
+The command exits with status `1` on failure, so it can be used in scripts.
 
 ## Check your setup (`chacc doctor`)
 
@@ -201,6 +227,18 @@ server port is free. Every problem comes with a plain-language fix. The exit cod
 is `1` when something must be fixed, so it can gate deployments.
 
 `chacc --version` prints the installed version.
+
+## Module packages (`chacc deps`)
+
+```bash
+chacc deps check   # are the enabled modules' Python packages installed? No network.
+chacc deps sync    # resolve what changed and install what is missing (needs network)
+```
+
+Use `sync` after changing the Python version, or to install packages for modules
+copied into `.modules_installed/` by hand. Both exit with status `1` while a
+module can't be loaded. In Docker, run them as the server's user:
+`docker exec -u chacc chacc-api chacc deps sync`.
 
 ## Run the server
 
@@ -225,6 +263,9 @@ Options:
 | `--port` | Port to bind. Defaults to `8085`. |
 | `-v` / `--verbose` | Enable verbose logging (`CHACC_VERBOSE=true`). The flag is passed to the server subprocess, so startup logs and application logs use `INFO` level. |
 | `--debug` | Enable debug logging (`CHACC_DEBUG=true` in development mode). |
+
+`chacc run server` starts the server again after a restart request. See
+[Automatic Restarts](server-restarts.md).
 
 ## Legacy server command
 

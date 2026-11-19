@@ -15,6 +15,17 @@ import sys
 from collections import defaultdict
 
 
+def _forget_failed(mod_name: str, mod) -> None:
+    """
+    Drop a module whose code raised while being imported, like Python's own
+    import does. Left in sys.modules, a later import would get the half-loaded
+    module and report a misleading error (e.g. a missing function) instead of
+    the real one.
+    """
+    if mod is not None and sys.modules.get(mod_name) is mod:
+        del sys.modules[mod_name]
+
+
 def _dotted_name(prefix: str, rel_dir: str, file_stem: str) -> str:
     """Build the dotted module name for a file."""
     sd = "" if rel_dir in ("", ".") else rel_dir.replace(os.sep, ".")
@@ -168,14 +179,15 @@ def discover_and_import_models(
                     logger.debug(f"Skipping already imported: {mod_name}")
                     continue
 
+                mod = None
                 try:
                     spec = importlib.util.spec_from_file_location(mod_name, file_path)
                     if not spec or not spec.loader:
                         logger.warning(f"Could not create spec for {file_path}")
                         continue
+                    # spec.parent is the enclosing package already, so relative
+                    # imports work from __spec__ (Python 3.15 ignores __package__).
                     mod = importlib.util.module_from_spec(spec)
-                    mod.__package__ = enclosing
-                    mod.__name__ = mod_name
                     sys.modules[mod_name] = mod
                     spec.loader.exec_module(mod)
                     logger.info(f"Scanned for models in: {mod_name}")
@@ -187,8 +199,10 @@ def discover_and_import_models(
                         )
                         continue
                     logger.error(f"Relative import issue in {file_path}: {e}")
+                    _forget_failed(mod_name, mod)
                 except SyntaxError as e:
                     logger.error(f"SyntaxError in {file_path} (line {e.lineno}): {e.msg}")
+                    _forget_failed(mod_name, mod)
                 except Exception as e:
                     if "already defined for this MetaData instance" in str(e):
                         logger.warning(
@@ -196,6 +210,7 @@ def discover_and_import_models(
                         )
                         continue
                     logger.exception(f"Failed to import models from {file_path}")
+                    _forget_failed(mod_name, mod)
 
             for module_name in sorted_inits:
                 file_path, rel_path, file, mod_name, enclosing = init_map[module_name]
@@ -204,14 +219,19 @@ def discover_and_import_models(
                     logger.debug(f"Skipping already imported: {mod_name}")
                     continue
 
+                mod = None
                 try:
-                    spec = importlib.util.spec_from_file_location(mod_name, file_path)
+                    # A package: give the spec its search location, so spec.parent is
+                    # the package itself and relative imports resolve from __spec__.
+                    spec = importlib.util.spec_from_file_location(
+                        mod_name,
+                        file_path,
+                        submodule_search_locations=[os.path.dirname(file_path)],
+                    )
                     if not spec or not spec.loader:
                         logger.warning(f"Could not create spec for {file_path}")
                         continue
                     mod = importlib.util.module_from_spec(spec)
-                    mod.__package__ = mod_name
-                    mod.__name__ = mod_name
                     sys.modules[mod_name] = mod
                     spec.loader.exec_module(mod)
                     logger.info(f"Scanned for models in: {mod_name}")
@@ -223,8 +243,10 @@ def discover_and_import_models(
                         )
                         continue
                     logger.warning(f"Relative import issue in {file_path}: {e}")
+                    _forget_failed(mod_name, mod)
                 except SyntaxError as e:
                     logger.warning(f"SyntaxError in {file_path} (line {e.lineno}): {e.msg}")
+                    _forget_failed(mod_name, mod)
                 except Exception as e:
                     if "already defined for this MetaData instance" in str(e):
                         logger.warning(
@@ -232,6 +254,7 @@ def discover_and_import_models(
                         )
                         continue
                     logger.exception(f"Failed to import models from {file_path}")
+                    _forget_failed(mod_name, mod)
 
     finally:
         if _added_parent and parent_dir in sys.path:

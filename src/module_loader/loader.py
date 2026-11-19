@@ -5,6 +5,7 @@ validating and resolving Python dependencies, extracting archives,
 synchronising the database, and mounting enabled modules into the FastAPI application.
 """
 
+import asyncio
 import importlib
 import inspect
 import json
@@ -13,21 +14,23 @@ import sys
 
 from fastapi import APIRouter, FastAPI
 
+from src import module_status
 from src.constants import (
     API_PREFIX,
-    DEPENDENCY_CACHE_DIR,
-    ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
+    MIGRATION_MODE,
     MODULES_INSTALLED_DIR,
     MODULES_LOADED_DIR,
 )
 from src.core_services import BackboneContext
 from src.database import (
     ModuleRecord,
+    SessionLocal,
     apply_deferred_schema_changes,
-    get_db,
     initialize_database_models,
 )
 from src.logger import configure_logging, get_default_log_level
+from src.module_graph import GraphReport, check_graph
+from src.module_packages import boot_check
 
 from .archive import (
     collect_module_requirements,
@@ -35,10 +38,15 @@ from .archive import (
     process_module_archives,
     unzip_modules,
 )
+from .dependencies import log_report
 from .discovery import discover_and_import_models
 from .metadata import sync_database_with_filesystem
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
+
+
+class _LoadFailed(Exception):
+    """A module can't be loaded; the message says why, in plain words."""
 
 
 async def load_single_module(
@@ -57,6 +65,10 @@ async def load_single_module(
     All required data is supplied via parameters. Supports sync and async
     entry-point setup functions.
 
+    The outcome is recorded in :mod:`src.module_status` (loaded with its routes,
+    or failed with the reason) for the console. An exception raised by the
+    module's own setup function is recorded and then re-raised.
+
     Args:
         module_name: Name of the module.
         module_path: Path to the module directory.
@@ -70,12 +82,42 @@ async def load_single_module(
     Returns:
         True if the module loaded successfully, False otherwise.
     """
+    try:
+        return await _load_single_module(
+            module_name,
+            module_path,
+            module_metadata,
+            app,
+            backbone_context,
+            base_path_prefix,
+            tags,
+            discover_only,
+        )
+    except _LoadFailed as e:
+        chacc_logger.error(f"Module '{module_name}' not loaded: {e}")
+        if not discover_only:
+            module_status.mark_failed(module_name, str(e))
+        return False
+    except Exception as e:
+        if not discover_only:
+            module_status.mark_failed(module_name, f"{type(e).__name__}: {e}")
+        raise
 
+
+async def _load_single_module(
+    module_name: str,
+    module_path: str,
+    module_metadata: dict,
+    app: FastAPI,
+    backbone_context: BackboneContext,
+    base_path_prefix: str | None,
+    tags: list | None,
+    discover_only: bool,
+) -> bool:
     chacc_logger.info(f"Loading module '{module_name}' from path: {module_path}")
 
     if not os.path.isdir(module_path):
-        chacc_logger.error(f"Module path does not exist: {module_path}")
-        return False
+        raise _LoadFailed(f"Its folder is missing: {module_path}")
 
     chacc_logger.info(f"Module path confirmed: {module_path}")
 
@@ -93,17 +135,15 @@ async def load_single_module(
 
     entry_point_str = module_metadata.get("entry_point")
     if not entry_point_str or ":" not in entry_point_str:
-        chacc_logger.warning(f"Skipping '{module_name}': Invalid 'entry_point' in metadata.")
-        return False
+        raise _LoadFailed(
+            "module_meta.json has no valid 'entry_point' (expected 'package.file:function')."
+        )
 
     module_relative_path, func_name = entry_point_str.split(":")
     plugin_main_file_path = os.path.join(module_path, *module_relative_path.split(".")) + ".py"
 
     if not os.path.exists(plugin_main_file_path):
-        chacc_logger.warning(
-            f"Skipping '{module_name}': Entry point file not found: {plugin_main_file_path}"
-        )
-        return False
+        raise _LoadFailed(f"The entry point file is missing: {module_relative_path}.py")
 
     chacc_logger.info(f"Found entry point file: {plugin_main_file_path}")
 
@@ -118,17 +158,12 @@ async def load_single_module(
         module = importlib.import_module(full_module_name)
         chacc_logger.info(f"Successfully imported module '{module_name}'")
     except ImportError as e:
-        chacc_logger.error(f"Import error in module '{module_name}': {e}")
-        chacc_logger.error(f"Module path: {module_path}")
         chacc_logger.error(f"Full module name: {full_module_name}")
-        return False
+        raise _LoadFailed(f"Its code couldn't be imported: {e}") from e
 
     setup_func = getattr(module, func_name, None)
     if not setup_func or not callable(setup_func):
-        chacc_logger.error(
-            f"Plugin '{module_name}': Entry point function '{func_name}' not found or not callable after import."
-        )
-        return False
+        raise _LoadFailed(f"The setup function '{func_name}' wasn't found in its entry point.")
 
     chacc_logger.info(f"Found setup function: {func_name}")
 
@@ -137,35 +172,59 @@ async def load_single_module(
     else:
         plugin_router = setup_func(backbone_context)
 
-    if plugin_router and isinstance(plugin_router, APIRouter):
-        base_prefix = base_path_prefix or module_metadata.get("base_path_prefix", f"/{module_name}")
-        if not base_prefix.startswith(API_PREFIX):
-            base_prefix = f"{API_PREFIX}{base_prefix}"
-        module_tags = tags or module_metadata.get(
-            "tags", [module_metadata.get("display_name", module_name)]
+    if not (plugin_router and isinstance(plugin_router, APIRouter)):
+        raise _LoadFailed(f"Its setup function '{func_name}' didn't return an APIRouter.")
+
+    base_prefix = base_path_prefix or module_metadata.get("base_path_prefix", f"/{module_name}")
+    # Every module is mounted under the API prefix, without exception.
+    base_prefix = f"{API_PREFIX}/{base_prefix.strip('/')}"
+    module_tags = tags or module_metadata.get(
+        "tags", [module_metadata.get("display_name", module_name)]
+    )
+    if not isinstance(module_tags, list):
+        module_tags = [module_tags]
+
+    app.include_router(plugin_router, prefix=base_prefix, tags=module_tags)
+
+    chacc_logger.info(f"Module '{module_name}' loaded and enabled with prefix: {base_prefix}")
+    chacc_logger.info(f"Module '{module_name}' documentation tags: {module_tags}")
+
+    for route in getattr(plugin_router, "routes", []):
+        route_path = getattr(route, "path", None)
+        route_methods = getattr(route, "methods", None)
+        if route_path and route_methods:
+            chacc_logger.info(f"  - {route_path}: {', '.join(route_methods)}")
+
+    module_status.mark_loaded(module_name, base_prefix)
+    return True
+
+
+def _record_meta(record: ModuleRecord) -> dict:
+    """module_meta.json of an extracted module, falling back to the DB copy."""
+    meta_file_path = os.path.join(MODULES_LOADED_DIR, record.name, "module_meta.json")
+    if os.path.exists(meta_file_path):
+        try:
+            with open(meta_file_path, "r") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            chacc_logger.warning(f"Could not read {meta_file_path}; using stored metadata.")
+    return record.meta_data or {}
+
+
+def migration_mode_for(report: GraphReport) -> str | None:
+    """
+    Never drop anything while modules are skipped.
+
+    A skipped module's models are not imported, so in 'full' mode its tables
+    would look unused and be dropped. Fall back to 'auto' (additive only).
+    """
+    if report.blocked and MIGRATION_MODE == "full":
+        chacc_logger.warning(
+            "Some modules were skipped; running migrations in 'auto' mode this time "
+            "so their tables are not dropped."
         )
-        if not isinstance(module_tags, list):
-            module_tags = [module_tags]
-
-        app.include_router(plugin_router, prefix=base_prefix, tags=module_tags)
-
-        chacc_logger.info(f"Module '{module_name}' loaded and enabled with prefix: {base_prefix}")
-        chacc_logger.info(f"Module '{module_name}' documentation tags: {module_tags}")
-
-        if hasattr(plugin_router, "routes"):
-            chacc_logger.info(f"Module '{module_name}' routes mounted:")
-            for route in plugin_router.routes:
-                route_path = getattr(route, "path", None)
-                route_methods = getattr(route, "methods", None)
-                if route_path and route_methods:
-                    chacc_logger.info(f"  - {route_path}: {', '.join(route_methods)}")
-        else:
-            chacc_logger.info(f"Module '{module_name}' has no routes")
-
-        return True
-    else:
-        chacc_logger.error(f"Plugin '{module_name}': Setup function did not return an APIRouter.")
-        return False
+        return "auto"
+    return None
 
 
 async def load_modules(
@@ -182,7 +241,7 @@ async def load_modules(
     """
     chacc_logger.info("Starting module discovery and database synchronization...")
 
-    db = await anext(get_db())
+    db = SessionLocal()  # closed in the finally block below
 
     try:
         if MODULES_LOADED_DIR not in sys.path:
@@ -203,8 +262,6 @@ async def load_modules(
 
         existing_records = {record.name: record for record in db.query(ModuleRecord).all()}
 
-        modules_requirements = await collect_module_requirements()
-
         chacc_to_module_name = extract_module_names_from_chacc_files(installed_chacc_files)
 
         modules_to_process = process_module_archives(
@@ -217,27 +274,14 @@ async def load_modules(
 
         db.commit()
 
-        enabled_modules = [r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()]
+        enabled_modules = {r.name for r in db.query(ModuleRecord).filter_by(is_enabled=True).all()}
 
-        enabled_requirements = {}
-        for mod_name, reqs in modules_requirements.items():
-            if mod_name in enabled_modules or mod_name == "backbone":
-                enabled_requirements[mod_name] = reqs
-
-        if ENABLE_PLUGIN_DEPENDENCY_RESOLUTION and enabled_requirements:
-            chacc_logger.info("Ensuring dependencies are resolved for all enabled modules...")
-            try:
-                from chacc import DependencyManager
-
-                dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
-                await dm.resolve_dependencies(enabled_requirements)
-
-                importlib.invalidate_caches()
-                chacc_logger.info("Python import cache refreshed after dependency resolution.")
-            except Exception as e:  # noqa: BLE001
-                chacc_logger.error(f"Dependency resolution failed: {e}")
-                chacc_logger.error("Aborting module loading to prevent inconsistent state.")
-                raise RuntimeError(f"Dependency resolution failed: {e}")
+        # Python packages: check, never re-resolve what is resolved. Modules whose
+        # packages are still missing are not loaded; everything else is.
+        chacc_logger.info("Checking Python packages of enabled modules...")
+        enabled_requirements = collect_module_requirements(enabled_modules)
+        deps_report = await asyncio.to_thread(boot_check, enabled_requirements, chacc_logger)
+        importlib.invalidate_caches()
 
         module_found = db.query(ModuleRecord).first()
         if module_found:
@@ -245,25 +289,29 @@ async def load_modules(
 
         chacc_logger.info("Database synchronized with filesystem. Proceeding to load modules...")
 
-        query = db.query(ModuleRecord).filter_by(is_enabled=True)
-        if only_modules:
-            query = query.filter(ModuleRecord.name.in_(only_modules))
+        enabled_records = db.query(ModuleRecord).filter_by(is_enabled=True).all()
+        record_metas = {record.name: _record_meta(record) for record in enabled_records}
+
+        # Dependencies are checked against every enabled module, before any
+        # models are imported: a module whose required module is missing is
+        # skipped entirely (its models would reference tables nobody defines).
+        report = check_graph(record_metas, preblocked=deps_report.blocked)
+        log_report(report, chacc_logger, dev=False)
+
         if exclude_modules:
             chacc_logger.info(f"Excluding modules from loading: {exclude_modules}")
-            query = query.filter(ModuleRecord.name.notin_(exclude_modules))
-
-        updated_records = query.all()
+        by_name = {record.name: record for record in enabled_records}
+        updated_records = [
+            by_name[name]
+            for name in report.order
+            if (not only_modules or name in only_modules)
+            and not (exclude_modules and name in exclude_modules)
+        ]
 
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)
-
-                meta_file_path = os.path.join(module_path, "module_meta.json")
-                if os.path.exists(meta_file_path):
-                    with open(meta_file_path, "r") as f:
-                        metadata = json.load(f)
-                else:
-                    metadata = record.meta_data if record.meta_data else {}
+                metadata = record_metas[record.name]
 
                 discovery_success = await load_single_module(
                     module_name=record.name,
@@ -288,20 +336,14 @@ async def load_modules(
         try:
             from src.migration.runner import run_migration
 
-            await run_migration()
+            await run_migration(mode=migration_mode_for(report))
         except Exception:
             chacc_logger.exception("Migration after model discovery failed")
 
         for record in updated_records:
             try:
                 module_path = os.path.join(MODULES_LOADED_DIR, record.name)
-
-                meta_file_path = os.path.join(module_path, "module_meta.json")
-                if os.path.exists(meta_file_path):
-                    with open(meta_file_path, "r") as f:
-                        metadata = json.load(f)
-                else:
-                    metadata = record.meta_data if record.meta_data else {}
+                metadata = record_metas[record.name]
 
                 success = await load_single_module(
                     module_name=record.name,
@@ -331,7 +373,7 @@ async def load_modules(
                 chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
                 from src.migration.runner import run_migration
 
-                await run_migration()
+                await run_migration(mode=migration_mode_for(report))
                 chacc_logger.info("Deferred migration completed.")
         except Exception:
             chacc_logger.exception("Deferred schema migration failed")

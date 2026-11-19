@@ -18,7 +18,7 @@ The backbone owns the HTTP server, configuration validation, database engine, an
 | --- | --- |
 | Package | `chacc-api` |
 | Version | `1.0.0-b5.3` |
-| Runtime | Python 3.10, 3.11, or 3.12 |
+| Runtime | Python 3.10 to 3.15 (Docker images use 3.15) |
 | Web framework | FastAPI |
 | Database | SQLite by default, PostgreSQL supported |
 | License | Apache-2.0 |
@@ -49,10 +49,9 @@ It exposes shared services:
 | Context member | Purpose |
 | --- | --- |
 | `context.app` | Main FastAPI application. |
-| `context.limiter` | SlowAPI limiter for route-level throttling. |
+| `context.limiter` | Deprecated; use `chacc_api.rate_limit` (see [Rate limiting](modules.md#rate-limiting)). |
 | `context.logger` | Centralized logger. |
-| `context.get_db` | Database session dependency. It is a synchronous session and should be treated as such. |
-| `context.get_db_async` | Async database session dependency. Use this for non-blocking database access; works with `AsyncSession`. |
+| `context.get_db` / `context.get_db_async` | Deprecated; use `chacc_api.database` (see [Database sessions](modules.md#database-sessions)). |
 | `context.register_service()` | Register a named service for other modules. |
 | `context.get_service()` | Retrieve a named service. |
 | `context.get_module_config()` | Read module-specific environment configuration. |
@@ -104,8 +103,9 @@ flowchart LR
 
 1. **Discover**: the loader scans installed `.chacc` archives or development
    plugin directories.
-2. **Resolve dependencies**: module requirements are combined with backbone
-   requirements and resolved through the dependency manager.
+2. **Check packages**: each enabled module's Python packages must already be in
+   the packages folder (installed on upload). A module whose packages are missing
+   is skipped, not the whole server. See [Deployment](deployment.md#running-without-network).
 3. **Extract**: archives are unpacked into `.modules_loaded/`.
 4. **Synchronize**: `ModuleRecord` rows are created, updated, or removed.
 5. **Discover models**: Python files are imported so `ChaCCBaseModel`

@@ -1,10 +1,22 @@
 import logging
+import warnings
 from collections.abc import Callable
 from typing import Any
 
 from decouple import config as decouple_config
 from fastapi import FastAPI
 from slowapi import Limiter
+
+_warned: set[str] = set()
+
+
+def _deprecated(old: str, new: str, logger: logging.Logger | None = None) -> None:
+    """Warn about a deprecated API; logged once per name so module authors see it."""
+    message = f"{old} is deprecated and will be removed in a future release; use {new}."
+    warnings.warn(message, DeprecationWarning, stacklevel=3)
+    if logger is not None and old not in _warned:
+        _warned.add(old)
+        logger.warning(message)
 
 
 class BackboneContext:
@@ -35,7 +47,11 @@ class BackboneContext:
 
     @property
     def limiter(self) -> Limiter:
-        """The main SlowAPI Limiter instance."""
+        """
+        Deprecated: use ``rate_limit`` (or ``limiter``) from ``chacc_api.rate_limit``.
+        Still works in this release.
+        """
+        _deprecated("context.limiter", "chacc_api.rate_limit", self._logger)
         return self._limiter
 
     @property
@@ -46,17 +62,19 @@ class BackboneContext:
     @property
     def get_db(self):
         """
-        Provides the FastAPI dependency function to get a database session.
-        Modules will use this as: db: Session = Depends(context.get_db)
+        Deprecated: use ``Depends(get_db)`` with ``from chacc_api.database import get_db``.
+        Still works in this release.
         """
+        _deprecated("context.get_db", "chacc_api.database.get_db", self._logger)
         return self._db_session_factory
 
     @property
     def get_db_async(self):
         """
-        Provides the FastAPI dependency function to get a asynchronous database session.
-        Modules will use this as: db: AsyncSession = Depends(context.get_async_db)
+        Deprecated: use ``Depends(get_async_db)`` with
+        ``from chacc_api.database import get_async_db``. Still works in this release.
         """
+        _deprecated("context.get_db_async", "chacc_api.database.get_async_db", self._logger)
         return self._async_db_session_factory
 
     def register_service(self, name: str, service: Callable[..., Any]):
@@ -67,6 +85,10 @@ class BackboneContext:
             self._logger.warning(f"Service '{name}' is being overridden by a new registration.")
         self._logger.info(f"Service '{name}' has been registered.")
         self._services[name] = service
+
+    def has_service(self, name: str) -> bool:
+        """Whether a service with this name is registered (no warning if not)."""
+        return name in self._services
 
     def get_service(self, name: str) -> Callable[..., Any] | None:
         """

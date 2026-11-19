@@ -3,8 +3,11 @@ Context factory for providing BackboneContext in different environments.
 """
 import os
 from typing import Optional
-from fastapi import HTTPException
 from chacc_api import BackboneContext
+
+# Database sessions come from chacc_api.database. Re-exported here so
+# `from .context_factory import get_async_db` keeps working.
+from chacc_api.database import get_async_db, get_db  # noqa: F401
 
 
 # Module-level context holder (set by main.py after setup_plugin is called)
@@ -62,45 +65,6 @@ class ContextFactory:
 def get_context(context: Optional[BackboneContext] = None) -> BackboneContext:
     """Get context using the factory."""
     return ContextFactory.get_context(context)
-
-
-async def get_db():
-    """
-    Get a synchronous database session from module context.
-
-    This can be used in FastAPI Depends: db = Depends(get_db)
-    The session lifecycle (rollback on exception, cleanup) is handled by the
-    backbone's get_db factory; the generator is closed when the dependency
-    completes.
-    """
-    context: BackboneContext = get_module_context()
-    if context is None:
-        raise HTTPException(status_code=500, detail="Module not initialized")
-
-    gen = context.get_db()
-    db = await anext(gen)
-    try:
-        yield db
-    finally:
-        await gen.aclose()
-
-
-async def get_async_db():
-    """Get async database session from module context.
-
-    Delegates to the backbone's get_async_db which handles session lifecycle
-    (creation, rollback on exception, cleanup).
-    """
-    context = get_module_context()
-    if context is None:
-        raise HTTPException(status_code=500, detail="Module not initialized")
-
-    gen = context.get_db_async()
-    db = await anext(gen)
-    try:
-        yield db
-    finally:
-        await gen.aclose()
 
 
 async def get_redis_client():

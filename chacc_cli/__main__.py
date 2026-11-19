@@ -17,6 +17,72 @@ def _color(text: str, ansi: str) -> str:
     return f"{ansi}{text}{_RESET}" if sys.stdout.isatty() else text
 
 
+_CLEAN_EXITS = (0, -2, -15, 130, 143)
+
+
+def _supervise_server(cmd: list[str], env: dict[str, str]) -> int:
+    """
+    Run the server and start it again whenever it asks to be restarted.
+
+    The server exits with ``RESTART_EXIT_CODE`` after ``POST /system/restart``
+    (see ``src/system.py``); any other exit ends supervision.
+
+    Stop signals are forwarded to the server so it shuts down gracefully. This
+    matters in Docker, where the supervisor is PID 1: ``docker stop`` sends
+    SIGTERM to PID 1 only, and PID 1 ignores signals it has no handler for.
+
+    - first SIGINT/SIGTERM: forward SIGTERM (graceful) and wait;
+    - second one: kill the server immediately.
+
+    SIGTERM is forwarded even for Ctrl+C because the terminal already sent
+    SIGINT to the server, and a second SIGINT would make uvicorn force-quit.
+    """
+    import signal
+
+    from src.lifecycle import RESTART_EXIT_CODE, SUPERVISED_ENV
+
+    env = {**env, SUPERVISED_ENV: "1"}
+    env.pop("CHACC_SERVER_ROOT_PID", None)
+    state: dict = {"child": None, "stopping": False}
+
+    def on_stop_signal(signum, frame):
+        child = state["child"]
+        if state["stopping"]:
+            if child is not None and child.poll() is None:
+                print(_color("\nForcing ChaCC server to stop...", _YELLOW), flush=True)
+                child.kill()
+            return
+        state["stopping"] = True
+        print(_color("\nShutting down ChaCC server...", _YELLOW), flush=True)
+        if child is not None and child.poll() is None:
+            child.send_signal(signal.SIGTERM)
+
+    stop_signals = [signal.SIGINT, signal.SIGTERM]
+    if hasattr(signal, "SIGHUP"):
+        stop_signals.append(signal.SIGHUP)
+    previous = {sig: signal.signal(sig, on_stop_signal) for sig in stop_signals}
+
+    restarts = 0
+    try:
+        while not state["stopping"]:
+            child = subprocess.Popen(cmd, env=env, cwd=os.getcwd())
+            state["child"] = child
+            returncode = child.wait()
+            if state["stopping"]:
+                break
+            if returncode != RESTART_EXIT_CODE:
+                return 0 if returncode in _CLEAN_EXITS else returncode
+            restarts += 1
+            print(
+                _color(f"\nRestarting ChaCC server (restart #{restarts})...", _YELLOW), flush=True
+            )
+        returncode = state["child"].wait() if state["child"] else 0
+        return 0 if returncode in _CLEAN_EXITS else returncode
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
 def main():
     """
     Main CLI entry point.
@@ -26,8 +92,10 @@ def main():
         description="ChaCC API CLI for module scaffolding, packaging, and deployment.\n\n"
         "Deployment requires environment variables:\n"
         "  CHACC_DEPLOY_URL=http://your-api-server.com\n"
-        "  CHACC_DEPLOY_API_KEY=optional-api-key\n"
-        "  CHACC_DEPLOY_TIMEOUT=30",
+        "  CHACC_DEPLOY_API_KEY=optional-bearer-token\n"
+        "  CHACC_DEPLOY_USERNAME / CHACC_DEPLOY_PASSWORD=optional, for non-interactive login\n"
+        "  CHACC_DEPLOY_AUTH_PATH=/authentication\n"
+        "  CHACC_DEPLOY_TIMEOUT=600 (seconds to wait for the server response)",
     )
     parser.add_argument(
         "--version", action="store_true", help="Show the installed ChaCC API version and exit."
@@ -81,18 +149,33 @@ def main():
     build_install_parser(subparsers)
 
     deploy_parser = subparsers.add_parser(
-        "deploy", help="Deploy an .chacc module to a remote ChaCC API instance."
+        "deploy",
+        help="Deploy an .chacc module to a remote ChaCC API instance.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     deploy_parser.add_argument(
         "chacc_file",
         type=str,
         help="The path to the .chacc file to deploy (e.g., 'my_module.chacc').",
     )
+    deploy_parser.add_argument(
+        "--restart",
+        action="store_true",
+        help=(
+            "Restart the server after a successful deploy and wait until it is back "
+            "(requires the server to run via 'chacc run server')."
+        ),
+    )
     deploy_parser.epilog = (
-        "Environment variables required:\n"
+        "If the server requires authentication (401), you are prompted for a\n"
+        "username and password unless credentials are provided via env.\n\n"
+        "Environment variables:\n"
         "  CHACC_DEPLOY_URL=http://your-api-server.com\n"
-        "  CHACC_DEPLOY_API_KEY=optional-api-key\n"
-        "  CHACC_DEPLOY_TIMEOUT=30"
+        "  CHACC_DEPLOY_API_KEY=optional-bearer-token\n"
+        "  CHACC_DEPLOY_USERNAME / CHACC_DEPLOY_PASSWORD=optional, for non-interactive login\n"
+        "  CHACC_DEPLOY_AUTH_PATH=/authentication\n"
+        "  CHACC_DEPLOY_TIMEOUT=600 (seconds to wait for the server response)\n"
+        "  CHACC_DEPLOY_RESTART_TIMEOUT=180 (seconds to wait for --restart)"
     )
 
     server_cmd_parser = subparsers.add_parser("server", help="Run the ChaCC development server.")
@@ -114,6 +197,16 @@ def main():
     server_cmd_parser.add_argument("--debug", action="store_true", help="Enable debug mode.")
     server_cmd_parser.add_argument(
         "--auto-reload", action="store_true", help="Enable auto-reload for development."
+    )
+
+    deps_parser = subparsers.add_parser(
+        "deps", help="Check or install the Python packages of installed modules."
+    )
+    deps_parser.add_argument(
+        "deps_action",
+        choices=["check", "sync"],
+        help="check: report what is installed (no network). "
+        "sync: resolve and install what is missing (needs network).",
     )
 
     run_parser = subparsers.add_parser("run", help="Run the ChaCC server.")
@@ -167,6 +260,11 @@ def main():
             )
         )
 
+    if args.command == "deps":
+        from .deps import run_deps
+
+        sys.exit(run_deps(args.deps_action))
+
     from .commands import (
         build_install_parser,
         build_module_chacc,
@@ -204,7 +302,7 @@ def main():
     elif args.command == "build":
         build_module_chacc(args.module_source_dir, args.output_filename)
     elif args.command == "deploy":
-        deploy_module(args.chacc_file)
+        sys.exit(0 if deploy_module(args.chacc_file, restart=args.restart) else 1)
 
     elif args.command == "run":
         if args.run_subcommand == "server":
@@ -237,12 +335,7 @@ def main():
                 server_path = package_dir / "start_server.py"
                 cmd = [sys.executable, str(server_path)]
 
-            try:
-                subprocess.run(cmd, env=env, cwd=os.getcwd(), check=False)
-            except KeyboardInterrupt:
-                msg = _color("\nShutting down ChaCC server...", _YELLOW)
-                print(msg)
-            sys.exit(0)
+            sys.exit(_supervise_server(cmd, env))
         elif args.run_subcommand is None:
             msg = _color(
                 "Error: 'run' command requires a subcommand. Use 'chacc run server'.", _YELLOW

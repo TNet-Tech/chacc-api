@@ -4,7 +4,7 @@ from enum import Enum
 
 import colorlog
 
-from src.constants import LOG_FORMAT_DEBUG, LOG_FORMAT_DEFAULT, LOGGER_NAME
+from src.constants import API_PREFIX, LOG_FORMAT_DEBUG, LOG_FORMAT_DEFAULT, LOGGER_NAME
 
 
 class LogLevels(str, Enum):
@@ -16,17 +16,17 @@ class LogLevels(str, Enum):
 
 
 class HealthCheckFilter(logging.Filter):
-    """Suppress uvicorn access log entries for the health check endpoint.
+    """Suppress uvicorn access log entries for polling endpoints.
 
-    Docker health checks hit /api/health every 30s. Without this filter each
-    check produces an access log line, polluting the application logs with
-    noise. The health check still runs (so unhealthy states are detected),
-    but its log output is silently dropped.
+    Docker health checks hit /api/health every 30s, and the landing page and
+    console poll /.well-known/chacc to show the server status. Without this
+    filter each poll produces an access log line, drowning the useful ones.
+    The endpoints still work; only their access log lines are dropped.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
-        return "/api/health" not in message
+        return f"{API_PREFIX}/health" not in message and "/.well-known/chacc" not in message
 
 
 def get_default_log_level() -> str:

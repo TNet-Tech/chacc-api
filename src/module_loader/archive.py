@@ -12,7 +12,7 @@ import zipfile
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.constants import BASE_DIR, MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
+from src.constants import MODULES_INSTALLED_DIR, MODULES_LOADED_DIR
 from src.database import ModuleRecord
 from src.logger import configure_logging, get_default_log_level
 
@@ -95,45 +95,62 @@ def extract_module_names_from_chacc_files(installed_chacc_files: list[str]) -> d
     return chacc_to_module_name
 
 
-async def collect_module_requirements() -> dict[str, str]:
-    """Collect requirements from all .chacc files BEFORE unzipping.
+def read_archive_requirements(zip_ref: zipfile.ZipFile, meta: dict | None) -> str | None:
+    """
+    The module's Python requirements text from an open archive, or None if it has none.
+
+    Uses ``dependencies_file`` from module_meta.json (default ``requirements.txt``).
+    Every caller (upload, enable, boot, CLI) reads requirements through this, so the
+    text, and therefore the dependency cache's hash of it, is always the same.
+    """
+    names = [(meta or {}).get("dependencies_file") or "requirements.txt", "requirements.txt"]
+    for name in dict.fromkeys(names):
+        try:
+            with zip_ref.open(name) as req_file:
+                content = req_file.read().decode("utf-8")
+        except KeyError:
+            continue
+        return content if content.strip() else None
+    return None
+
+
+def collect_module_requirements(names: set[str] | None = None) -> dict[str, str]:
+    """Python requirements of installed modules, read from their .chacc archives.
+
+    Works before archives are extracted and on a first boot with no database
+    records. The backbone is not included: it is installed with ChaCC itself.
+
+    Args:
+        names: Only these modules (by module name). None means every archive.
 
     Returns:
-        Dict mapping module_name -> requirements_content.
+        Dict mapping module_name -> requirements text, for modules that have any.
     """
     modules_requirements = {}
 
-    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
-    if os.path.exists(backbone_req_path):
-        with open(backbone_req_path, "r") as f:
-            modules_requirements["backbone"] = f.read()
-
-    installed_chacc_files = {f for f in os.listdir(MODULES_INSTALLED_DIR) if f.endswith(".chacc")}
-
-    for chacc_filename in installed_chacc_files:
+    for chacc_filename in sorted(os.listdir(MODULES_INSTALLED_DIR)):
+        if not chacc_filename.endswith(".chacc"):
+            continue
         chacc_filepath = os.path.join(MODULES_INSTALLED_DIR, chacc_filename)
 
         try:
             with zipfile.ZipFile(chacc_filepath, "r") as zip_ref:
-                module_name = chacc_filename.replace(".chacc", "")
+                meta_data = {}
                 try:
                     with zip_ref.open("module_meta.json") as meta_file:
                         meta_data = json.load(meta_file)
-                        module_name = meta_data.get("name", module_name)
                 except KeyError:
                     chacc_logger.warning(
                         f"No module_meta.json found in {chacc_filename}, using filename as module name"
                     )
+                module_name = meta_data.get("name") or chacc_filename.removesuffix(".chacc")
+                if names is not None and module_name not in names:
+                    continue
 
-                try:
-                    with zip_ref.open("requirements.txt") as req_file:
-                        req_content = req_file.read().decode("utf-8")
-                        modules_requirements[module_name] = req_content
-                except KeyError:
-                    chacc_logger.warning(
-                        f"No requirements were specified for module {chacc_filename}"
-                    )
-        except (zipfile.BadZipFile, OSError, KeyError) as e:
+                content = read_archive_requirements(zip_ref, meta_data)
+                if content is not None:
+                    modules_requirements[module_name] = content
+        except (zipfile.BadZipFile, json.JSONDecodeError, OSError) as e:
             chacc_logger.warning(f"Could not read requirements from {chacc_filename}: {e}")
 
     return modules_requirements

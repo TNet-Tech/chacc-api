@@ -1,9 +1,8 @@
-from chacc_api import ChaCCBaseModel, register_model
+from chacc_api import ChaCCBaseModel
 from sqlalchemy import Column, String
 from pydantic import BaseModel
 
 
-# @register_model
 # class {{module_name_pascal}}Item(ChaCCBaseModel):
 #     __tablename__ = "{{module_name}}_items"
 #     name = Column(String, index=True)

@@ -97,7 +97,8 @@ Response:
 
 ```json
 {
-  "message": "Module 'billing' installed/updated successfully. Dependencies resolved. Please restart the API server to apply changes."
+  "message": "Module 'billing' installed/updated successfully. Restart the server to apply changes (POST /api/system/restart).",
+  "warnings": []
 }
 ```
 
@@ -106,7 +107,9 @@ Validation:
 - File name must end with `.chacc`.
 - Archive must contain `module_meta.json`.
 - `module_meta.json` must contain `name`.
-- Dependencies are resolved before extraction.
+- The module's Python packages are installed into the packages folder before the
+  archive is saved. If that fails nothing changes: `409` conflicting requirements,
+  `422` requirements that can't be resolved, `503` package index unreachable.
 - A server restart is required to activate the new module.
 
 ### List modules
@@ -137,8 +140,8 @@ GET /api/modules/
 POST /api/modules/{module_name}/enable
 ```
 
-Marks a module enabled in the database, resolves dependencies, extracts the
-archive, and requires a restart to mount it.
+Marks a module enabled in the database, installs its Python packages (same errors
+as upload), and requires a restart to mount it.
 
 ### Disable a module
 
@@ -163,16 +166,131 @@ Removes:
 
 A restart is required to complete the uninstall.
 
+### Module details
+
+```text
+GET /api/modules/{name}
+```
+
+Everything about one module: what `module_meta.json` declares (license, links,
+required ChaCC version), its state, its routes, the modules it requires and the
+modules that use it, its Python packages with the installed versions, its archive
+(file, size, SHA-256) and its README. Returns `404` for an unknown module.
+
+`state.code` is one of:
+
+| Code | Meaning |
+| --- | --- |
+| `loaded` | Running now. |
+| `pending` | Enabled, loads after a restart. |
+| `stopping` | Disabled, still running until a restart. |
+| `disabled` | Disabled. |
+| `blocked` | Can't load: a required module or Python package is missing (`state.reason`). |
+| `failed` | Failed to load (`state.reason`). In production the module is turned off. |
+
+A failure is kept across restarts until the module loads, is enabled again,
+updated or uninstalled. The module list also reports it as `load_failure`.
+
+### Dependency graph
+
+```text
+GET /api/modules/graph
+```
+
+Returns the modules the server would load (installed archives in production,
+`plugins/` in dev mode), the dependencies between them, which modules are
+blocked, disabled or not installed, and the load order.
+
+## Web console
+
+Open `/console` in a browser to manage modules, see the dependency graph and the
+services, and restart the server. See [Web Console](console.md).
+
+With the authentication module loaded, the `/modules` and `/system` routes need a
+user with the console privilege (`CHACC_ADMIN_PRIVILEGE`, default
+`MANAGE_WEB_CONSOLE`) or `ALL`. Without a login
+they return `401`; without the privilege, `403`.
+
+Without the authentication module, they need the web console key
+(`CHACC_CONSOLE_KEY`) in the `X-ChaCC-Key` header when one is set, and return
+`401` without it. With no key set they are open, and their responses carry an
+`X-ChaCC-Warning` header. See [Who can use it](console.md#who-can-use-it).
+
+`GET /system/access` returns `{"access": true}` when the caller may use the
+console, and `401` or `403` otherwise.
+
+## Server discovery
+
+`GET /.well-known/chacc` is never prefixed. It returns the server's `api_prefix`,
+a `boot_id` that changes on every restart, and `auth`: how core routes are
+protected (`method`: `login`, `key` or `none`) and the login path.
+
+## Restart the server
+
+```http
+POST /api/system/restart
+```
+
+Applies module changes. Returns `202`, or `409` if the server was not started
+with `chacc run server`. Like the module routes, it requires a login when the
+authentication module is loaded. See [Automatic Restarts](server-restarts.md).
+
+## Service status
+
+```http
+GET /api/system/services
+```
+
+Checks the services the server uses, all at once, each within 2 seconds:
+
+| Service | Shows |
+| --- | --- |
+| `database` | Engine and version, location. |
+| `redis` | Address, version, memory used. `disabled` unless `REDIS_ENABLED=true`. |
+| `rate_limit` | Storage and how many routes are limited. |
+| `server` | Mode, version, Python, API prefix, start time, whether a login is required and whether restarting from the console works. |
+
+Each has a `status`: `ok`, `degraded` (working with a fallback, for example
+rate limits counted in memory because Redis is down), `down`, or `disabled` (not
+set up). The top-level `status` is the worst of them, with `disabled` counting
+as `ok`. `message` says what is wrong, `hint` what to do, `description` what the
+service is for, and `error` holds the original error. Passwords are never returned.
+
+```json
+{
+  "status": "down",
+  "checked_at": 1763380000.0,
+  "services": [
+    {
+      "id": "redis",
+      "name": "Redis",
+      "status": "down",
+      "description": "Optional. A fast shared store: ...",
+      "message": "Nothing is answering at redis:6379.",
+      "hint": "ChaCC keeps running and reconnects when Redis is back.",
+      "error": "Error 111 connecting to redis:6379. Connection refused.",
+      "details": [{"label": "Server", "value": "redis:6379"}],
+      "latency_ms": null
+    }
+  ]
+}
+```
+
+It is open in development mode. In production it requires a login when the
+authentication module is loaded. For load balancers and Kubernetes, keep using
+[`/api/health/ready`](#readiness), which only depends on the database.
+
 ## Rate limiting
 
-The backbone installs a SlowAPI limiter and a custom handler for
-`RateLimitExceeded`. Module routes can use `context.limiter` for throttling.
+Routes are limited only when they use `rate_limit` or `shared_rate_limit` from `chacc_api.rate_limit`
+(see [Rate limiting](modules.md#rate-limiting)). Over the limit, the client gets
+`429` with a `Retry-After` header:
 
-Example:
-
-```python
-@router.get("/status")
-@context.limiter.limit("10/minute")
-async def status():
-    return {"status": "ok"}
+```json
+{"detail": "Too many requests. You have exceeded the rate limit of 10 per 1 minute."}
 ```
+
+A route's `error_message` replaces the `detail` text.
+
+Clients are counted by IP. Counts are kept in memory unless
+`RATE_LIMIT_STORAGE_URI` points to Redis. See [Configuration](configuration.md#rate-limiting).

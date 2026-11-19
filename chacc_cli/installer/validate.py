@@ -62,8 +62,14 @@ def load_and_validate(module_dir: str) -> ModuleMeta:
         module_path, _, _ = entry_point.partition(":")
         candidate = os.path.join(module_dir, *module_path.split(".")) + ".py"
         if not os.path.isfile(candidate):
-            # we don't fail hard here - module_path may use __init__ layout - warn via meta
             pass
+
+    from src.module_graph import DependencyDeclarationError, declared_dependencies
+
+    try:
+        declared_dependencies({**data, "name": clean_name})
+    except DependencyDeclarationError as exc:
+        raise ValidationError(f"module_meta.json: {exc}") from exc
 
     has_requirements = os.path.isfile(os.path.join(module_dir, "requirements.txt"))
     has_git = os.path.isdir(os.path.join(module_dir, ".git"))

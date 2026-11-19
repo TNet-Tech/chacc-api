@@ -325,6 +325,13 @@ AUTHENTICATION_DEFAULT_ADMIN_PASSWORD=admin123
 
 Credentials for the default admin account created on first startup. Override these in production immediately.
 
+```bash
+AUTHENTICATION_ACCESS_TOKEN_EXPIRE_MINUTES=10
+AUTHENTICATION_REFRESH_TOKEN_EXPIRE_MINUTES=15
+```
+
+How long access and refresh tokens are valid, in minutes. Defaults: 10 and 15. The names without the `AUTHENTICATION_` prefix also work. The [web console](../console.md#who-can-use-it) asks for a login again once the refresh token expires.
+
 > **Warning:** Change `AUTHENTICATION_DEFAULT_ADMIN_PASSWORD` before running in production. The default account is only created on first startup when no admin exists.
 
 ### Module-specific config access
@@ -400,12 +407,12 @@ POST /authentication/login
   "refresh_token": "refresh_...",
   "token_type": "bearer",
   "access_token_expires_at": "2026-06-16T14:05:00Z",
-  "access_token_expiry": 900,
-  "refresh_token_expiry": 604800
+  "access_token_expiry": 600,
+  "refresh_token_expiry": 900
 }
 ```
 
-- `access_token` — short-lived bearer token (15 minutes)
+- `access_token` — short-lived bearer token (10 minutes by default)
 - `refresh_token` — long-lived token for obtaining new access tokens
 - `token_type` — always `bearer`
 
@@ -595,8 +602,8 @@ async def my_permissions(privileges=Depends(get_user_privileges)):
 
 - **Password hashing:** Argon2 via `argon2-cffi`
 - **JWT algorithm:** HS256
-- **Access token TTL:** 15 minutes (configurable per token request)
-- **Refresh token TTL:** 7 days (stored in `oauth_sessions` table)
+- **Access token TTL:** 10 minutes by default (`ACCESS_TOKEN_EXPIRE_MINUTES`)
+- **Refresh token TTL:** 15 minutes by default (`REFRESH_TOKEN_EXPIRE_MINUTES`), stored in the `oauth_sessions` table
 - **Token rotation:** Enabled — each refresh invalidates the old token and issues a new one
 - **Bearer scheme:** `HTTPBearer` per FastAPI Security conventions
 
@@ -685,7 +692,7 @@ Creates a virtual environment and installs dependencies.
 |---|---|
 | `401 Not authenticated` on every request | Ensure `Authorization: Bearer <token>` header is sent. Verify `SECRET_KEY` matches between token creation and verification. |
 | `SECRET_KEY not configured` | Set `SECRET_KEY` in your environment variables. The module raises this error at token creation if it is missing. |
-| `Token revoked successfully` but still works | The revoked token is a refresh token. The access token remains valid until it expires (15 minutes). |
+| `Token revoked successfully` but still works | The revoked token is a refresh token. The access token remains valid until it expires (`ACCESS_TOKEN_EXPIRE_MINUTES`, 10 by default). |
 | `Session not found` on refresh | The refresh token was already rotated, revoked, or expired. Log in again. |
 | Default admin not created | The admin is only created when the database is empty of users. Check migration state and database connectivity. |
 | `ENABLE_SELF_REGISTRATION` has no effect | Verify the value is lowercase `"true"` (not `"True"`). The module checks `.lower() == "true"`. |

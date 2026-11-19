@@ -9,9 +9,6 @@ import shutil
 import subprocess
 import zipfile
 
-import requests
-from decouple import config
-
 from src.logger import configure_logging
 
 cli_logger = configure_logging()
@@ -175,6 +172,7 @@ def create_module_scaffold(module_name: str, output_dir: str, force: bool = Fals
             "test_entry_point": f"{clean_module_name}_src.tests.test_module:run_module_tests",
             "base_path_prefix": f"/{clean_module_name.replace('_', '-')}",
             "dependencies_file": "requirements.txt",
+            "module_dependencies": {"required": [], "optional": []},
             "required_chacc_version": ">=1.0.0",
             "license": "MIT",
             "tags": ["testing"],
@@ -284,6 +282,14 @@ def build_module_chacc(module_source_dir: str, output_filename: str | None = Non
         cli_logger.error(f"Error: 'module_meta.json' in '{module_source_dir}' is not valid JSON.")
         return
 
+    from src.module_graph import DependencyDeclarationError, declared_dependencies
+
+    try:
+        declared_dependencies({**meta_data, "name": module_name})
+    except DependencyDeclarationError as exc:
+        cli_logger.error(f"Error: 'module_meta.json' in '{module_source_dir}': {exc}")
+        return
+
     if not output_filename:
         output_filename = f"{module_name}.chacc"
     elif not output_filename.endswith(".chacc"):
@@ -387,6 +393,30 @@ def build_install_parser(subparsers):
     return install_parser
 
 
+def _check_module_dependencies(meta, destinations, mode: str) -> list[str]:
+    """
+    Refuse to install a module whose required modules are not installed.
+
+    "Installed" depends on the mode: the plugins directory in dev, the
+    installed .chacc archives in prod. Returns the missing optional modules.
+    """
+    from chacc_cli.installer.validate import ValidationError
+    from src.module_graph import archive_metas, missing_dependencies, scan_module_directory
+
+    if mode == "dev":
+        available, where = scan_module_directory(destinations.plugins_dir), destinations.plugins_dir
+    else:
+        available = archive_metas(destinations.modules_installed_dir)
+        where = destinations.modules_installed_dir
+    missing = missing_dependencies(meta.meta, set(available) - {meta.name})
+    if missing.required:
+        lines = [f"'{meta.name}' requires module(s) that are not installed in {where}:"]
+        lines += [f"  - {name}" for name in missing.required]
+        lines.append("Install them first, then install this module again.")
+        raise ValidationError("\n".join(lines))
+    return missing.optional
+
+
 def install_module(
     source: str,
     ref: str | None = None,
@@ -428,6 +458,7 @@ def install_module(
             meta = validate_mod.load_and_validate(resolved.path)
 
         progress_mod.info(f"Module name: {meta.name}")
+        missing_optional = _check_module_dependencies(meta, destinations, effective_mode)
         destination, is_archive = destinations.resolve(effective_mode, meta.name)
         progress_mod.info(f"Destination: {destination}")
 
@@ -459,6 +490,11 @@ def install_module(
             f"Module '{meta.name}' installed. Restart the ChaCC server to activate it.",
             success=True,
         )
+        if missing_optional:
+            progress_mod.warn_always(
+                f"Optional module(s) not installed: {', '.join(missing_optional)}. "
+                f"'{meta.name}' works without them, with fewer features."
+            )
         if meta.has_requirements:
             progress_mod.warn_always(
                 f"Module '{meta.name}' ships requirements.txt. "
@@ -471,70 +507,14 @@ def install_module(
         source_mod.cleanup(resolved)
 
 
-def deploy_module(chacc_file_path: str):
+def deploy_module(chacc_file_path: str, restart: bool = False) -> bool:
     """
     Deploys an .chacc module to a remote ChaCC API instance.
-    Reads deployment configuration from environment variables.
+
+    Reads configuration from environment variables and prompts for a username
+    and password only when the server requires authentication (401).
+    See :mod:`chacc_cli.deploy`.
     """
-    if not os.path.exists(chacc_file_path):
-        cli_logger.error(f"Error: ChaCC file '{chacc_file_path}' not found.")
-        return
+    from chacc_cli.deploy import deploy_module as _deploy
 
-    try:
-        deploy_url = config("CHACC_DEPLOY_URL", default=None)
-        deploy_api_key = config("CHACC_DEPLOY_API_KEY", default=None)
-        deploy_timeout = config("CHACC_DEPLOY_TIMEOUT", default=30, cast=int)
-
-        if not deploy_url:
-            cli_logger.error("Error: CHACC_DEPLOY_URL not set in environment variables.")
-            cli_logger.info(
-                "Please set CHACC_DEPLOY_URL in your .env file (e.g., CHACC_DEPLOY_URL=http://your-api.com)"
-            )
-            return
-
-    except (ValueError, TypeError) as e:
-        cli_logger.error(f"Error reading deployment configuration: {e}")
-        return
-
-    cli_logger.info(f"Deploying '{chacc_file_path}' to {deploy_url}...")
-
-    try:
-        with open(chacc_file_path, "rb") as f:
-            files = {"file": (os.path.basename(chacc_file_path), f, "application/zip")}
-            headers = {}
-            if deploy_api_key:
-                headers["Authorization"] = f"Bearer {deploy_api_key}"
-
-            response = requests.post(
-                f"{deploy_url}/api/modules/", files=files, headers=headers, timeout=deploy_timeout
-            )
-
-            if response.status_code == 200:
-                cli_logger.info("=" * 60)
-                cli_logger.info("SUCCESS: Module deployed successfully!")
-                cli_logger.info(
-                    "SUCCESS: Response: %s", response.json().get("message", "No message")
-                )
-                cli_logger.info(
-                    "SUCCESS: Please restart your remote ChaCC API server to activate the module."
-                )
-                cli_logger.info("=" * 60)
-            else:
-                cli_logger.error(
-                    f"FAILED: Deployment failed with status code {response.status_code}"
-                )
-                try:
-                    error_data = response.json()
-                    cli_logger.error(
-                        f"FAILED: Error details: {error_data.get('detail', 'No details available')}"
-                    )
-                except (ValueError, AttributeError):
-                    cli_logger.error(f"FAILED: Response: {response.text}")
-
-    except requests.exceptions.Timeout:
-        cli_logger.error(f"FAILED: Deployment timed out after {deploy_timeout} seconds")
-    except requests.exceptions.ConnectionError:
-        cli_logger.error(f"FAILED: Could not connect to {deploy_url}")
-        cli_logger.info("NOTE: Check that your ChaCC API server is running and accessible")
-    except Exception as e:  # noqa: BLE001
-        cli_logger.error(f"FAILED: Deployment error: {e}")
+    return _deploy(chacc_file_path, restart=restart)

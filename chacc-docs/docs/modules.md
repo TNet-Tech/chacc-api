@@ -24,6 +24,8 @@ my_module/
   .gitignore
 ```
 
+The web console shows the module's `README.md` in its details, formatted as Markdown. Code blocks marked `mermaid` are drawn as diagrams. Images and links show only when they use full `https://` addresses; raw HTML tags are left out.
+
 ## `module_meta.json`
 
 | Field | Required | Description |
@@ -34,12 +36,16 @@ my_module/
 | `author` | No | Author or organization. |
 | `description` | No | Module description. |
 | `entry_point` | Yes | Python path to setup function, for example `my_module_src.main:setup_plugin`. |
-| `base_path_prefix` | No | Default API prefix, for example `/billing`. |
+| `test_entry_point` | No | Python path to the module's test runner, set by `chacc create`. |
+| `base_path_prefix` | No | Module path, for example `/billing`. Always mounted under the server's `API_PREFIX` (default `/api`), so `/billing` is served at `/api/billing`. |
 | `tags` | No | FastAPI documentation tags. |
 | `dependencies_file` | No | Requirements file name, usually `requirements.txt`. |
+| `module_dependencies` | No | Other ChaCC modules this module needs. See [Module dependencies](#module-dependencies). |
 | `required_chacc_version` | No | Minimum ChaCC version. |
 | `license` | No | Module license. |
 | `homepage` | No | Module homepage. |
+| `repository` | No | Source code link, shown in the web console. |
+| `support` | No | Where to get help (an issues page or contact), shown in the web console. |
 
 ## Setup function
 
@@ -89,45 +95,150 @@ class Item(ChaCCBaseModel):
 | `updated_at` | `DateTime` | Last update timestamp. |
 | `deleted_at` | `DateTime` | Soft-delete timestamp. |
 
-## Routes
+## Database sessions
 
-Use a database dependency to work with the database in your routes. ChaCC
-provides both a synchronous and an asynchronous session. For new modules,
-prefer the **async** session (`AsyncSession`) because it does not block the
-server while it waits for the database to respond.
+All database helpers come from `chacc_api.database`. Prefer the async session
+(`AsyncSession`): it doesn't block the server while it waits for the database.
+Each helper has a synchronous twin (`get_db`, `session`, `with_session`).
 
-Get the dependency from your module's `context_factory.py`, which the
-`chacc create` command generates for you:
+The rule: the code that opens a session closes it, when its work ends. The
+helpers do that for you, also on errors.
+
+**In routes**, use the dependency. FastAPI closes the session after the response:
 
 ```python
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from .context_factory import get_async_db
+from chacc_api.database import get_async_db
 
 router = APIRouter()
 
 
 @router.get("/items")
 async def list_items(db: AsyncSession = Depends(get_async_db)):
-    # `db` is an async SQLAlchemy session.
-    # Example: result = await db.execute(select(Item))
-    return {"items": []}
+    items = (await db.execute(select(Item))).scalars().all()
+    return [item.name for item in items]
 ```
 
-If you need a traditional synchronous session, use `get_db` instead:
+**In a block of code** (startup, background tasks):
 
 ```python
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from .context_factory import get_db
+from chacc_api.database import async_session
 
-router = APIRouter()
-
-
-@router.get("/ping")
-async def ping(db: Session = Depends(get_db)):
-    return {"ok": True}
+async with async_session() as db:
+    items = (await db.execute(select(Item))).scalars().all()
 ```
+
+**In functions and service classes**, decorate with `with_async_session`. Each
+call gets its own session as the keyword argument `db`; callers don't pass one:
+
+```python
+from chacc_api.database import with_async_session
+
+
+class ItemService:
+    @with_async_session
+    async def rename(self, item_id, name, *, db):
+        item = await db.get(Item, item_id)
+        item.name = name
+        await db.commit()
+
+
+await ItemService().rename(1, "new")
+```
+
+To run several calls in one transaction, pass your session: `await
+service.rename(1, "new", db=db)`. That session is then left open for you to close.
+
+**A class may keep a session it receives** (for example a repository built per
+request), as long as it doesn't outlive the request or block that opened it and
+doesn't close it itself.
+
+Avoid:
+
+- Returning a session, or storing one on a long-lived service (created in
+  `setup_plugin` or registered with `context.register_service()`). An
+  `AsyncSession` can't be shared by concurrent requests.
+- `db = await anext(get_async_db())`. Nothing closes that session except the
+  garbage collector, sometimes in the middle of a query (`CLOSE FAILED ...
+  _connection_for_bind() is already in progress`), and the connection pool runs
+  out under load.
+
+Modules made with `chacc create` can also import `get_async_db` and `get_db`
+from their own `context_factory.py`; they are the same functions.
+
+!!! note "Deprecated: `context.get_db` and `context.get_db_async`"
+    They still work in this release but log a deprecation warning. Replace
+    `Depends(context.get_db_async)` with `Depends(get_async_db)` and
+    `Depends(context.get_db)` with `Depends(get_db)` from `chacc_api.database`.
+
+## Rate limiting
+
+Everything comes from `chacc_api.rate_limit`. Routes without a limit are not
+limited.
+
+**One route**: put `rate_limit` **under** the route decorator. The route doesn't
+need a `request` parameter.
+
+```python
+from chacc_api.rate_limit import rate_limit
+
+
+@router.get("/status")
+@rate_limit("10/minute")
+async def status():
+    return {"status": "ok"}
+```
+
+Limits look like `"10/minute"`, `"5/second"` or several at once:
+`"5/second;100/hour"`. Stacked decorators all apply. Over the limit, the client
+gets `429` with a `Retry-After` header.
+
+| Option | Use |
+| --- | --- |
+| `key=lambda request: ...` | What to count by. Default: the client IP. Example: `request.headers["x-api-key"]`. |
+| `cost=5` or `cost=lambda request: ...` | How many requests one call counts as, for expensive routes. |
+| `exempt_when=lambda request: ...` | Don't count the call when it returns `True`, for example for internal callers. |
+| `error_message="..."` | The `detail` text of the 429 response. |
+| `methods=["POST"]` | Only limit these HTTP methods. |
+| `per_method=True` | Count each HTTP method separately. |
+
+**Several routes sharing one limit**: calls to any of them count together.
+
+```python
+from chacc_api.rate_limit import shared_rate_limit
+
+search_limit = shared_rate_limit("60/minute", scope="search")
+
+
+@router.get("/search/items")
+@search_limit
+async def search_items(): ...
+
+
+@router.get("/search/users")
+@search_limit
+async def search_users(): ...
+```
+
+**Something that isn't a route**, such as login attempts per username:
+
+```python
+from chacc_api.rate_limit import check_rate_limit
+
+if not check_rate_limit("5/minute", "login", username):
+    raise HTTPException(429, "Too many attempts, try again later.")
+```
+
+A `scope` or `check_rate_limit` name only needs to be unique within your module:
+ChaCC prefixes it with your module's package, so two modules both using
+`"search"` get separate counters. Counting is set up for the whole server (in memory
+or Redis, see [Configuration](configuration.md#rate-limiting)). For anything else,
+`limiter` is the server's SlowAPI limiter.
+
+!!! note "Deprecated: `context.limiter`"
+    It still works in this release but logs a deprecation warning. Use
+    `rate_limit`, `shared_rate_limit` or `limiter` from `chacc_api.rate_limit`.
 
 ## Services
 
@@ -151,13 +262,48 @@ verifier = context.get_service("token_verifier")
 
 ## Dependencies
 
-Put Python dependencies in `requirements.txt`. ChaCC resolves dependencies before
-extracting or enabling modules.
+Put Python dependencies in `requirements.txt`. ChaCC resolves and installs them
+when the module is uploaded or enabled, before the module is saved, so a failure
+changes nothing.
 
 ```text
 requests
-pydantic==2.7.0
+qrcode>=7.4
 ```
+
+- Core packages (FastAPI, SQLAlchemy, Pydantic and the rest of ChaCC's own
+  dependencies) can't be changed by a module. Requirements that only fit another
+  core version are refused.
+- In production, packages are installed into `.chacc_packages/` and stay there
+  across restarts. See [Running without network](deployment.md#running-without-network).
+- Upload or enable errors: `409` conflicting requirements, `422` requirements that
+  can't be resolved, `503` the package index can't be reached.
+
+## Module dependencies
+
+List the other ChaCC modules your module uses in `module_meta.json`:
+
+```json
+"module_dependencies": {
+  "required": ["chacc_authentication"],
+  "optional": ["chacc_file_manager"]
+}
+```
+
+- **required**: the module can't work without these, for example because its
+  models have foreign keys to their tables.
+- **optional**: the module works without these, with fewer features.
+
+ChaCC never installs modules for you. A module is checked against the modules in
+`plugins/` in dev mode, and against installed modules in production.
+
+| When | Required module missing | Optional module missing |
+| --- | --- | --- |
+| `chacc install`, `chacc deploy`, enable | Refused, with the missing modules listed. | Installed, with a warning. |
+| Server start | Module is skipped and listed in the log. | Module loads, and a warning is logged. |
+
+Install the missing modules yourself, then restart. Modules always load after
+the modules they depend on.
 
 ## Build and deploy
 

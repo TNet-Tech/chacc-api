@@ -7,14 +7,11 @@ Supports both:
 """
 
 import importlib
-import json
 import os
 
 from fastapi import FastAPI
 
 from src.constants import (
-    BASE_DIR,
-    DEPENDENCY_CACHE_DIR,
     DEVELOPMENT_MODE,
     ENABLE_PLUGIN_DEPENDENCY_RESOLUTION,
     ENABLE_PLUGIN_HOT_RELOAD,
@@ -24,7 +21,9 @@ from src.constants import (
 )
 from src.database import apply_deferred_schema_changes
 from src.logger import configure_logging, get_default_log_level
-from src.module_loader.loader import load_single_module
+from src.module_graph import check_graph, scan_module_directory
+from src.module_loader.dependencies import log_report
+from src.module_loader.loader import load_single_module, migration_mode_for
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -92,48 +91,13 @@ def discover_modules_from_directory(directory: str) -> dict[str, dict]:
     Returns:
         Dict mapping module_name -> module_info
     """
-    modules = {}
-
     if not os.path.isdir(directory):
         chacc_logger.warning(f"Modules directory not found: {directory}")
-        return modules
+        return {}
 
-    for entry in os.listdir(directory):
-        module_path = os.path.join(directory, entry)
-
-        if not os.path.isdir(module_path) or entry.startswith("."):
-            continue
-
-        meta_path = os.path.join(module_path, "module_meta.json")
-        if not os.path.exists(meta_path):
-            for subentry in os.listdir(module_path):
-                subpath = os.path.join(module_path, subentry)
-                if os.path.isdir(subpath) and not subentry.startswith("."):
-                    meta_path = os.path.join(subpath, "module_meta.json")
-                    if os.path.exists(meta_path):
-                        module_path = subpath
-                        break
-
-        if not os.path.exists(meta_path):
-            chacc_logger.debug(f"Skipping {entry}: no module_meta.json")
-            continue
-
-        try:
-            with open(meta_path, "r") as f:
-                meta_data = json.load(f)
-
-            module_name = meta_data.get("name", entry)
-
-            modules[module_name] = {
-                "name": module_name,
-                "module_path": module_path,
-                "meta": meta_data,
-            }
-
-            chacc_logger.debug(f"Discovered module: {module_name}")
-        except (OSError, KeyError) as e:
-            chacc_logger.warning(f"Failed to read module_meta.json for {entry}: {e}")
-
+    modules = scan_module_directory(directory)
+    for module_name in modules:
+        chacc_logger.debug(f"Discovered module: {module_name}")
     return modules
 
 
@@ -152,33 +116,29 @@ async def resolve_dependencies(modules: dict[str, dict], enabled_modules: list[s
     if not ENABLE_PLUGIN_DEPENDENCY_RESOLUTION:
         return
 
-    requirements = {}
-
-    backbone_req_path = os.path.join(BASE_DIR, "requirements.txt")
-    if os.path.exists(backbone_req_path):
-        with open(backbone_req_path, "r") as f:
-            requirements["backbone"] = f.read()
-
+    # The backbone is not resolved: it is installed with ChaCC, and its versions
+    # are passed as constraints so plugins cannot change them.
+    enabled_requirements = {}
     for module_name, module_info in modules.items():
-        module_path = module_info["module_path"]
-        req_path = os.path.join(module_path, "requirements.txt")
+        if module_name not in enabled_modules:
+            continue
+        meta = module_info.get("meta") or {}
+        req_file = meta.get("dependencies_file") or "requirements.txt"
+        req_path = os.path.join(module_info["module_path"], req_file)
         if os.path.exists(req_path):
             with open(req_path, "r") as f:
-                requirements[module_name] = f.read()
-
-    enabled_requirements = {
-        k: v for k, v in requirements.items() if k in enabled_modules or k == "backbone"
-    }
+                enabled_requirements[module_name] = f.read()
 
     if enabled_requirements:
         try:
-            from chacc import DependencyManager
+            from src.module_packages import resolve_and_install
 
-            dm = DependencyManager(cache_dir=DEPENDENCY_CACHE_DIR, logger=chacc_logger)
-            await dm.resolve_dependencies(enabled_requirements)
+            result = await resolve_and_install(enabled_requirements, chacc_logger)
+            for line in result.warnings:
+                chacc_logger.warning(line)
             importlib.invalidate_caches()
             chacc_logger.info("Module dependencies resolved")
-        except (ImportError, RuntimeError) as e:
+        except Exception as e:  # noqa: BLE001 - dev server keeps starting
             chacc_logger.warning(f"Dependency resolution failed: {e}")
 
 
@@ -224,8 +184,13 @@ async def _load_modules(
     source: str,
 ):
     """Internal function to load modules."""
+    # Check dependencies against everything in the source directory before any
+    # models are imported; skipped modules never reach model discovery.
+    report = check_graph({name: info["meta"] for name, info in modules.items()})
+    log_report(report, chacc_logger, dev=True)
+
     modules_to_load = []
-    for name in modules:
+    for name in report.order:
         if only_modules and name not in only_modules:
             continue
         if exclude_modules and name in exclude_modules:
@@ -236,6 +201,15 @@ async def _load_modules(
         return
 
     chacc_logger.info(f"Loading {len(modules_to_load)} modules from {source}: {modules_to_load}")
+
+    # By design, plugin hot reload also covers the plugins' models: with it off,
+    # their models aren't discovered, so their tables aren't created or migrated.
+    if not ENABLE_PLUGIN_HOT_RELOAD:
+        chacc_logger.warning(
+            "Plugin hot reload is off (ENABLE_PLUGIN_HOT_RELOAD=False): the server doesn't "
+            f"restart when {source}/ changes, and the modules' tables aren't created or "
+            "migrated. Set ENABLE_PLUGIN_HOT_RELOAD=True to turn both on."
+        )
 
     await resolve_dependencies(modules, modules_to_load)
 
@@ -273,7 +247,7 @@ async def _load_modules(
         from src.migration.runner import run_migration
 
         chacc_logger.info("Running database migrations after model discovery...")
-        await run_migration()
+        await run_migration(mode=migration_mode_for(report))
         chacc_logger.info("Database migrations completed.")
     except Exception:
         chacc_logger.exception("Migration failed")
@@ -306,7 +280,7 @@ async def _load_modules(
             chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
             from src.migration.runner import run_migration
 
-            await run_migration()
+            await run_migration(mode=migration_mode_for(report))
             chacc_logger.info("Deferred migration completed.")
     except Exception:
         chacc_logger.exception("Deferred schema migration failed")

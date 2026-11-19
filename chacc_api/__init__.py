@@ -6,7 +6,7 @@ when building modules for the ChaCC API backbone.
 
 Usage:
     from chacc_api import BackboneContext, ChaCCBaseModel, RedisService
-    from chacc_api.database import get_db
+    from chacc_api.database import get_async_db, async_session, with_async_session
 """
 
 __all__ = [

@@ -185,10 +185,10 @@ chacc-api/
 │   ├── modules.py             # REST routes: install / list / enable / disable / uninstall modules
 │   ├── rate_limiter.py        # SlowAPI rate-limiting setup
 │   ├── redis_service.py       # Async Redis client wrapper
-│   ├── chacc_dependency_manager.py  # ChaCC-specific integration with chacc-dependency-manager
+│   ├── module_packages.py     # Module Python packages: packages dir, core constraints, boot check
 │   │
 │   ├── module_loader/         # Production module loading pipeline
-│   │   ├── loader.py          # Orchestrates: scan → resolve deps → extract → migrate → mount
+│   │   ├── loader.py          # Orchestrates: scan → check packages → extract → migrate → mount
 │   │   ├── discovery.py       # Recursive Python-file import for @register_model discovery
 │   │   ├── archive.py         # .chacc file inspection, mtime-based re-unzip decisions
 │   │   └── metadata.py        # DB↔filesystem sync: remove records for deleted modules
@@ -372,16 +372,17 @@ Every module's `setup_plugin(backbone_context)` function receives a
 # The FastAPI app (to register routes manually if needed)
 backbone_context.app
 
-# Rate limiter
-backbone_context.limiter
+# Rate limiting comes from chacc_api.rate_limit (backbone_context.limiter is deprecated)
+from chacc_api.rate_limit import rate_limit
 
 # Logger
 backbone_context.logger
 
-# Database session factory (usable as FastAPI Depends)
+# Database sessions come from chacc_api.database (backbone_context.get_db is deprecated)
 from fastapi import Depends
+from chacc_api.database import get_async_db
 
-db: Session = Depends(backbone_context.get_db)
+db: AsyncSession = Depends(get_async_db)
 
 # Register a named service for other modules to consume
 backbone_context.register_service("my_service", my_callable)

@@ -1,7 +1,94 @@
 # Changelog
 
 
-## Unreleased
+## 1.0.0-beta6
+
+> Feature release: module dependencies, a web console for modules, automatic restarts, and production servers that start without network. Read **Before you upgrade** first.
+
+**Update now:**
+> PyPi Package:
+```bash
+pip install --upgrade chacc-api==1.0.0-b6
+```
+
+> Docker
+```bash
+docker pull jonas1015/chacc-api:1.0.0-beta6
+```
+
+### Before you upgrade
+
+- **Rebuild modules that depend on other modules.** Add `module_dependencies` to their `module_meta.json`, rebuild the `.chacc`, and deploy the modules they require first. See [Module dependencies](modules.md#module-dependencies).
+- Deploying a module whose required modules are not installed is now refused with `409`.
+- At startup, a module whose required modules are missing is skipped and listed in the log instead of crashing the server. While a module is skipped, `MIGRATION_MODE=full` runs as `auto` so its tables are kept.
+- **Only admins can use the web console.** With the authentication module loaded, the core `/modules` and `/system` routes, the web console and `chacc deploy` need the `MANAGE_WEB_CONSOLE` privilege (set another with `CHACC_ADMIN_PRIVILEGE`) or `ALL`. ChaCC registers it with the authentication module itself. Other logged-in users now get `403`. Give deploy accounts a role with `MANAGE_WEB_CONSOLE`. See [Who can use it](console.md#who-can-use-it).
+- **Protect servers without the authentication module** with `CHACC_CONSOLE_KEY`. The web console asks for it and `chacc deploy` sends `CHACC_DEPLOY_KEY`. Without it the server still works, but the console, the log and `chacc deploy` warn that it isn't protected. See [Without the authentication module](console.md#without-the-authentication-module).
+- `POST /api/system/restart` is refused in development mode, where the server already reloads when files change.
+- **Docker: add the `chacc_packages` volume** (`/app/.chacc_packages`) if you don't use the provided compose file. Module packages now live there.
+- **Keep network available for the first start after upgrading.** Existing module packages were in the old container, so the first start installs them into the new volume. After that, starts need no network. Without network the affected modules are skipped until you run `chacc deps sync`.
+- The images now use **Python 3.15** and pinned core package versions (`requirements.lock`).
+- Requires `chacc-dependency-manager` 1.4.0 or newer.
+
+## Added
+
+- **Module dependencies** – Modules list required and optional modules in `module_meta.json` (`module_dependencies`). Modules load after the modules they depend on. `chacc install`, `chacc deploy` and the API check them, and missing optional modules only produce a warning. New modules created with `chacc create` include an empty list. See [Module dependencies](modules.md#module-dependencies).
+- **Web console** – `/console` lists modules with their author, installs, enables, disables and uninstalls them, shows the dependency graph and restarts the server. It asks for a login when the authentication module protects the API. In development mode the dependency graph needs no login.
+- **Dependency graph API** – `GET /api/modules/graph` returns the modules, their dependencies, which ones are blocked or missing, and the load order.
+- **Automatic restarts** – `POST /api/system/restart` restarts the server gracefully, and `chacc run server` brings it back on its own. `chacc deploy --restart` deploys a module and makes it live in one step. See [Automatic Restarts](server-restarts.md).
+- **Login prompt in `chacc deploy`** – When the server answers `401`, the CLI asks for a username and password, uploads with the token and revokes the session afterwards. `CHACC_DEPLOY_USERNAME`/`CHACC_DEPLOY_PASSWORD` cover CI.
+- **Configurable API prefix** – `API_PREFIX` (default `/api`). Every core and module route is mounted under it. Clients discover it, and whether a login is needed, at `GET /.well-known/chacc`.
+- **Large module uploads** – Uploads stream to disk in chunks. Packages up to 10 MB are accepted (`MAX_MODULE_UPLOAD_SIZE`), with a guard against zip bombs (`MAX_MODULE_UNCOMPRESSED_SIZE`).
+- **Start without network** – In production, module packages are installed into `.chacc_packages/` (`MODULE_PACKAGES_DIR`, a volume in Docker) when a module is uploaded or enabled. Restarts and recreated containers reuse them. At startup the server only checks them; if some are missing it tries once (`CHACC_BOOT_INSTALL`) and otherwise skips just the modules that need them. See [Running without network](deployment.md#running-without-network).
+- **`chacc deps check` and `chacc deps sync`** – Check the enabled modules' packages, or install what is missing.
+- **Database helpers in `chacc_api.database`** – Route dependencies (`get_async_db`, `get_db`), blocks (`async with async_session()`, `with session()`) and decorators for functions and service classes (`@with_async_session`, `@with_session`). Each closes its session when the work ends. See [Database sessions](modules.md#database-sessions).
+- **Rate limiting in `chacc_api.rate_limit`** – `rate_limit` for a route (with `key`, `cost`, `exempt_when`, `error_message` and `methods` options), `shared_rate_limit` for several routes sharing one limit, and `check_rate_limit` for things that aren't routes, such as login attempts. Routes can be limited where they are defined and don't need a `request` parameter. `RATE_LIMIT_ENABLED` and `RATE_LIMIT_STORAGE_URI` (memory or Redis) configure it. See [Rate limiting](modules.md#rate-limiting).
+- **Optional Redis in Docker Compose** – `docker compose --profile redis up -d` adds a Redis container; ChaCC waits for it before starting. See [Redis (optional)](deployment.md#redis-optional).
+- **Services tab in the web console** – Shows whether the database, Redis and rate limiting work, plus server details, checked every 30 seconds. The top bar shows when a service is down or degraded. Also available as `GET /api/system/services`. See [Service status](core-api.md#service-status).
+- **Module details in the web console** – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows **Failed to load** with the reason, which is kept across restarts. Also available as `GET /api/modules/{name}`. See [Module details](core-api.md#module-details).
+- **Console guide** – A new [Console](console.md) page walks through the modules, module details, dependency graph, services and restarts, with screenshots.
+
+## Changed
+
+- **New landing page** – Links to the web console and shows a live server status that follows restarts.
+- `chacc deploy` waits up to 600 s for the server response by default (`CHACC_DEPLOY_TIMEOUT`) and exits with status `1` on failure.
+- `chacc run server` now exits with the server's exit code when it crashes.
+- Requests to `/.well-known/chacc` are no longer written to the access log.
+- **Modules can't change core packages.** ChaCC's own installed versions are applied as constraints whenever module requirements are resolved, and the backbone is no longer resolved at runtime. Conflicts are refused at upload (`409`), unresolvable requirements return `422`, and an unreachable package index returns `503`. Nothing is installed or saved when this happens.
+- The Docker entrypoint no longer resolves dependencies as root, and pip can't fall back to a per-user install that was lost when the container was recreated.
+- Docker images use Python 3.15 and install core packages at the versions in `requirements.lock`.
+- Disabling or uninstalling a module no longer contacts the package index.
+- In development mode, settings that aren't allowed in production (such as an insecure `SECRET_KEY`) are logged as warnings instead of errors, since they don't stop the server there. Production still refuses to start.
+
+## Deprecated
+
+- `context.get_db` and `context.get_db_async` – Use `get_db` and `get_async_db` from `chacc_api.database`. They still work in this release and log a warning once.
+- `context.limiter` – Use `chacc_api.rate_limit`. It still works in this release and logs a warning once.
+
+## Fixed
+
+- `docker stop` now shuts the server down gracefully.
+- Docker health checks follow `API_PREFIX`.
+- A `.chacc` file that is not a valid zip now returns `400` instead of `500`.
+- Enabling a module now installs its own Python packages. They were skipped before.
+- Docker images no longer contain module archives from the machine that built them.
+- A failed dependency resolution is no longer remembered as a success (`chacc-dependency-manager` 1.4.0).
+- Module discovery works with Python 3.15, which no longer uses `__package__` for imports.
+- The development Docker image starts in development mode and builds again. The Docker files and `.env.example` used `DEVELOPMENT_MODE`, which ChaCC never read; the setting is `CHACC_DEV_MODE`. Rename it in your own `.env` if you copied it.
+- `deploy.sh` (standalone Linux) works again: it started the service from the wrong folder with a command that doesn't exist, and the service could not write to most of its data folders. Running it again no longer replaces `.env` and its secrets.
+- Module discovery at startup no longer leaves its database session to be closed by the garbage collector.
+- `import chacc_api.database` and `import chacc_api.core` failed with `ImportError`.
+- The rate-limiting example in the docs crashed at import: SlowAPI routes need a `request` parameter. `rate_limit` doesn't.
+- A rate-limited route defined again (module hot reload) counted every request twice.
+- Modules made with `chacc create` now use `chacc_api.database` for sessions, so they don't log deprecation warnings.
+- `docker-compose.dev.yml` runs `chacc run server --dev` like the development image, works on its own, and mounts `chacc_api/`. It ran bare `uvicorn` and mounted files the server doesn't use. The development image runs as your user, so it can read mounted modules whose folders only you can open.
+- When a module's code couldn't be imported (for example a missing package), the error was hidden behind a misleading one such as "setup function not found". The real error is now reported.
+- If Redis was down when the server started, modules never got it, even after Redis came back. The server now registers Redis whenever it is enabled and connects as soon as Redis is reachable.
+- An unreachable Redis no longer slows the server down: each connection attempt took about 4.5 seconds because of retries. It now fails at once and is tried again at most every 10 seconds.
+- After an upgrade, the console and landing page could keep running the browser's old cached script and styles, so new features (such as the Services tab) stayed empty until a hard refresh. Their links now include a fingerprint of the file's contents, so a changed file is always fetched again.
+- In production, the console page was cached until a restart even when its files changed, so it could show headings that didn't match its script. It is now rebuilt when its files change.
+- In development mode with `ENABLE_PLUGIN_HOT_RELOAD=True`, editing a module in `plugins/` restarts the server again. An earlier beta 6 change had limited the reload to `src/`.
+- In development mode, the server didn't start when a data folder such as `MODULES_INSTALLED_DIR` was outside the project folder ("Non-relative patterns are unsupported").
+- When nginx or another proxy refused a module as too large, `chacc deploy` printed the proxy's HTML error page. It now says the proxy refused it and which setting to raise. See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 
 ## 1.0.0-beta5.3
 

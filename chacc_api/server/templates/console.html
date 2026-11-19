@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="chacc-api-prefix" content="{{API_PREFIX}}" />
+    <title>Web Console · ChaCC</title>
+    <link rel="icon" type="image/x-icon" href="/static/img/chacc-icon.ico" />
+    <link rel="stylesheet" href="/static/css/console.css">
+</head>
+<body>
+    <header class="topbar">
+        <a href="/" class="brand" title="Back to the landing page">
+            <img src="/static/img/chacc-icon.ico" alt="" class="brand-logo">
+            <span class="brand-name"><span>ChaCC</span> Web Console</span>
+        </a>
+        <span class="status" data-state="loading" aria-live="polite">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span class="status-text">Checking…</span>
+        </span>
+        <span class="version"></span>
+        <div class="topbar-actions">
+            <button type="button" class="btn btn-ghost" id="logout-btn" hidden>Log out</button>
+            <button type="button" class="btn btn-outline" id="restart-btn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                Restart server
+            </button>
+        </div>
+    </header>
+
+    <div class="pending-banner" id="pending-banner" hidden>
+        <span>Changes are saved. Restart the server to apply them.</span>
+        <button type="button" class="btn btn-small btn-primary" data-action="restart">Restart now</button>
+    </div>
+
+    <main class="main">
+        <nav class="tabs" role="tablist">
+            <button type="button" role="tab" class="tab" data-tab="modules" aria-selected="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-3a2 2 0 0 1-2-2V2"></path><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"></path><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"></path></svg>
+                Modules <span class="tab-count" id="module-count"></span>
+            </button>
+            <button type="button" role="tab" class="tab" data-tab="graph" aria-selected="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2.5"></circle><circle cx="19" cy="6" r="2.5"></circle><circle cx="12" cy="18" r="2.5"></circle><path d="M7 7.5l3.6 8.3M17 7.5l-3.6 8.3M7.5 6h9"></path></svg>
+                Dependency graph
+            </button>
+            <button type="button" role="tab" class="tab" data-tab="services" aria-selected="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="1.5"></rect><rect x="3" y="14" width="18" height="6" rx="1.5"></rect><line x1="7" y1="7" x2="7.01" y2="7"></line><line x1="7" y1="17" x2="7.01" y2="17"></line></svg>
+                Services <span class="tab-badge" id="services-badge" hidden></span>
+            </button>
+        </nav>
+
+        <section class="panel" id="panel-modules" role="tabpanel">
+            <div class="toolbar">
+                <label class="dropzone" id="dropzone">
+                    <input type="file" id="upload-input" accept=".chacc" hidden>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span class="dropzone-text"><strong>Install a module:</strong> drag a .chacc file here, or click to browse</span>
+                </label>
+                <label class="search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="search" id="filter" placeholder="Filter by name, author or description…" aria-label="Filter modules">
+                </label>
+            </div>
+
+            <div class="table" role="table" aria-label="Installed modules">
+                <div class="table-head" role="row">
+                    <span role="columnheader">Module</span>
+                    <span role="columnheader">Version</span>
+                    <span role="columnheader">Author</span>
+                    <span role="columnheader">Status</span>
+                    <span role="columnheader">Depends on</span>
+                    <span role="columnheader" class="col-actions">Actions</span>
+                </div>
+                <div id="module-list" class="table-body" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-graph" role="tabpanel" hidden>
+            <p class="panel-intro" id="graph-intro"></p>
+            <div class="legend">
+                <span><i class="dot dot-ok"></i>Loads</span>
+                <span><i class="dot dot-blocked"></i>Blocked</span>
+                <span><i class="dot dot-disabled"></i>Disabled</span>
+                <span><i class="dot dot-missing"></i>Not installed</span>
+                <span><i class="line"></i>Required</span>
+                <span><i class="line line-dashed"></i>Optional</span>
+            </div>
+            <div class="graph-wrap"><svg id="graph" role="img" aria-label="Module dependency graph"></svg></div>
+            <div id="graph-problems"></div>
+            <div class="load-order" id="load-order"></div>
+        </section>
+
+        <section class="panel" id="panel-services" role="tabpanel" hidden>
+            <div class="services-head">
+                <span class="muted" id="services-checked"></span>
+                <button type="button" class="btn btn-small" id="services-refresh">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    Check again
+                </button>
+            </div>
+            <div class="services" id="services-list" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <aside class="notice" id="dev-note" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <div>
+            <strong>Development mode</strong>
+            <p>Server loads modules from plugins/. The list shows production modules from the database.</p>
+        </div>
+        <button type="button" class="notice-close" id="dev-note-close" aria-label="Dismiss">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    </aside>
+
+    <div class="menu" id="row-menu" role="menu" hidden></div>
+
+    <div class="overlay" id="restart-overlay" hidden>
+        <div class="overlay-card">
+            <div class="spinner" aria-hidden="true"></div>
+            <h2>Restarting…</h2>
+            <p id="restart-text">Waiting for the server to come back.</p>
+        </div>
+    </div>
+
+    <div class="gate" id="gate" hidden>
+        <div class="overlay-card">
+            <svg viewBox="0 0 24 24" class="gate-icon" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+            <p id="gate-text"></p>
+            <button type="button" class="btn btn-primary" id="gate-btn"></button>
+        </div>
+    </div>
+
+    <dialog id="key-dialog" class="dialog">
+        <form method="dialog" id="key-form">
+            <h2>Web console key</h2>
+            <p class="dialog-sub">Enter the key set on the server.</p>
+            <label>Key<input name="key" type="password" class="input" autocomplete="current-password" required></label>
+            <p class="form-error" id="key-error" hidden></p>
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-ghost" value="cancel" id="key-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="key-submit">Continue</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="login-dialog" class="dialog">
+        <form method="dialog" id="login-form">
+            <h2>Log in</h2>
+            <p class="dialog-sub">The authentication module protects this server. Log in to manage modules.</p>
+            <label>Username<input name="username" class="input" autocomplete="username" required></label>
+            <label>Password<input name="password" type="password" class="input" autocomplete="current-password" required></label>
+            <p class="form-error" id="login-error" hidden></p>
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-ghost" value="cancel" id="login-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="login-submit">Log in</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="dialog">
+        <form method="dialog">
+            <h2 id="confirm-title">Are you sure?</h2>
+            <p class="dialog-sub" id="confirm-text"></p>
+            <div class="dialog-actions">
+                <button value="cancel" class="btn btn-ghost">Cancel</button>
+                <button value="ok" class="btn btn-danger" id="confirm-ok">Confirm</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="module-dialog" class="dialog dialog-module" aria-labelledby="md-title">
+        <header class="md-head">
+            <div class="md-heading">
+                <h2 id="md-title"></h2>
+                <p class="md-sub" id="md-sub"></p>
+            </div>
+            <button type="button" class="notice-close md-close" id="md-close" aria-label="Close">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </header>
+        <div class="md-body" id="md-body"></div>
+        <footer class="md-actions" id="md-actions"></footer>
+    </dialog>
+
+    <script type="module" src="/static/js/console/main.js"></script>
+</body>
+</html>
