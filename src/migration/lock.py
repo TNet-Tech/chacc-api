@@ -21,26 +21,14 @@ Waiting doesn't block the event loop, and gives up after
 import asyncio
 import contextlib
 import os
+import sys
 import time
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
-try:  # POSIX
-    import fcntl
-
-    def _try_lock_file(fd: int) -> bool:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return True
-        except BlockingIOError:
-            return False
-
-    def _unlock_file(fd: int) -> None:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-
-except ImportError:
+if sys.platform == "win32":
     import msvcrt
 
     def _try_lock_file(fd: int) -> bool:
@@ -53,6 +41,19 @@ except ImportError:
     def _unlock_file(fd: int) -> None:
         os.lseek(fd, 0, os.SEEK_SET)
         msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+else:
+    import fcntl
+
+    def _try_lock_file(fd: int) -> bool:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except BlockingIOError:
+            return False
+
+    def _unlock_file(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
 
 
 _ADVISORY_LOCK_KEY = 0x63686163635F6D67
