@@ -6,9 +6,11 @@ ChaCC API handles database setup and migrations automatically. When you run the 
 - [Quickstart](#quickstart)
 - [Defining Models](#defining-models)
 - [Migration Modes](#migration-modes)
+- [Renaming Tables and Columns](#renaming-tables-and-columns)
 - [How Migrations Work](#how-migrations-work)
 - [Backup and Restore](#backup-and-restore)
 - [Idempotency](#idempotency)
+- [Several servers on one database](#several-servers-on-one-database)
 - [Migration Tracker Table](#migration-tracker-table)
 - [Troubleshooting](#troubleshooting)
 - [SQLite Compatibility](#sqlite-compatibility)
@@ -133,6 +135,37 @@ In `auto` mode, these operations are safe:
 
 **Tables are never dropped automatically, in any mode.** A table that no loaded model defines may belong to a disabled module or one that failed to load, so ChaCC keeps it. In `full` mode the log lists these tables; drop the ones you no longer need yourself.
 
+---
+
+## Renaming Tables and Columns
+
+ChaCC compares your models with the database, and a renamed column looks exactly like one column removed and another added. Without help, `auto` adds the new column empty and keeps the old one, and `full` **deletes the old column and its data**.
+
+Mark the rename on the model instead:
+
+```python
+class Item(ChaCCBaseModel):
+    __tablename__ = "shop_items"
+    __table_args__ = {"info": {"renamed_from": "shop_products"}}
+
+    title = Column(String, info={"renamed_from": "name"})
+```
+
+At the next start ChaCC renames in the database first, in `auto` and `full` mode, so the data stays where it is. Indexes and unique constraints on the column get the names the model expects. New installations simply create the new names. The rename is recorded in the migration log, after a backup if `MIGRATION_BACKUP=true`.
+
+If a database may have skipped versions, list every earlier name, newest first: `info={"renamed_from": ["label", "name"]}`.
+
+| The database has | ChaCC |
+| --- | --- |
+| The old name only | Renames it. |
+| The new name only | Nothing to do (already renamed). |
+| Both names | Renames nothing and keeps both, with a warning. Move the data and drop the old column yourself. |
+| Neither (typo in the marker) | Renames nothing, adds and drops no column in that table, and warns at every start until the marker is fixed. |
+
+A column named in `renamed_from` is never dropped automatically. You can leave the marker in place; once every installation is renamed it does nothing.
+
+Renaming doesn't change your code: update queries that use the old name.
+
 ### What about PostgreSQL enums?
 
 If you're using PostgreSQL enums with `alembic-postgresql-enum`, the runner recognizes:
@@ -219,6 +252,17 @@ The migration runner catches errors like `already exists` or `duplicate` and con
 - The system recovers gracefully from partial states
 
 **Practical example:** If you restart the server frequently during development, migrations won't bomb out because a table already exists.
+
+---
+
+## Several servers on one database
+
+Several workers, containers or replicas can start at the same time against one database. Only one migrates at a time: the others wait, then find nothing left to do, so every change is applied once.
+
+- **PostgreSQL** uses an advisory lock.
+- **SQLite** uses a lock file next to the database (`chaccapi.db.migration.lock`).
+
+Both are released when the server stops, even if it crashes. A server that waits longer than `MIGRATION_LOCK_TIMEOUT` seconds (default 600) starts without migrating and says so in the log.
 
 ---
 
@@ -346,6 +390,7 @@ The runner no longer passes a schema parameter to SQLite's `get_table_names()`. 
 | **Preview changes** | Set `MIGRATION_MODE=preview` |
 | **Full migration** | Set `MIGRATION_MODE=full` |
 | **Backup** | Set `MIGRATION_BACKUP=true` |
+| **Rename a table or column** | `info={"renamed_from": "old_name"}` |
 | **Recover from failure** | Check the log table, preview changes, restart |
 
 ---

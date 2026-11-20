@@ -106,6 +106,12 @@ class MigrationDependencyResolver:
         if op_type == "drop_table" and len(details) > 1:
             return self.safe_name(details[1])
 
+        if op_type == "rename_table" and len(details) > 3:
+            return self.safe_name(details[3])
+
+        if op_type in ("rename_column", "rename_index", "rename_unique_constraint"):
+            return self.safe_name(details[2])
+
         return "unknown"
 
     def get_column_names_from_details(self, op_type: str, details: tuple) -> set[str]:

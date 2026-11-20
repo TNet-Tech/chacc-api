@@ -12,7 +12,7 @@ new connection. With ``SQLITE_FOREIGN_KEYS=true`` ChaCC sends it, and:
 """
 
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from sqlalchemy import event
@@ -40,7 +40,7 @@ def _enable_on_connect(dbapi_connection, _connection_record) -> None:
 
 
 @contextmanager
-def suspended(conn: Connection) -> Iterator[None]:
+def suspended(conn: Connection) -> Generator[None]:
     """
     Run the block with enforcement off on ``conn``. Use it outside any
     transaction: SQLite ignores this PRAGMA inside one.

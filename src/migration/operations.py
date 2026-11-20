@@ -55,6 +55,10 @@ class MigrationOperationExecutor:
             "create_enum": self._create_enum,
             "drop_enum": self._drop_enum,
             "sync_enum_values": self._sync_enum_values,
+            "rename_table": self._rename_table,
+            "rename_column": self._rename_column,
+            "rename_index": self._rename_index,
+            "rename_unique_constraint": self._rename_unique_constraint,
         }
 
     # ------------------------------------------------------------------ running
@@ -459,6 +463,55 @@ class MigrationOperationExecutor:
         else:
             with op.batch_alter_table(fk.table.name, schema=fk.table.schema) as batch_op:
                 batch_op.drop_constraint(fk.name, type_="foreignkey")
+        return True
+
+    # ------------------------------------------------------------------ renames
+    # Planned in src/migration/renames.py. Renaming keeps the data in place, and
+    # both databases carry indexes, constraints and references to it along.
+
+    def _quote(self, op: Operations, name: str) -> str:
+        return op.get_bind().dialect.identifier_preparer.quote(name)
+
+    def _quoted_table(self, op: Operations, schema: str | None, table_name: str) -> str:
+        table = self._quote(op, table_name)
+        return f"{self._quote(op, schema)}.{table}" if schema else table
+
+    def _rename_table(self, op: Operations, details: tuple) -> bool:
+        _, schema, old, new = details
+        op.rename_table(old, new, schema=schema)
+        return True
+
+    def _rename_column(self, op: Operations, details: tuple) -> bool:
+        _, schema, table_name, old, new = details
+        op.execute(
+            f"ALTER TABLE {self._quoted_table(op, schema, table_name)} "
+            f"RENAME COLUMN {self._quote(op, old)} TO {self._quote(op, new)}"
+        )
+        return True
+
+    def _rename_index(self, op: Operations, details: tuple) -> bool:
+        _, schema, table_name, old, new, unique, column = details
+        if self.is_postgres:
+            op.execute(
+                f"ALTER INDEX {self._quoted_table(op, schema, old)} "
+                f"RENAME TO {self._quote(op, new)}"
+            )
+        else:  # SQLite can't rename an index: rebuild it under the new name
+            op.drop_index(old, table_name=table_name, schema=schema)
+            op.create_index(new, table_name, [column], unique=unique, schema=schema)
+        return True
+
+    def _rename_unique_constraint(self, op: Operations, details: tuple) -> bool:
+        _, schema, table_name, old, new, column = details
+        if self.is_postgres:
+            op.execute(
+                f"ALTER TABLE {self._quoted_table(op, schema, table_name)} "
+                f"RENAME CONSTRAINT {self._quote(op, old)} TO {self._quote(op, new)}"
+            )
+        else:  # SQLite keeps unique constraints in the table definition: rebuild it
+            with op.batch_alter_table(table_name, schema=schema) as batch_op:
+                batch_op.drop_constraint(old, type_="unique")
+                batch_op.create_unique_constraint(new, [column])
         return True
 
     # ------------------------------------------------------------------ enums

@@ -5,6 +5,7 @@ Safe migration execution with tracking, backup, and preview capabilities.
 """
 
 import asyncio
+import functools
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -15,14 +16,27 @@ from alembic.runtime.migration import MigrationContext
 from sqlalchemy import MetaData
 from sqlalchemy.engine import Engine
 
-from src.constants import DATABASE_ENGINE, MIGRATION_BACKUP, MIGRATION_BACKUP_DIR, MIGRATION_MODE
+from src.constants import (
+    MIGRATION_BACKUP,
+    MIGRATION_BACKUP_DIR,
+    MIGRATION_LOCK_TIMEOUT,
+    MIGRATION_MODE,
+)
 from src.database import engine as default_engine
 from src.database import metadata_obj
 from src.logger import configure_logging, get_default_log_level
 from src.migration.backup import create_backup
 from src.migration.dependencies import MigrationDependencyResolver
 from src.migration.diff import flatten, operation_type, without_unmanaged_tables
+from src.migration.lock import migration_lock
 from src.migration.operations import MigrationOperationExecutor
+from src.migration.renames import (
+    describe_rename,
+    guard_renamed_columns,
+    plan_column_renames,
+    plan_table_renames,
+    resolved_by_renames,
+)
 from src.migration.tracker import TRACKER_TABLE, create_tracker
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
@@ -73,7 +87,8 @@ class MigrationRunner:
     ):
         self.engine = engine or default_engine
         self.mode = mode or MIGRATION_MODE
-        self._is_postgres = "postgres" in DATABASE_ENGINE.lower()
+        # The engine, not the setting: tests and tools may pass another database.
+        self._is_postgres = self.engine.dialect.name == "postgresql"
 
         self.create_backup = (
             MIGRATION_BACKUP if create_backup_before is None else create_backup_before
@@ -94,6 +109,10 @@ class MigrationRunner:
 
         self._pending_migrations: list[dict] = []
         self._applied_migrations: list[dict] = []
+        self._backup_attempted = False
+        self._backup_path: str | None = None
+        # Columns whose rename marker can't be resolved; see renames.py.
+        self._held_renames: set[tuple[str, str]] = set()
 
     @property
     def tracker(self):
@@ -466,6 +485,7 @@ class MigrationRunner:
             diff = list(flatten(compare_metadata(context, metadata) or []))
 
         diff, unmanaged = without_unmanaged_tables(diff, metadata)
+        diff = guard_renamed_columns(diff, metadata, chacc_logger, self._held_renames)
         unmanaged = [name for name in unmanaged if name != TRACKER_TABLE]
         if unmanaged:
             # Only news in the last pass of a 'full' start: earlier passes run
@@ -478,6 +498,18 @@ class MigrationRunner:
         return diff
 
     async def run(self, model_metadata: MetaData = None) -> dict[str, Any]:
+        """
+        Run pending migrations, one process at a time (see src/migration/lock.py):
+        others wait, then find nothing left to do.
+
+        Raises:
+            MigrationLockTimeout: another process kept migrating past MIGRATION_LOCK_TIMEOUT
+            RuntimeError: If migration fails and can't be recovered
+        """
+        async with migration_lock(self.engine, chacc_logger, MIGRATION_LOCK_TIMEOUT):
+            return await self._run(model_metadata)
+
+    async def _run(self, model_metadata: MetaData = None) -> dict[str, Any]:
         """
         Run pending migrations.
 
@@ -496,37 +528,84 @@ class MigrationRunner:
         for table_name in sorted(metadata.tables.keys()):
             chacc_logger.debug(f"  - {table_name}")
 
-        preview_result = await self.preview(metadata)
-
         if self.mode == MigrationMode.PREVIEW:
-            chacc_logger.info("Preview mode - no changes will be made")
-            return {
-                "status": "preview",
-                "message": "Run with AUTO or FULL mode to apply changes",
-                **preview_result,
-            }
-
-        if preview_result["pending_count"] == 0:
-            chacc_logger.info("Database schema is up to date")
-            return {"status": "up_to_date", "message": "No migrations to apply"}
-
-        backup_path = await self._backup_before_changes() if self.create_backup else None
+            return await self._preview_run(metadata)
 
         try:
-            await self._apply_migrations(preview_result["migrations"], metadata)
+            # Renames first, so the comparison finds the data where the models
+            # expect it. Tables before columns: columns are looked up under the
+            # table's new name.
+            for plan in self._rename_planners():
+                renames = await asyncio.to_thread(plan, metadata, self.engine, chacc_logger)
+                if renames:
+                    await self._backup_once()
+                    await self._apply_renames(renames)
+
+            preview_result = await self.preview(metadata)
+            if preview_result["pending_count"]:
+                await self._backup_once()
+                await self._apply_migrations(preview_result["migrations"], metadata)
+            elif not self._applied_migrations:
+                chacc_logger.info("Database schema is up to date")
+                return {"status": "up_to_date", "message": "No migrations to apply"}
 
             return {
                 "status": "success",
                 "applied_count": len(self._applied_migrations),
                 "applied": self._applied_migrations,
-                "backup": backup_path,
+                "backup": self._backup_path,
             }
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             chacc_logger.error(f"Migration failed: {e}")
-            if backup_path and os.path.exists(backup_path):
-                await self._recover_from(backup_path)
-            raise RuntimeError(f"Migration failed: {e}")
+            if self._backup_path and os.path.exists(self._backup_path):
+                await self._recover_from(self._backup_path)
+            raise RuntimeError(f"Migration failed: {e}") from e
+
+    async def _preview_run(self, metadata: MetaData) -> dict[str, Any]:
+        renames = []
+        for plan in self._rename_planners():
+            renames += await asyncio.to_thread(plan, metadata, self.engine, chacc_logger)
+        for details in renames:
+            chacc_logger.info(f"Would rename {describe_rename(details)}")
+
+        preview_result = await self.preview(metadata)
+        # What the renames take care of isn't pending.
+        resolved = resolved_by_renames(renames)
+        preview_result["migrations"] = [m for m in preview_result["migrations"] if not resolved(m)]
+        preview_result["pending_count"] = len(preview_result["migrations"]) + len(renames)
+        preview_result["renames"] = renames
+
+        chacc_logger.info("Preview mode - no changes will be made")
+        return {
+            "status": "preview",
+            "message": "Run with AUTO or FULL mode to apply changes",
+            **preview_result,
+        }
+
+    def _rename_planners(self):
+        """Tables first: columns are then looked up under the table's new name."""
+        return (
+            plan_table_renames,
+            functools.partial(plan_column_renames, held=self._held_renames),
+        )
+
+    async def _apply_renames(self, renames: list[tuple]) -> None:
+        for details in renames:
+            op_type = details[0]
+            table_name = self._dependency_resolver.get_table_name_from_details(op_type, details)
+            await self._apply_single_migration(
+                self._generate_version(op_type, table_name),
+                details,
+                op_type,
+                self._generate_checksum([details]),
+            )
+
+    async def _backup_once(self) -> None:
+        """One backup per pass, before its first change, when backups are on."""
+        if self.create_backup and not self._backup_attempted:
+            self._backup_attempted = True
+            self._backup_path = await self._backup_before_changes()
 
     async def _backup_before_changes(self) -> str | None:
         """

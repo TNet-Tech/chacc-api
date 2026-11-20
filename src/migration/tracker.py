@@ -11,7 +11,6 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
-from src.constants import DATABASE_ENGINE
 from src.logger import configure_logging, get_default_log_level
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
@@ -27,7 +26,7 @@ class MigrationTracker:
 
     def __init__(self, engine: Engine):
         self.engine = engine
-        self._is_postgres = "postgres" in DATABASE_ENGINE.lower()
+        self._is_postgres = engine.dialect.name == "postgresql"
         self._table_ensured = False
 
     def _ensure_table(self):

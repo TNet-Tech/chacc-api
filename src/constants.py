@@ -45,6 +45,8 @@ MIGRATION_BACKUP_DIR = os.path.join(
     BASE_DIR, config("MIGRATION_BACKUP_DIR", default="backups", cast=str)
 )
 MIGRATION_AUTO_DROP = config("MIGRATION_AUTO_DROP", default=False, cast=bool)
+# How long a process waits while another one migrates the database (seconds).
+MIGRATION_LOCK_TIMEOUT = config("MIGRATION_LOCK_TIMEOUT", default=600, cast=int)
 
 DEVELOPMENT_MODE = config("CHACC_DEV_MODE", default=False, cast=bool)
 ENABLE_PLUGIN_HOT_RELOAD = config("ENABLE_PLUGIN_HOT_RELOAD", default=False, cast=bool)
