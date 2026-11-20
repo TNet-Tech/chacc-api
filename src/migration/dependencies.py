@@ -87,6 +87,10 @@ class MigrationDependencyResolver:
                     return self.safe_name(table)
             raise ValueError(f"Cannot determine table for {op_type} operation: {details}")
 
+        if op_type in ("drop_index", "drop_constraint", "drop_foreign_key") and len(details) > 1:
+            table = getattr(details[1], "table", None)
+            return self.safe_name(table) if table is not None else "unknown"
+
         if op_type == "add_column":
             if len(details) >= 4 and details[1] is None:
                 return self.safe_name(details[2])
@@ -94,19 +98,10 @@ class MigrationDependencyResolver:
                 return self.safe_name(details[1])
 
         if (
-            op_type
-            in (
-                "modify_type",
-                "modify_nullable",
-                "modify_default",
-                "drop_column",
-                "drop_index",
-                "drop_constraint",
-                "drop_foreign_key",
-            )
-            and len(details) > 1
+            op_type in ("drop_column", "modify_type", "modify_nullable", "modify_default")
+            and len(details) > 2
         ):
-            return self.safe_name(details[1])
+            return self.safe_name(details[2])
 
         if op_type == "drop_table" and len(details) > 1:
             return self.safe_name(details[1])

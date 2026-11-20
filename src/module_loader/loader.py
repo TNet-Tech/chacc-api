@@ -227,6 +227,26 @@ def migration_mode_for(report: GraphReport) -> str | None:
     return None
 
 
+async def migrate_after_loading(report: GraphReport, backbone_context: BackboneContext) -> None:
+    """
+    The last migration pass of a start, the only one allowed to remove
+    anything: by now every module's models and the audit columns added by
+    modules are known. Earlier passes run in additive mode.
+    """
+    from src.migration.runner import MigrationMode, run_migration
+
+    try:
+        schema_changed = apply_deferred_schema_changes(backbone_context)
+        if schema_changed:
+            chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
+        mode = migration_mode_for(report) or MIGRATION_MODE
+        if schema_changed or mode == MigrationMode.FULL:
+            await run_migration(mode=mode)
+            chacc_logger.info("Final migration completed.")
+    except Exception:
+        chacc_logger.exception("Final schema migration failed")
+
+
 async def load_modules(
     app: FastAPI,
     backbone_context: BackboneContext,
@@ -334,9 +354,11 @@ async def load_modules(
             chacc_logger.exception("initialize_database_models failed")
 
         try:
-            from src.migration.runner import run_migration
+            from src.migration.runner import additive_mode, run_migration
 
-            await run_migration(mode=migration_mode_for(report))
+            # Creates what the modules need before they load; removals wait
+            # for migrate_after_loading, once audit columns are known.
+            await run_migration(mode=additive_mode())
         except Exception:
             chacc_logger.exception("Migration after model discovery failed")
 
@@ -368,15 +390,7 @@ async def load_modules(
                 except Exception as e:  # noqa: BLE001
                     chacc_logger.warning(f"Failed to disable module '{record.name}': {e}")
 
-        try:
-            if apply_deferred_schema_changes(backbone_context):
-                chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
-                from src.migration.runner import run_migration
-
-                await run_migration(mode=migration_mode_for(report))
-                chacc_logger.info("Deferred migration completed.")
-        except Exception:
-            chacc_logger.exception("Deferred schema migration failed")
+        await migrate_after_loading(report, backbone_context)
     except Exception:
         chacc_logger.exception("Unexpected error during module loading")
 

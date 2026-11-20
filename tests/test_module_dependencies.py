@@ -259,7 +259,7 @@ def test_dev_loader_skips_blocked_modules_before_model_discovery(monkeypatch):
     monkeypatch.setattr(plugin_loader, "resolve_dependencies", lambda *a: _noop())
     monkeypatch.setattr(src.migration.runner, "run_migration", fake_migration)
     monkeypatch.setattr(src.database, "initialize_database_models", lambda ctx: None)
-    monkeypatch.setattr(plugin_loader, "apply_deferred_schema_changes", lambda ctx: False)
+    monkeypatch.setattr("src.module_loader.loader.apply_deferred_schema_changes", lambda ctx: False)
     monkeypatch.setattr(plugin_loader._module_state, "should_reload", lambda *a: True)
     monkeypatch.setattr("src.module_loader.loader.MIGRATION_MODE", "full")
     # Collect log lines directly; the ChaCC logger does not reach caplog.
@@ -285,8 +285,9 @@ def test_dev_loader_skips_blocked_modules_before_model_discovery(monkeypatch):
     loaded = [c[0] for c in calls if c[0] != "migration"]
     assert "menu" not in loaded
     assert set(loaded) == {"files", "core"}
-    # Something was skipped, so 'full' must not drop its tables.
-    assert ("migration", "auto") in calls
+    # Something was skipped, so 'full' must not drop its tables: no pass is 'full'.
+    migrations = [c[1] for c in calls if c[0] == "migration"]
+    assert migrations and "full" not in migrations
     assert "MODULE DEPENDENCIES NEED ATTENTION" in log
     assert "menu: NOT LOADED - missing required module(s): auth" in log
     assert "files: optional module(s) not installed: outbound" in log

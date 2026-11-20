@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import os
 import re
@@ -17,6 +18,7 @@ from slowapi.errors import RateLimitExceeded
 
 from chacc_api.server.docs.redoc import get_themed_redoc_html
 from chacc_api.server.docs.swagger import get_themed_swagger_ui_html, patch_binary_file_schema
+from src import sqlite_foreign_keys
 from src.admin_access import access_method, ensure_admin_privilege, log_console_protection
 from src.constants import (
     API_PREFIX,
@@ -30,11 +32,11 @@ from src.constants import (
 )
 from src.core_services import BackboneContext
 from src.csv_utils import parse_csv
-from src.database import get_async_db, get_db
+from src.database import engine, get_async_db, get_db
 from src.env_validator import ValidationError, validate_environment
 from src.health import get_version, health_router
 from src.logger import configure_logging, get_default_log_level
-from src.migration.runner import run_migration
+from src.migration.runner import additive_mode, run_migration
 from src.modules import ModuleUploadSizeLimitMiddleware, modules_router
 from src.rate_limiter import limiter, rate_limit_exceeded_handler
 from src.redis_service import RedisService
@@ -83,8 +85,6 @@ async def onStartupLifespan(app: FastAPI):
         async_db_session_factory=get_async_db,
     )
 
-    # Registered whenever Redis is enabled, even if it is down now: get_client()
-    # reconnects when Redis comes back, so modules don't need a restart.
     app.state.redis_service = redis_service
     if redis_service.is_enabled:
         backbone_context.register_service("redis", redis_service)
@@ -103,7 +103,7 @@ async def onStartupLifespan(app: FastAPI):
 
     app.state.backbone_context = backbone_context
 
-    await run_migration()
+    await run_migration(mode=additive_mode())
 
     chacc_logger.info("Loading modules...")
 
@@ -123,8 +123,8 @@ async def onStartupLifespan(app: FastAPI):
         await load_modules(app, backbone_context)
 
     log_console_protection(backbone_context)
+    await asyncio.to_thread(sqlite_foreign_keys.warn_about_orphan_rows, engine, chacc_logger)
 
-    # Copy .env.sample to .env if .env doesn't exist
     copy_sample_env()
 
     yield

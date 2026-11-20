@@ -69,9 +69,10 @@ SQLite stores the database at `chaccapi.db` in the current working directory by 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `MIGRATION_MODE` | `auto` | `preview`, `auto`, or `full`. |
-| `MIGRATION_BACKUP` | `false` | Create a database backup before non-preview migrations. |
+| `MIGRATION_BACKUP` | `false` | Back up the database before a migration that changes it (`auto` and `full`). |
 | `MIGRATION_BACKUP_DIR` | `backups` | Backup directory. |
 | `MIGRATION_AUTO_DROP` | `false` | Present for deployment scripts; migration runner uses `auto` safe filtering. |
+| `SQLITE_FOREIGN_KEYS` | `false` | SQLite only: enforce foreign keys. See [Foreign keys on SQLite](database-migrations.md#foreign-keys-on-sqlite). |
 
 ## Redis
 

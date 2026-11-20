@@ -109,7 +109,7 @@ ChaCC runs migrations automatically on startup. You control how aggressive they 
 |------|----------|-------------|
 | **preview** | Shows pending operations without applying them | Testing or dry runs |
 | **auto** (default) | Applies safe operations, skips destructive changes | Production day-to-day |
-| **full** | Applies everything, including destructive changes | Major upgrades or controlled rollbacks |
+| **full** | Also removes columns, indexes and constraints that models no longer define | Major upgrades or controlled rollbacks |
 
 Set the mode with an environment variable:
 
@@ -129,7 +129,9 @@ In `auto` mode, these operations are safe:
 - Modifying defaults
 - Enum synchronization
 
-**Destructive operations** like dropping tables are **skipped in `auto` mode**.
+**Destructive operations** like removing columns are **skipped in `auto` mode**.
+
+**Tables are never dropped automatically, in any mode.** A table that no loaded model defines may belong to a disabled module or one that failed to load, so ChaCC keeps it. In `full` mode the log lists these tables; drop the ones you no longer need yourself.
 
 ### What about PostgreSQL enums?
 
@@ -179,8 +181,12 @@ MIGRATION_BACKUP_DIR=backups
 
 ### How backups work
 
-- **SQLite** – The entire database file is copied.
-- **PostgreSQL** – Uses `pg_dump` to create a SQL dump.
+A backup is taken before a migration that changes the database, in `auto` and `full` mode. Starts with nothing to migrate take none. Backups are only readable by the server's user and are never deleted automatically.
+
+- **SQLite** – The database is copied with SQLite's backup API, which is safe while the server runs.
+- **PostgreSQL** – Uses `pg_dump` to create a SQL dump. `pg_dump` must be installed where the server runs.
+
+If a migration fails, SQLite is restored from the backup automatically. On PostgreSQL, each change runs in its own transaction: the failed one is rolled back, earlier ones are kept, and the log names the backup. Stop the server before restoring it.
 
 ### Backup file names
 
@@ -227,7 +233,7 @@ The runner creates `chacc_migration_log` to track what's been applied:
 | `applied_at` | When it was applied |
 | `rollback_available` | Whether rollback is possible |
 
-This table is excluded from destructive drop detection—it won't be accidentally removed.
+Only changes that were actually applied are recorded. This table is excluded from destructive drop detection—it won't be accidentally removed.
 
 ---
 
@@ -281,6 +287,18 @@ SQLite has limitations with direct table alteration. ChaCC handles this by using
 - Adding/dropping indexes and constraints
 
 This avoids common SQLite migration pitfalls.
+
+### Foreign keys on SQLite
+
+Tables get the foreign keys their models declare. Tables created by versions before 1.0.0-beta6 had none; the first start adds them (each table is rebuilt once, keeping its rows).
+
+SQLite only **checks** foreign keys when asked to, so by default a row can still point at a missing row, and `ondelete="CASCADE"` does nothing. To enforce them:
+
+```env
+SQLITE_FOREIGN_KEYS=true
+```
+
+Then deleting a parent cascades or fails as the model says, and rows that point at missing rows are refused. Rows like that from before are listed in the log at startup; fix or remove them. Migrations run with enforcement off, so rebuilding a table never touches its child rows.
 
 ---
 

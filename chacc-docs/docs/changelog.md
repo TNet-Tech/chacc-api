@@ -28,6 +28,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Keep network available for the first start after upgrading.** Existing module packages were in the old container, so the first start installs them into the new volume. After that, starts need no network. Without network the affected modules are skipped until you run `chacc deps sync`.
 - The images now use **Python 3.15** and pinned core package versions (`requirements.lock`).
 - Requires `chacc-dependency-manager` 1.4.0 or newer.
+- **SQLite: the first start rebuilds tables that are missing their foreign keys.** Rows are kept. `MIGRATION_BACKUP=true` now really backs up first.
 
 ## Added
 
@@ -88,6 +89,9 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - In production, the console page was cached until a restart even when its files changed, so it could show headings that didn't match its script. It is now rebuilt when its files change.
 - In development mode with `ENABLE_PLUGIN_HOT_RELOAD=True`, editing a module in `plugins/` restarts the server again. An earlier beta 6 change had limited the reload to `src/`.
 - In development mode, the server didn't start when a data folder such as `MODULES_INSTALLED_DIR` was outside the project folder ("Non-relative patterns are unsupported").
+- **SQLite tables were created without their foreign keys**, so relationships and `ondelete` did nothing. Tables now get them, and existing tables get them at the next start. Enforcing them is opt-in with `SQLITE_FOREIGN_KEYS=true`. See [Foreign keys on SQLite](database-migrations.md#foreign-keys-on-sqlite).
+- **`MIGRATION_BACKUP=true` never created a backup.** It now backs up before a migration that changes the database, in `auto` and `full` mode. SQLite backups are taken safely while the server runs and are restored if the migration fails.
+- **`MIGRATION_MODE=full` planned to drop every module's tables at each start** and recorded operations it never ran as applied. Only a bug prevented the drops. Tables are now never dropped automatically, removals wait until every module has loaded, and the migration log only lists what was applied.
 - When nginx or another proxy refused a module as too large, `chacc deploy` printed the proxy's HTML error page. It now says the proxy refused it and which setting to raise. See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 
 ## 1.0.0-beta5.3

@@ -19,11 +19,10 @@ from src.constants import (
     PLUGIN_AUTO_DISCOVERY,
     PLUGINS_DIR,
 )
-from src.database import apply_deferred_schema_changes
 from src.logger import configure_logging, get_default_log_level
 from src.module_graph import check_graph, scan_module_directory
 from src.module_loader.dependencies import log_report
-from src.module_loader.loader import load_single_module, migration_mode_for
+from src.module_loader.loader import load_single_module, migrate_after_loading
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -244,10 +243,12 @@ async def _load_modules(
         chacc_logger.exception("initialize_database_models failed")
 
     try:
-        from src.migration.runner import run_migration
+        from src.migration.runner import additive_mode, run_migration
 
+        # Creates what the plugins need before they load; removals wait for
+        # migrate_after_loading, once audit columns are known.
         chacc_logger.info("Running database migrations after model discovery...")
-        await run_migration(mode=migration_mode_for(report))
+        await run_migration(mode=additive_mode())
         chacc_logger.info("Database migrations completed.")
     except Exception:
         chacc_logger.exception("Migration failed")
@@ -275,14 +276,6 @@ async def _load_modules(
         except Exception:
             chacc_logger.exception(f"Error loading module '{module_name}'")
 
-    try:
-        if apply_deferred_schema_changes(backbone_context):
-            chacc_logger.info("Deferred schema changes detected; running follow-up migration.")
-            from src.migration.runner import run_migration
-
-            await run_migration(mode=migration_mode_for(report))
-            chacc_logger.info("Deferred migration completed.")
-    except Exception:
-        chacc_logger.exception("Deferred schema migration failed")
+    await migrate_after_loading(report, backbone_context)
 
     chacc_logger.info(f"Module loading from {source} completed")

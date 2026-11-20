@@ -24,6 +24,7 @@ from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.types import TypeDecorator
 
+from . import sqlite_foreign_keys
 from .constants import ASYNC_DATABASE_URL, DATABASE_ENGINE, DATABASE_URL
 from .logger import configure_logging, get_default_log_level
 
@@ -74,6 +75,8 @@ else:
     async_engine = create_async_engine(
         ASYNC_DATABASE_URL, connect_args={"check_same_thread": False}, pool_pre_ping=True
     )
+    sqlite_foreign_keys.enforce_on(engine)
+    sqlite_foreign_keys.enforce_on(async_engine.sync_engine)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)

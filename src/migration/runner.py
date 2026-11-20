@@ -15,12 +15,13 @@ from alembic.runtime.migration import MigrationContext
 from sqlalchemy import MetaData
 from sqlalchemy.engine import Engine
 
-from src.constants import DATABASE_ENGINE, MIGRATION_BACKUP_DIR, MIGRATION_MODE
+from src.constants import DATABASE_ENGINE, MIGRATION_BACKUP, MIGRATION_BACKUP_DIR, MIGRATION_MODE
 from src.database import engine as default_engine
 from src.database import metadata_obj
 from src.logger import configure_logging, get_default_log_level
 from src.migration.backup import create_backup
 from src.migration.dependencies import MigrationDependencyResolver
+from src.migration.diff import flatten, operation_type, without_unmanaged_tables
 from src.migration.operations import MigrationOperationExecutor
 from src.migration.tracker import TRACKER_TABLE, create_tracker
 
@@ -38,6 +39,16 @@ class MigrationMode:
     PREVIEW = "preview"
     AUTO = "auto"
     FULL = "full"
+
+
+def additive_mode(mode: str | None = None) -> str:
+    """
+    The mode for a pass that runs before every model is known (at startup,
+    before modules are loaded): it may add, never remove. ``preview`` stays
+    ``preview``; anything else becomes ``auto``.
+    """
+    mode = mode or MIGRATION_MODE
+    return MigrationMode.PREVIEW if mode == MigrationMode.PREVIEW else MigrationMode.AUTO
 
 
 class MigrationRunner:
@@ -64,10 +75,9 @@ class MigrationRunner:
         self.mode = mode or MIGRATION_MODE
         self._is_postgres = "postgres" in DATABASE_ENGINE.lower()
 
-        if create_backup_before is None:
-            self.create_backup = False
-        else:
-            self.create_backup = create_backup_before
+        self.create_backup = (
+            MIGRATION_BACKUP if create_backup_before is None else create_backup_before
+        )
 
         self.backup_dir = backup_dir or MIGRATION_BACKUP_DIR
 
@@ -125,21 +135,8 @@ class MigrationRunner:
         safe_diff = []
         dropped_count = 0
 
-        for op in diff:
-            if isinstance(op, list):
-                for nested_op in op:
-                    safe_diff.extend(self._filter_safe_operations([nested_op]))
-                continue
-
-            if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
-                op_type = "sync_enum_values"
-            elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
-                op_type = "create_enum"
-            elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
-                op_type = "drop_enum"
-            else:
-                op_type = op[0]
-
+        for op in flatten(diff):
+            op_type = operation_type(op)
             if op_type in safe_operations:
                 safe_diff.append(op)
             else:
@@ -147,7 +144,10 @@ class MigrationRunner:
                 chacc_logger.info(f"Skipping destructive operation in safe mode: {op_type}")
 
         if dropped_count > 0:
-            chacc_logger.warning(f"Safe mode: Skipped {dropped_count} destructive operations")
+            # Only worth a warning when 'auto' is what the user chose; in an
+            # additive pass of a 'full' start, the last pass applies them.
+            log = chacc_logger.warning if MIGRATION_MODE == self.mode else chacc_logger.info
+            log(f"Safe mode: Skipped {dropped_count} destructive operations")
 
         return safe_diff
 
@@ -178,13 +178,15 @@ class MigrationRunner:
                 return op[1].table.name
             return op[1] or "unknown"
 
-        if op_type in ("add_index", "add_constraint"):
-            if len(op) > 1 and hasattr(op[1], "table") and op[1].table is not None:
-                return op[1].table.name
-            return "unknown"
-
-        if op_type == "create_foreign_key":
-            if len(op) > 1 and hasattr(op[1], "table") and op[1].table is not None:
+        if op_type in (
+            "add_index",
+            "add_constraint",
+            "create_foreign_key",
+            "drop_index",
+            "drop_constraint",
+            "drop_foreign_key",
+        ):
+            if len(op) > 1 and getattr(op[1], "table", None) is not None:
                 return op[1].table.name
             return "unknown"
 
@@ -370,19 +372,13 @@ class MigrationRunner:
 
     def _diff_to_migrations(self, diff: list[Any]) -> list[dict]:
         migrations = []
-
-        for op in diff:
-            if isinstance(op, list):
-                for nested_op in op:
-                    migrations.extend(self._process_diff_op(nested_op))
-                continue
+        for op in flatten(diff):
             migrations.extend(self._process_diff_op(op))
-
         return self._build_dependency_graph(migrations)
 
     def _process_diff_op(self, op: Any) -> list[dict]:
-        if hasattr(op, "__class__") and "SyncEnumValuesOp" in op.__class__.__name__:
-            op_type = "sync_enum_values"
+        op_type = operation_type(op)
+        if op_type == "sync_enum_values":
             aff_cols = getattr(op, "affected_columns", [])
             details = (
                 op_type,
@@ -392,16 +388,7 @@ class MigrationRunner:
                 aff_cols,
                 getattr(op, "enum_values_to_rename", []),
             )
-        elif hasattr(op, "__class__") and "CreateEnumOp" in op.__class__.__name__:
-            op_type = "create_enum"
-            details = (
-                op_type,
-                getattr(op, "name", ""),
-                getattr(op, "schema", None),
-                getattr(op, "enum_values", []),
-            )
-        elif hasattr(op, "__class__") and "DropEnumOp" in op.__class__.__name__:
-            op_type = "drop_enum"
+        elif op_type in ("create_enum", "drop_enum"):
             details = (
                 op_type,
                 getattr(op, "name", ""),
@@ -409,7 +396,6 @@ class MigrationRunner:
                 getattr(op, "enum_values", []),
             )
         else:
-            op_type = op[0]
             details = op
 
         table_name = self._extract_table_name(op_type, op)
@@ -477,42 +463,19 @@ class MigrationRunner:
             for table in metadata.tables.values():
                 table.bind = self.engine
 
-            diff = compare_metadata(context, metadata)
+            diff = list(flatten(compare_metadata(context, metadata) or []))
 
-            filtered_diff = []
-            for op in diff or []:
-                if isinstance(op, list):
-                    for nested_op in op:
-                        nested_op_type = (
-                            nested_op[0]
-                            if isinstance(nested_op, tuple)
-                            else getattr(nested_op, "op_name", None)
-                        )
-                        if nested_op_type in ("drop_table", "remove_table"):
-                            table = (
-                                nested_op[1]
-                                if isinstance(nested_op, tuple)
-                                else getattr(nested_op, "table", None)
-                            )
-                            if hasattr(table, "name") and table.name == TRACKER_TABLE:
-                                chacc_logger.debug(
-                                    f"Skipping {nested_op_type} for {TRACKER_TABLE} (not in model metadata)"
-                                )
-                                continue
-                        filtered_diff.append(nested_op)
-                    continue
-
-                op_type = op[0] if isinstance(op, tuple) else getattr(op, "op_name", None)
-                if op_type in ("drop_table", "remove_table"):
-                    table = op[1] if isinstance(op, tuple) else getattr(op, "table", None)
-                    if hasattr(table, "name") and table.name == TRACKER_TABLE:
-                        chacc_logger.debug(
-                            f"Skipping {op_type} for {TRACKER_TABLE} (not in model metadata)"
-                        )
-                        continue
-                filtered_diff.append(op)
-
-            return filtered_diff
+        diff, unmanaged = without_unmanaged_tables(diff, metadata)
+        unmanaged = [name for name in unmanaged if name != TRACKER_TABLE]
+        if unmanaged:
+            # Only news in the last pass of a 'full' start: earlier passes run
+            # before module models are known, and 'auto' never drops tables.
+            log = chacc_logger.info if self.mode == MigrationMode.FULL else chacc_logger.debug
+            log(
+                f"Keeping {len(unmanaged)} table(s) that no loaded model defines "
+                f"(tables are never dropped automatically): {', '.join(unmanaged)}"
+            )
+        return diff
 
     async def run(self, model_metadata: MetaData = None) -> dict[str, Any]:
         """
@@ -547,17 +510,7 @@ class MigrationRunner:
             chacc_logger.info("Database schema is up to date")
             return {"status": "up_to_date", "message": "No migrations to apply"}
 
-        backup_path = None
-
-        if self.create_backup and self.mode != MigrationMode.AUTO:
-            try:
-                backup_path = await self.backup.create_backup()
-                chacc_logger.info(f"Backup created: {backup_path}")
-            except Exception as e:  # noqa: BLE001
-                if self.mode == MigrationMode.AUTO:
-                    chacc_logger.warning(f"Backup failed, continuing anyway: {e}")
-                else:
-                    raise RuntimeError(f"Backup failed, aborting migration: {e}")
+        backup_path = await self._backup_before_changes() if self.create_backup else None
 
         try:
             await self._apply_migrations(preview_result["migrations"], metadata)
@@ -571,22 +524,51 @@ class MigrationRunner:
 
         except Exception as e:  # noqa: BLE001
             chacc_logger.error(f"Migration failed: {e}")
-
             if backup_path and os.path.exists(backup_path):
-                chacc_logger.warning("Attempting to restore from backup...")
-                try:
-                    await self.backup.restore(backup_path)
-                    chacc_logger.info("Database restored from backup")
-                except Exception as restore_error:  # noqa: BLE001
-                    chacc_logger.critical(
-                        f"CRITICAL: Migration failed AND restore failed: {restore_error}"
-                    )
-                    raise RuntimeError(
-                        f"Migration failed and could not restore from backup. "
-                        f"Manual intervention required. Backup at: {backup_path}"
-                    )
-
+                await self._recover_from(backup_path)
             raise RuntimeError(f"Migration failed: {e}")
+
+    async def _backup_before_changes(self) -> str | None:
+        """
+        Back up the database before applying anything. If that fails, 'auto'
+        (additions only) carries on; 'full' stops rather than drop data with
+        no way back.
+        """
+        try:
+            backup_path = await self.backup.create_backup()
+        except Exception as e:
+            if self.mode == MigrationMode.AUTO:
+                chacc_logger.warning(f"Backup failed, continuing anyway: {e}")
+                return None
+            raise RuntimeError(f"Backup failed, aborting migration: {e}") from e
+        chacc_logger.info(f"Backup created: {backup_path}")
+        return backup_path
+
+    async def _recover_from(self, backup_path: str) -> None:
+        """
+        SQLite: put the backup back. PostgreSQL: each change ran in its own
+        transaction, so the failed one was rolled back and earlier ones are
+        kept; replacing a database the server is connected to isn't safe, so
+        say where the backup is instead.
+        """
+        if not self.backup.is_sqlite:
+            chacc_logger.error(
+                f"Changes applied before the failure were kept. To go back to the "
+                f"state before this migration, stop the server and restore {backup_path} "
+                "(see 'Backup and Restore' in the database migration docs)."
+            )
+            return
+
+        chacc_logger.warning("Restoring the database from the backup...")
+        try:
+            await self.backup.restore(backup_path)
+        except Exception as restore_error:
+            chacc_logger.critical(f"CRITICAL: Migration failed AND restore failed: {restore_error}")
+            raise RuntimeError(
+                f"Migration failed and could not restore from backup. "
+                f"Manual intervention required. Backup at: {backup_path}"
+            ) from restore_error
+        chacc_logger.info("Database restored from backup")
 
     async def _apply_migrations(self, migrations: list[dict], metadata: MetaData):
         """Apply migrations to database."""
