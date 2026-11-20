@@ -4,8 +4,9 @@ WORKDIR /app
 
 RUN groupadd -r chacc && useradd -r -g chacc -d /app chacc
 
+# postgresql-client: pg_dump for MIGRATION_BACKUP=true on PostgreSQL (servers up to its version).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu \
+    && apt-get install -y --no-install-recommends gosu postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /app/plugins /app/.modules_loaded /app/.modules_installed /app/.modules_upload /app/.chacc_cache /app/.chacc_packages /app/backups \

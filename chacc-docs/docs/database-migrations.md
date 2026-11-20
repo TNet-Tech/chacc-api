@@ -206,6 +206,8 @@ cp backups/chacc_backup_YYYYMMDD_HHMMSS.db chaccapi.db
 psql -d chaccapidb < backups/chacc_backup_YYYYMMDD_HHMMSS.sql
 ```
 
+On PostgreSQL 16 or older, `unrecognized configuration parameter "transaction_timeout"` is harmless: the Docker images' `pg_dump` is version 17.
+
 ---
 
 ## Idempotency

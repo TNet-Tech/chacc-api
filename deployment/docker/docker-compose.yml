@@ -33,6 +33,7 @@ services:
       - chacc_plugins:/app/plugins
       - chacc_cache:/app/.chacc_cache
       - chacc_packages:/app/.chacc_packages
+      - chacc_backups:/app/backups   # MIGRATION_BACKUP=true
     restart: unless-stopped
     stop_grace_period: 40s
     healthcheck:
@@ -96,6 +97,8 @@ volumes:
   chacc_cache:
     driver: local
   chacc_packages:
+    driver: local
+  chacc_backups:
     driver: local
   redis_data:
     driver: local

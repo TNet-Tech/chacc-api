@@ -222,9 +222,11 @@ at runtime:
 | `.chacc_packages/` | Python packages that modules need. |
 | `.chacc_cache/` | Resolved package versions and the last startup check. |
 | `.modules_loaded/` | Extracted module code (rebuilt from the archives if lost). |
-| `backups/` | Migration backups. |
+| `backups/` | Migration backups (`MIGRATION_BACKUP=true`). |
 
-The compose file mounts all of them except `.modules_loaded/`. Without
+The compose file mounts all of them except `.modules_loaded/`. The images include
+`pg_dump` (PostgreSQL 17 client), so backups work on PostgreSQL servers up to
+version 17. Without
 persistence, installed modules and their packages are lost when the container is
 recreated.
 

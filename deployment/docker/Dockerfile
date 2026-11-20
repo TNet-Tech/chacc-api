@@ -2,9 +2,11 @@ FROM python:3.15.2-slim
 
 WORKDIR /app
 
+# postgresql-client: pg_dump for MIGRATION_BACKUP=true on PostgreSQL (servers up to its version).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gosu \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r chacc && useradd -r -g chacc -d /app chacc
