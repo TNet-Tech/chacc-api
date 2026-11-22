@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chacc-api"
-version = "1.0.0-b6"
+version = "1.0.0-b6.post1
 description = "ChaCC API - A modular FastAPI application for extensible APIs"
 readme = "README.md"
 license = "Apache-2.0"
@@ -39,7 +39,7 @@ dependencies = [
     "python-multipart",
     "email-validator",
     "colorlog",
-    "chacc-dependency-manager>=1.4.0",
+    "chacc-dependency-manager>=1.4.1",
     "redis",
     "requests",
     "pytest",

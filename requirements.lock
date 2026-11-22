@@ -33,7 +33,7 @@ certifi==2026.10.23
     #   requests
 cffi==2.1.1
     # via argon2-cffi-bindings
-chacc-dependency-manager==1.4.0
+chacc-dependency-manager==1.4.1
     # via -r pyproject.toml
 charset-normalizer==3.5.2
     # via requests

@@ -1,6 +1,29 @@
 # Changelog
 
 
+## Unreleased – 1.0.0-beta6.1
+
+> Safer database migrations: foreign keys on SQLite, working backups, renames, and several servers on one database.
+
+### Before you upgrade
+
+- Requires `chacc-dependency-manager` 1.4.1 or newer.
+- **Docker:** with `MIGRATION_BACKUP=true`, add a volume for `/app/backups` if you don't use the provided compose file (it has `chacc_backups`). The images now include `pg_dump`.
+- **SQLite database file name:** `.env.sample` now uses `SQLITE_DATABASE_NAME=chaccapi.db`, the same as the default. It said `chaccapi`, so a project could end up with two databases. If your `.env` says `chaccapi`, either keep it, or stop the server, rename the file to `chaccapi.db` and change the setting.
+- **SQLite: the first start rebuilds tables that are missing their foreign keys.** Rows are kept. `MIGRATION_BACKUP=true` now really backs up first.
+
+## Added
+
+- **Safe startup with several servers** – Workers, containers or replicas that start together against one database take turns to migrate, so each change is applied once. `MIGRATION_LOCK_TIMEOUT` sets how long a server waits. See [Several servers on one database](database-migrations.md#several-servers-on-one-database).
+- **Renaming tables and columns** – Mark a rename on the model with `info={"renamed_from": "old_name"}` and ChaCC renames in the database at the next start, keeping the data. Without it, `full` mode treated a renamed column as removed and deleted its data. See [Renaming Tables and Columns](database-migrations.md#renaming-tables-and-columns).
+- **Plugins in the web console** – In development mode the module list shows the modules in `plugins/`, like the dependency graph, with their details. It showed the modules installed in the database, which the development server doesn't load.
+
+## Fixed
+
+- **SQLite tables were created without their foreign keys**, so relationships and `ondelete` did nothing. Tables now get them, and existing tables get them at the next start. Enforcing them is opt-in with `SQLITE_FOREIGN_KEYS=true`. See [Foreign keys on SQLite](database-migrations.md#foreign-keys-on-sqlite).
+- **`MIGRATION_BACKUP=true` never created a backup.** It now backs up before a migration that changes the database, in `auto` and `full` mode. SQLite backups are taken safely while the server runs and are restored if the migration fails.
+- **`MIGRATION_MODE=full` planned to drop every module's tables at each start** and recorded operations it never ran as applied. Only a bug prevented the drops. Tables are now never dropped automatically, removals wait until every module has loaded, and the migration log only lists what was applied.
+
 ## 1.0.0-beta6
 
 > Feature release: module dependencies, a web console for modules, automatic restarts, and production servers that start without network. Read **Before you upgrade** first.
@@ -24,11 +47,10 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Only admins can use the web console.** With the authentication module loaded, the core `/modules` and `/system` routes, the web console and `chacc deploy` need the `MANAGE_WEB_CONSOLE` privilege (set another with `CHACC_ADMIN_PRIVILEGE`) or `ALL`. ChaCC registers it with the authentication module itself. Other logged-in users now get `403`. Give deploy accounts a role with `MANAGE_WEB_CONSOLE`. See [Who can use it](console.md#who-can-use-it).
 - **Protect servers without the authentication module** with `CHACC_CONSOLE_KEY`. The web console asks for it and `chacc deploy` sends `CHACC_DEPLOY_KEY`. Without it the server still works, but the console, the log and `chacc deploy` warn that it isn't protected. See [Without the authentication module](console.md#without-the-authentication-module).
 - `POST /api/system/restart` is refused in development mode, where the server already reloads when files change.
-- **Docker: add the `chacc_packages` volume** (`/app/.chacc_packages`) if you don't use the provided compose file. Module packages now live there. With `MIGRATION_BACKUP=true`, also add a volume for `/app/backups` (the compose file has `chacc_backups`); the images now include `pg_dump`.
+- **Docker: add the `chacc_packages` volume** (`/app/.chacc_packages`) if you don't use the provided compose file. Module packages now live there.
 - **Keep network available for the first start after upgrading.** Existing module packages were in the old container, so the first start installs them into the new volume. After that, starts need no network. Without network the affected modules are skipped until you run `chacc deps sync`.
 - The images now use **Python 3.15** and pinned core package versions (`requirements.lock`).
 - Requires `chacc-dependency-manager` 1.4.0 or newer.
-- **SQLite: the first start rebuilds tables that are missing their foreign keys.** Rows are kept. `MIGRATION_BACKUP=true` now really backs up first.
 
 ## Added
 
@@ -46,9 +68,6 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Optional Redis in Docker Compose** – `docker compose --profile redis up -d` adds a Redis container; ChaCC waits for it before starting. See [Redis (optional)](deployment.md#redis-optional).
 - **Services tab in the web console** – Shows whether the database, Redis and rate limiting work, plus server details, checked every 30 seconds. The top bar shows when a service is down or degraded. Also available as `GET /api/system/services`. See [Service status](core-api.md#service-status).
 - **Module details in the web console** – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows **Failed to load** with the reason, which is kept across restarts. Also available as `GET /api/modules/{name}`. See [Module details](core-api.md#module-details).
-- **Safe startup with several servers** – Workers, containers or replicas that start together against one database take turns to migrate, so each change is applied once. `MIGRATION_LOCK_TIMEOUT` sets how long a server waits. See [Several servers on one database](database-migrations.md#several-servers-on-one-database).
-- **Renaming tables and columns** – Mark a rename on the model with `info={"renamed_from": "old_name"}` and ChaCC renames in the database at the next start, keeping the data. Without it, `full` mode treated a renamed column as removed and deleted its data. See [Renaming Tables and Columns](database-migrations.md#renaming-tables-and-columns).
-- **Plugins in the web console** – In development mode the module list shows the modules in `plugins/`, like the dependency graph, with their details. It showed the modules installed in the database, which the development server doesn't load.
 - **Console guide** – A new [Console](console.md) page walks through the modules, module details, dependency graph, services and restarts, with screenshots.
 
 ## Changed
@@ -92,9 +111,6 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - In production, the console page was cached until a restart even when its files changed, so it could show headings that didn't match its script. It is now rebuilt when its files change.
 - In development mode with `ENABLE_PLUGIN_HOT_RELOAD=True`, editing a module in `plugins/` restarts the server again. An earlier beta 6 change had limited the reload to `src/`.
 - In development mode, the server didn't start when a data folder such as `MODULES_INSTALLED_DIR` was outside the project folder ("Non-relative patterns are unsupported").
-- **SQLite tables were created without their foreign keys**, so relationships and `ondelete` did nothing. Tables now get them, and existing tables get them at the next start. Enforcing them is opt-in with `SQLITE_FOREIGN_KEYS=true`. See [Foreign keys on SQLite](database-migrations.md#foreign-keys-on-sqlite).
-- **`MIGRATION_BACKUP=true` never created a backup.** It now backs up before a migration that changes the database, in `auto` and `full` mode. SQLite backups are taken safely while the server runs and are restored if the migration fails.
-- **`MIGRATION_MODE=full` planned to drop every module's tables at each start** and recorded operations it never ran as applied. Only a bug prevented the drops. Tables are now never dropped automatically, removals wait until every module has loaded, and the migration log only lists what was applied.
 - When nginx or another proxy refused a module as too large, `chacc deploy` printed the proxy's HTML error page. It now says the proxy refused it and which setting to raise. See [Behind a reverse proxy](deployment.md#behind-a-reverse-proxy).
 
 ## 1.0.0-beta5.3
