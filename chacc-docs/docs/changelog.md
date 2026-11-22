@@ -48,6 +48,7 @@ docker pull jonas1015/chacc-api:1.0.0-beta6
 - **Module details in the web console** – Click a module to see its state, routes, required and dependent modules, Python packages, archive, links and README (formatted as Markdown, with Mermaid diagrams drawn). A module that failed to load shows **Failed to load** with the reason, which is kept across restarts. Also available as `GET /api/modules/{name}`. See [Module details](core-api.md#module-details).
 - **Safe startup with several servers** – Workers, containers or replicas that start together against one database take turns to migrate, so each change is applied once. `MIGRATION_LOCK_TIMEOUT` sets how long a server waits. See [Several servers on one database](database-migrations.md#several-servers-on-one-database).
 - **Renaming tables and columns** – Mark a rename on the model with `info={"renamed_from": "old_name"}` and ChaCC renames in the database at the next start, keeping the data. Without it, `full` mode treated a renamed column as removed and deleted its data. See [Renaming Tables and Columns](database-migrations.md#renaming-tables-and-columns).
+- **Plugins in the web console** – In development mode the module list shows the modules in `plugins/`, like the dependency graph, with their details. It showed the modules installed in the database, which the development server doesn't load.
 - **Console guide** – A new [Console](console.md) page walks through the modules, module details, dependency graph, services and restarts, with screenshots.
 
 ## Changed

@@ -37,8 +37,20 @@ function dependsOn(module) {
     return el('span', { class: 'deps' }, out);
 }
 
+// Plugins (development) can't be disabled: say whether they are running.
+function pluginStatus(m, missingRequired) {
+    if (m.load_failure) return el('span', { class: 'state state-blocked', title: m.load_failure }, 'Failed to load');
+    if (missingRequired.length) {
+        return el('span', { class: 'state state-blocked', title: 'Missing required module(s): ' + missingRequired.join(', ') }, 'Not loaded');
+    }
+    return m.is_loaded
+        ? el('span', { class: 'state state-on' }, 'Running')
+        : el('span', { class: 'state state-off', title: 'Loads when the server restarts' }, 'Not loaded yet');
+}
+
 function statusCell(m) {
     const missingRequired = (m.missing_dependencies && m.missing_dependencies.required) || [];
+    if (m.source === 'plugins') return pluginStatus(m, missingRequired);
     if (!m.is_enabled && m.load_failure) {
         return el('span', { class: 'state state-blocked', title: m.load_failure }, 'Failed to load');
     }
@@ -49,8 +61,11 @@ function statusCell(m) {
 }
 
 function menuItems(m) {
+    const details = { icon: 'details', label: 'Details', onSelect: () => openModuleDetails(m.name) };
+    // Plugins are folders in plugins/: changed on disk, not from here.
+    if (m.source === 'plugins') return [details];
     return [
-        { icon: 'details', label: 'Details', onSelect: () => openModuleDetails(m.name) },
+        details,
         m.is_enabled
             ? { icon: 'disable', label: 'Disable', onSelect: () => moduleAction(m, 'disable') }
             : { icon: 'enable', label: 'Enable', kind: 'primary', onSelect: () => moduleAction(m, 'enable') },
@@ -70,7 +85,9 @@ export function renderModules() {
         .sort((a, b) => a.name.localeCompare(b.name));
 
     if (!state.modules.length) {
-        list.append(el('div', { class: 'empty' }, state.loaded ? 'No modules installed yet. Drop a .chacc package above to install one.' : 'Loading modules…'));
+        const dev = state.info && state.info.mode === 'development';
+        const empty = dev ? 'No modules in plugins/ yet.' : 'No modules installed yet. Drop a .chacc package above to install one.';
+        list.append(el('div', { class: 'empty' }, state.loaded ? empty : 'Loading modules…'));
         return;
     }
     if (!modules.length) {

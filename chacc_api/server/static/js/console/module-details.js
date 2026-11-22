@@ -95,6 +95,10 @@ function renderModuleDetails(d) {
         d.readme && readmeSection(d.readme),
     ].filter(Boolean));
 
+    if (d.source === 'plugins') {  // changed on disk, not from the console
+        $('#md-actions').replaceChildren();
+        return;
+    }
     const summary = state.modules.find((m) => m.name === d.name) || d;
     const act = (action, label, cls) => el('button', {
         type: 'button', class: 'btn ' + cls,

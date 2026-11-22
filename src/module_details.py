@@ -8,23 +8,16 @@ import os
 from datetime import datetime
 
 from src import module_packages, module_status
-from src.constants import API_PREFIX, DEVELOPMENT_MODE, MODULES_LOADED_DIR, PLUGINS_DIR
-from src.database import ModuleRecord
+from src.constants import API_PREFIX, DEVELOPMENT_MODE
 from src.module_loader.archive import get_chacc_filepath
 from src.module_loader.dependencies import graph_payload
+from src.module_view import ModuleView
 
 README_LIMIT = 100_000  # characters
 
 
 def _iso(value) -> str | None:
     return value.isoformat() if isinstance(value, datetime) else None
-
-
-def _module_folder(name: str) -> str | None:
-    """The module's code: plugins/ in development, the extracted archive in production."""
-    candidates = [os.path.join(PLUGINS_DIR, name)] if DEVELOPMENT_MODE else []
-    candidates.append(os.path.join(MODULES_LOADED_DIR, name))
-    return next((path for path in candidates if os.path.isdir(path)), None)
 
 
 def _read_text(path: str, limit: int) -> str | None:
@@ -100,7 +93,7 @@ def _used_by(name: str, graph: dict) -> dict:
     return {kind: sorted(names) for kind, names in used.items()}
 
 
-def _state(record: ModuleRecord, node: dict | None, route_count: int) -> dict:
+def _state(record: ModuleView, node: dict | None, route_count: int) -> dict:
     """What is going on with the module right now, in plain words."""
     loaded = module_status.loaded(record.name)
     failure = module_status.failure(record.name)
@@ -135,6 +128,11 @@ def _state(record: ModuleRecord, node: dict | None, route_count: int) -> dict:
             "reason": failure["reason"],
             "since": failure["at"],
         }
+    if getattr(record, "source", None) == "plugins":
+        return {
+            "code": "pending",
+            "message": "Not loaded yet. The development server loads it when it restarts.",
+        }
     if DEVELOPMENT_MODE and node is None:
         return {
             "code": "disabled",
@@ -143,11 +141,11 @@ def _state(record: ModuleRecord, node: dict | None, route_count: int) -> dict:
     return {"code": "pending", "message": "Enabled. Restart the server to load it."}
 
 
-def module_details(record: ModuleRecord, db, app) -> dict:
-    meta = record.meta_data or {}
+def module_details(record: ModuleView, db, app) -> dict:
+    meta = record.meta
     graph = graph_payload(db)
     node = next((n for n in graph["nodes"] if n["name"] == record.name), None)
-    folder = _module_folder(record.name)
+    folder = record.folder
     loaded = module_status.loaded(record.name)
     prefix = record.base_path_prefix or meta.get("base_path_prefix") or f"/{record.name}"
     api_path = loaded["api_path"] if loaded else f"{API_PREFIX}/{prefix.strip('/')}"
@@ -161,6 +159,9 @@ def module_details(record: ModuleRecord, db, app) -> dict:
         "author": record.author,
         "description": record.description,
         "is_enabled": record.is_enabled,
+        # "installed": an uploaded archive the console manages; "plugins": a
+        # folder in plugins/ (development), changed on disk instead.
+        "source": record.source,
         "license": meta.get("license"),
         "homepage": meta.get("homepage"),
         "repository": meta.get("repository"),
@@ -168,7 +169,7 @@ def module_details(record: ModuleRecord, db, app) -> dict:
         "tags": tags if isinstance(tags, list) else [tags],
         "required_chacc_version": meta.get("required_chacc_version"),
         "api_path": api_path,
-        "installed_at": _iso(record.created_at),
+        "installed_at": _iso(record.installed_at),
         "updated_at": _iso(record.updated_at),
         "dependencies": {
             "required": (node or {}).get("required", []),
@@ -178,6 +179,6 @@ def module_details(record: ModuleRecord, db, app) -> dict:
         "state": _state(record, node, len(routes)),
         "routes": routes,
         "packages": _packages(folder, meta),
-        "archive": None if DEVELOPMENT_MODE else _archive(record.name),
+        "archive": _archive(record.name) if record.managed else None,
         "readme": _readme(folder),
     }

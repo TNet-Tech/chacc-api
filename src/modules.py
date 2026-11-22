@@ -51,6 +51,7 @@ from src.module_loader.archive import (
     safe_extract,
 )
 from src.module_loader.dependencies import available_module_metas, graph_payload
+from src.module_view import ModuleView, console_modules, find_module
 
 chacc_logger = configure_logging(log_level=get_default_log_level())
 
@@ -505,11 +506,11 @@ async def get_modules_endpoint(
     current_user: object | None = Depends(get_current_user_optional),
 ):
     """
-    Retrieves a list of all installed modules and their current status from the database.
+    The modules this server loads and their status: the installed modules, or
+    in development mode the folders in plugins/ (like the dependency graph).
     """
-    module_records = db.query(ModuleRecord).all()
     available = set(available_module_metas(db))
-    return {"modules": [_module_summary(record, available) for record in module_records]}
+    return {"modules": [_module_summary(view, available) for view in console_modules(db)]}
 
 
 @modules_router.get("/modules/graph")
@@ -542,29 +543,31 @@ async def get_module_details_endpoint(
     """
     from src.module_details import module_details
 
-    record = db.query(ModuleRecord).filter(ModuleRecord.name == module_name).first()
-    if not record:
+    module = await run_in_threadpool(find_module, db, module_name)
+    if not module:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found.")
-    return await run_in_threadpool(module_details, record, db, request.app)
+    return await run_in_threadpool(module_details, module, db, request.app)
 
 
-def _module_summary(record: ModuleRecord, available: set[str]) -> dict:
-    meta = record.meta_data or {}
+def _module_summary(module: ModuleView, available: set[str]) -> dict:
     try:
-        required, optional = declared_dependencies(meta)
-        missing = missing_dependencies(meta, available - {record.name})
+        required, optional = declared_dependencies(module.meta)
+        missing = missing_dependencies(module.meta, available - {module.name})
     except DependencyDeclarationError:
         required, optional, missing = [], [], None
     return {
-        "name": record.name,
-        "display_name": record.display_name,
-        "version": record.version,
-        "author": record.author,
-        "description": record.description,
-        "is_enabled": record.is_enabled,
-        # Why it was turned off at startup, if it failed to load.
-        "load_failure": (module_status.failure(record.name) or {}).get("reason"),
-        "base_path_prefix": record.base_path_prefix,
+        "name": module.name,
+        "display_name": module.display_name,
+        "version": module.version,
+        "author": module.author,
+        "description": module.description,
+        "is_enabled": module.is_enabled,
+        # "installed": managed from the console; "plugins": a folder in plugins/.
+        "source": module.source,
+        "is_loaded": module_status.loaded(module.name) is not None,
+        # Why it failed to load at startup, if it did.
+        "load_failure": (module_status.failure(module.name) or {}).get("reason"),
+        "base_path_prefix": module.base_path_prefix,
         "dependencies": {"required": required, "optional": optional},
         "missing_dependencies": {
             "required": missing.required if missing else [],

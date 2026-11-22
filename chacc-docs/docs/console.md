@@ -136,6 +136,8 @@ development mode, where the server reloads by itself. See
 
 ## Development mode
 
-In development mode the server loads modules from `plugins/`, while the module
-list shows the modules installed in the database. The dependency graph shows
-the modules in `plugins/`.
+In development mode the server loads modules from `plugins/`, and the module
+list and the dependency graph both show those modules. Each one is **Running**,
+**Failed to load**, **Not loaded** (a required module is missing) or **Not
+loaded yet** (it loads when the server restarts). Plugins are changed on disk,
+so their only action is **Details**. Uploaded modules are loaded in production.
